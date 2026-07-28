@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /** GET /api/user/:name/report?threshold=365&level=track */
-export async function GET(
+async function handler(
   req: Request,
   { params }: { params: Promise<{ name: string }> }
 ) {
@@ -73,4 +73,18 @@ export async function GET(
     return NextResponse.json({ error: "No scrobbles synced yet" }, { status: 404 });
   }
   return NextResponse.json(report);
+}
+
+/** Surface real error messages instead of opaque empty 500s. */
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ name: string }> }
+) {
+  try {
+    return await handler(req, ctx);
+  } catch (err) {
+    const routeError = err instanceof Error ? err.message : String(err);
+    console.error(`[retrospect] route failure:`, err);
+    return NextResponse.json({ error: routeError }, { status: 500 });
+  }
 }
