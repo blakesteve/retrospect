@@ -12,7 +12,7 @@ export const maxDuration = 30;
  * the backfill before responding. The client polls this until status=ready,
  * which is what makes the worker resumable across serverless invocations.
  */
-export async function GET(
+async function handler(
   _req: Request,
   { params }: { params: Promise<{ name: string }> }
 ) {
@@ -32,4 +32,18 @@ export async function GET(
     oldestUts: state.oldestUts ?? null,
     error: state.error ?? null,
   });
+}
+
+/** Surface real error messages instead of opaque empty 500s. */
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ name: string }> }
+) {
+  try {
+    return await handler(req, ctx);
+  } catch (err) {
+    const routeError = err instanceof Error ? err.message : String(err);
+    console.error(`[retrospect] route failure:`, err);
+    return NextResponse.json({ error: routeError }, { status: 500 });
+  }
 }

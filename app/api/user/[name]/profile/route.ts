@@ -10,7 +10,7 @@ export const maxDuration = 60;
 /** GET /api/user/:name/profile?tzm=-300&noise=exclude — sky-independent habits. */
 const cache = new Map<string, { key: string; profile: ListeningProfile | null }>();
 
-export async function GET(
+async function handler(
   req: Request,
   { params }: { params: Promise<{ name: string }> }
 ) {
@@ -45,4 +45,18 @@ export async function GET(
   return profile
     ? NextResponse.json(profile)
     : NextResponse.json({ error: "not enough history" }, { status: 404 });
+}
+
+/** Surface real error messages instead of opaque empty 500s. */
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ name: string }> }
+) {
+  try {
+    return await handler(req, ctx);
+  } catch (err) {
+    const routeError = err instanceof Error ? err.message : String(err);
+    console.error(`[retrospect] route failure:`, err);
+    return NextResponse.json({ error: routeError }, { status: 500 });
+  }
 }

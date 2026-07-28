@@ -19,7 +19,7 @@ export const maxDuration = 60;
  */
 const cache = new Map<string, { key: string; analysis: GenreAnalysis }>();
 
-export async function GET(
+async function handler(
   _req: Request,
   { params }: { params: Promise<{ name: string }> }
 ) {
@@ -65,4 +65,18 @@ export async function GET(
   cache.set(userKey, { key: cacheKey, analysis });
   await getBlobStore().put(blobKey, Buffer.from(JSON.stringify({ key: cacheKey, analysis })));
   return NextResponse.json(analysis);
+}
+
+/** Surface real error messages instead of opaque empty 500s. */
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ name: string }> }
+) {
+  try {
+    return await handler(req, ctx);
+  } catch (err) {
+    const routeError = err instanceof Error ? err.message : String(err);
+    console.error(`[retrospect] route failure:`, err);
+    return NextResponse.json({ error: routeError }, { status: 500 });
+  }
 }

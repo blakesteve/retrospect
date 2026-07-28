@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
+import { R2BlobStore } from "./r2";
 
 /**
  * The storage boundary, distilled: named blobs, whole-object reads and
@@ -65,22 +66,16 @@ export class MemoryBlobStore implements BlobStore {
 
 let active: BlobStore | null = null;
 
-/**
- * Backend selection: R2 when its env vars are present, local folder
- * otherwise. Import of the R2 client is lazy so local dev never loads the
- * AWS SDK.
- */
+/** Backend selection: R2 when its env vars are present, local folder otherwise. */
 export function getBlobStore(): BlobStore {
   if (active) return active;
   const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
   if (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { R2BlobStore } = require("./r2") as typeof import("./r2");
     active = new R2BlobStore({
-      accountId: R2_ACCOUNT_ID,
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-      bucket: R2_BUCKET,
+      accountId: R2_ACCOUNT_ID.trim(),
+      accessKeyId: R2_ACCESS_KEY_ID.trim(),
+      secretAccessKey: R2_SECRET_ACCESS_KEY.trim(),
+      bucket: R2_BUCKET.trim(),
     });
   } else {
     active = new FsBlobStore();
