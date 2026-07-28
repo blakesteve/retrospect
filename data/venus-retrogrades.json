@@ -1,0 +1,104 @@
+{
+  "body": "Venus",
+  "generatedBy": "astronomy-engine",
+  "startYear": 2002,
+  "endYear": 2026,
+  "windows": [
+    {
+      "start": "2002-10-10T18:32:41.718Z",
+      "end": "2002-11-21T07:08:33.281Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2004-05-17T22:30:21.093Z",
+      "end": "2004-06-29T23:14:38.906Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2005-12-24T09:41:07.968Z",
+      "end": "2006-02-03T09:19:20.156Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2007-07-27T17:28:00.468Z",
+      "end": "2007-09-08T16:16:17.343Z",
+      "sign": "Virgo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2009-03-06T17:18:52.031Z",
+      "end": "2009-04-17T19:24:43.593Z",
+      "sign": "Aries",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2010-10-08T07:02:13.593Z",
+      "end": "2010-11-18T21:17:13.593Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2012-05-15T14:32:13.593Z",
+      "end": "2012-06-27T15:09:29.531Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2013-12-21T21:55:53.906Z",
+      "end": "2014-01-31T20:53:19.218Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2015-07-25T09:25:39.843Z",
+      "end": "2015-09-06T08:31:31.406Z",
+      "sign": "Virgo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2017-03-04T09:08:05.156Z",
+      "end": "2017-04-15T10:17:41.718Z",
+      "sign": "Aries",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2018-10-05T19:02:13.593Z",
+      "end": "2018-11-16T10:50:02.343Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2020-05-13T06:42:32.343Z",
+      "end": "2020-06-25T06:49:34.218Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2021-12-19T10:35:58.593Z",
+      "end": "2022-01-29T08:48:23.906Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2023-07-23T01:31:45.468Z",
+      "end": "2023-09-04T01:21:12.656Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2025-03-02T00:32:41.718Z",
+      "end": "2025-04-13T01:02:55.781Z",
+      "sign": "Aries",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2026-10-03T07:09:57.656Z",
+      "end": "2026-11-14T00:20:44.531Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Libra"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "ephemeris": "node scripts/retrograde-windows.mjs 2002 2026 Mercury && node scripts/retrograde-windows.mjs 2002 2026 Venus && node scripts/retrograde-windows.mjs 2002 2026 Mars && node scripts/full-moons.mjs 2002 2026 && node scripts/eclipses.mjs 2002 2026 && cp data/*.json lib/ephemeris/"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1097.0",
+    "@blakesteve/roster": "^2.9.5",
+    "astronomy-engine": "^2.1.19",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,2171 @@
+{
+  "body": "Moon",
+  "generatedBy": "astronomy-engine",
+  "startYear": 2002,
+  "endYear": 2026,
+  "windows": [
+    {
+      "start": "2002-01-27T10:51:04.765Z",
+      "end": "2002-01-30T10:51:04.765Z",
+      "peak": "2002-01-28T22:51:04.765Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2002-02-25T21:17:12.605Z",
+      "end": "2002-02-28T21:17:12.605Z",
+      "peak": "2002-02-27T09:17:12.605Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2002-03-27T06:25:26.997Z",
+      "end": "2002-03-30T06:25:26.997Z",
+      "peak": "2002-03-28T18:25:26.997Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2002-04-25T15:00:30.517Z",
+      "end": "2002-04-28T15:00:30.517Z",
+      "peak": "2002-04-27T03:00:30.517Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2002-05-24T23:51:48.995Z",
+      "end": "2002-05-27T23:51:48.995Z",
+      "peak": "2002-05-26T11:51:48.995Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2002-06-23T09:42:56.680Z",
+      "end": "2002-06-26T09:42:56.680Z",
+      "peak": "2002-06-24T21:42:56.680Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2002-07-22T21:07:39.624Z",
+      "end": "2002-07-25T21:07:39.624Z",
+      "peak": "2002-07-24T09:07:39.624Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2002-08-21T10:29:56.477Z",
+      "end": "2002-08-24T10:29:56.477Z",
+      "peak": "2002-08-22T22:29:56.477Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2002-09-20T01:59:58.594Z",
+      "end": "2002-09-23T01:59:58.594Z",
+      "peak": "2002-09-21T13:59:58.594Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2002-10-19T19:20:46.867Z",
+      "end": "2002-10-22T19:20:46.867Z",
+      "peak": "2002-10-21T07:20:46.867Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2002-11-18T13:34:24.564Z",
+      "end": "2002-11-21T13:34:24.564Z",
+      "peak": "2002-11-20T01:34:24.564Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2002-12-18T07:10:51.732Z",
+      "end": "2002-12-21T07:10:51.732Z",
+      "peak": "2002-12-19T19:10:51.732Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2003-01-16T22:48:15.341Z",
+      "end": "2003-01-19T22:48:15.341Z",
+      "peak": "2003-01-18T10:48:15.341Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2003-02-15T11:51:42.761Z",
+      "end": "2003-02-18T11:51:42.761Z",
+      "peak": "2003-02-16T23:51:42.761Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2003-03-16T22:35:03.242Z",
+      "end": "2003-03-19T22:35:03.242Z",
+      "peak": "2003-03-18T10:35:03.242Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2003-04-15T07:36:10.564Z",
+      "end": "2003-04-18T07:36:10.564Z",
+      "peak": "2003-04-16T19:36:10.564Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2003-05-14T15:36:28.435Z",
+      "end": "2003-05-17T15:36:28.435Z",
+      "peak": "2003-05-16T03:36:28.435Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2003-06-12T23:16:28.118Z",
+      "end": "2003-06-15T23:16:28.118Z",
+      "peak": "2003-06-14T11:16:28.118Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2003-07-12T07:21:58.426Z",
+      "end": "2003-07-15T07:21:58.426Z",
+      "peak": "2003-07-13T19:21:58.426Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2003-08-10T16:48:52.155Z",
+      "end": "2003-08-13T16:48:52.155Z",
+      "peak": "2003-08-12T04:48:52.155Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2003-09-09T04:36:55.909Z",
+      "end": "2003-09-12T04:36:55.909Z",
+      "peak": "2003-09-10T16:36:55.909Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2003-10-08T19:28:11.451Z",
+      "end": "2003-10-11T19:28:11.451Z",
+      "peak": "2003-10-10T07:28:11.451Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2003-11-07T13:14:07.279Z",
+      "end": "2003-11-10T13:14:07.279Z",
+      "peak": "2003-11-09T01:14:07.279Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2003-12-07T08:37:26.774Z",
+      "end": "2003-12-10T08:37:26.774Z",
+      "peak": "2003-12-08T20:37:26.774Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2004-01-06T03:40:55.269Z",
+      "end": "2004-01-09T03:40:55.269Z",
+      "peak": "2004-01-07T15:40:55.269Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2004-02-04T20:47:37.402Z",
+      "end": "2004-02-07T20:47:37.402Z",
+      "peak": "2004-02-06T08:47:37.402Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2004-03-05T11:14:57.127Z",
+      "end": "2004-03-08T11:14:57.127Z",
+      "peak": "2004-03-06T23:14:57.127Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2004-04-03T23:03:22.326Z",
+      "end": "2004-04-06T23:03:22.326Z",
+      "peak": "2004-04-05T11:03:22.326Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2004-05-03T08:34:01.013Z",
+      "end": "2004-05-06T08:34:01.013Z",
+      "peak": "2004-05-04T20:34:01.013Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2004-06-01T16:20:07.718Z",
+      "end": "2004-06-04T16:20:07.718Z",
+      "peak": "2004-06-03T04:20:07.718Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2004-06-30T23:09:27.987Z",
+      "end": "2004-07-03T23:09:27.987Z",
+      "peak": "2004-07-02T11:09:27.987Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2004-07-30T06:05:46.415Z",
+      "end": "2004-08-02T06:05:46.415Z",
+      "peak": "2004-07-31T18:05:46.415Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2004-08-28T14:22:52.922Z",
+      "end": "2004-08-31T14:22:52.922Z",
+      "peak": "2004-08-30T02:22:52.922Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2004-09-27T01:09:55.823Z",
+      "end": "2004-09-30T01:09:55.823Z",
+      "peak": "2004-09-28T13:09:55.823Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2004-10-26T15:08:05.126Z",
+      "end": "2004-10-29T15:08:05.126Z",
+      "peak": "2004-10-28T03:08:05.126Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2004-11-25T08:08:00.753Z",
+      "end": "2004-11-28T08:08:00.753Z",
+      "peak": "2004-11-26T20:08:00.753Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2004-12-25T03:07:05.642Z",
+      "end": "2004-12-28T03:07:05.642Z",
+      "peak": "2004-12-26T15:07:05.642Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2005-01-23T22:33:05.723Z",
+      "end": "2005-01-26T22:33:05.723Z",
+      "peak": "2005-01-25T10:33:05.723Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2005-02-22T16:54:27.055Z",
+      "end": "2005-02-25T16:54:27.055Z",
+      "peak": "2005-02-24T04:54:27.055Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2005-03-24T08:59:11.913Z",
+      "end": "2005-03-27T08:59:11.913Z",
+      "peak": "2005-03-25T20:59:11.913Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2005-04-22T22:07:06.180Z",
+      "end": "2005-04-25T22:07:06.180Z",
+      "peak": "2005-04-24T10:07:06.180Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2005-05-22T08:18:44.049Z",
+      "end": "2005-05-25T08:18:44.049Z",
+      "peak": "2005-05-23T20:18:44.049Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2005-06-20T16:14:22.874Z",
+      "end": "2005-06-23T16:14:22.874Z",
+      "peak": "2005-06-22T04:14:22.874Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2005-07-19T23:00:50.319Z",
+      "end": "2005-07-22T23:00:50.319Z",
+      "peak": "2005-07-21T11:00:50.319Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2005-08-18T05:53:37.314Z",
+      "end": "2005-08-21T05:53:37.314Z",
+      "peak": "2005-08-19T17:53:37.314Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2005-09-16T14:01:23.037Z",
+      "end": "2005-09-19T14:01:23.037Z",
+      "peak": "2005-09-18T02:01:23.037Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2005-10-16T00:14:15.574Z",
+      "end": "2005-10-19T00:14:15.574Z",
+      "peak": "2005-10-17T12:14:15.574Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2005-11-14T12:58:11.955Z",
+      "end": "2005-11-17T12:58:11.955Z",
+      "peak": "2005-11-16T00:58:11.955Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2005-12-14T04:16:14.631Z",
+      "end": "2005-12-17T04:16:14.631Z",
+      "peak": "2005-12-15T16:16:14.631Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2006-01-12T21:48:52.295Z",
+      "end": "2006-01-15T21:48:52.295Z",
+      "peak": "2006-01-14T09:48:52.295Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2006-02-11T16:45:01.488Z",
+      "end": "2006-02-14T16:45:01.488Z",
+      "peak": "2006-02-13T04:45:01.488Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2006-03-13T11:36:14.203Z",
+      "end": "2006-03-16T11:36:14.203Z",
+      "peak": "2006-03-14T23:36:14.203Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2006-04-12T04:40:53.438Z",
+      "end": "2006-04-15T04:40:53.438Z",
+      "peak": "2006-04-13T16:40:53.438Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2006-05-11T18:51:45.265Z",
+      "end": "2006-05-14T18:51:45.265Z",
+      "peak": "2006-05-13T06:51:45.265Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2006-06-10T06:03:44.539Z",
+      "end": "2006-06-13T06:03:44.539Z",
+      "peak": "2006-06-11T18:03:44.539Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2006-07-09T15:02:28.465Z",
+      "end": "2006-07-12T15:02:28.465Z",
+      "peak": "2006-07-11T03:02:28.465Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2006-08-07T22:54:31.236Z",
+      "end": "2006-08-10T22:54:31.236Z",
+      "peak": "2006-08-09T10:54:31.236Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2006-09-06T06:42:35.174Z",
+      "end": "2006-09-09T06:42:35.174Z",
+      "peak": "2006-09-07T18:42:35.174Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2006-10-05T15:13:23.213Z",
+      "end": "2006-10-08T15:13:23.213Z",
+      "peak": "2006-10-07T03:13:23.213Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2006-11-04T00:58:50.846Z",
+      "end": "2006-11-07T00:58:50.846Z",
+      "peak": "2006-11-05T12:58:50.846Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2006-12-03T12:25:27.578Z",
+      "end": "2006-12-06T12:25:27.578Z",
+      "peak": "2006-12-05T00:25:27.578Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2007-01-02T01:58:05.243Z",
+      "end": "2007-01-05T01:58:05.243Z",
+      "peak": "2007-01-03T13:58:05.243Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2007-01-31T17:46:01.544Z",
+      "end": "2007-02-03T17:46:01.544Z",
+      "peak": "2007-02-02T05:46:01.544Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2007-03-02T11:17:51.090Z",
+      "end": "2007-03-05T11:17:51.090Z",
+      "peak": "2007-03-03T23:17:51.090Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2007-04-01T05:15:46.598Z",
+      "end": "2007-04-04T05:15:46.598Z",
+      "peak": "2007-04-02T17:15:46.598Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2007-04-30T22:10:11.106Z",
+      "end": "2007-05-03T22:10:11.106Z",
+      "peak": "2007-05-02T10:10:11.106Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2007-05-30T13:04:23.912Z",
+      "end": "2007-06-02T13:04:23.912Z",
+      "peak": "2007-06-01T01:04:23.912Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2007-06-29T01:49:23.615Z",
+      "end": "2007-07-02T01:49:23.615Z",
+      "peak": "2007-06-30T13:49:23.615Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2007-07-28T12:48:22.906Z",
+      "end": "2007-07-31T12:48:22.906Z",
+      "peak": "2007-07-30T00:48:22.906Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2007-08-26T22:35:42.392Z",
+      "end": "2007-08-29T22:35:42.392Z",
+      "peak": "2007-08-28T10:35:42.392Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2007-09-25T07:45:44.956Z",
+      "end": "2007-09-28T07:45:44.956Z",
+      "peak": "2007-09-26T19:45:44.956Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2007-10-24T16:52:09.417Z",
+      "end": "2007-10-27T16:52:09.417Z",
+      "peak": "2007-10-26T04:52:09.417Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2007-11-23T02:30:27.073Z",
+      "end": "2007-11-26T02:30:27.073Z",
+      "peak": "2007-11-24T14:30:27.073Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2007-12-22T13:16:11.547Z",
+      "end": "2007-12-25T13:16:11.547Z",
+      "peak": "2007-12-24T01:16:11.547Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2008-01-21T01:35:19.144Z",
+      "end": "2008-01-24T01:35:19.144Z",
+      "peak": "2008-01-22T13:35:19.144Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2008-02-19T15:31:12.559Z",
+      "end": "2008-02-22T15:31:12.559Z",
+      "peak": "2008-02-21T03:31:12.559Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2008-03-20T06:40:42.235Z",
+      "end": "2008-03-23T06:40:42.235Z",
+      "peak": "2008-03-21T18:40:42.235Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2008-04-18T22:26:08.761Z",
+      "end": "2008-04-21T22:26:08.761Z",
+      "peak": "2008-04-20T10:26:08.761Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2008-05-18T14:12:08.970Z",
+      "end": "2008-05-21T14:12:08.970Z",
+      "peak": "2008-05-20T02:12:08.970Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2008-06-17T05:31:14.612Z",
+      "end": "2008-06-20T05:31:14.612Z",
+      "peak": "2008-06-18T17:31:14.612Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2008-07-16T19:59:46.866Z",
+      "end": "2008-07-19T19:59:46.866Z",
+      "peak": "2008-07-18T07:59:46.866Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2008-08-15T09:17:07.362Z",
+      "end": "2008-08-18T09:17:07.362Z",
+      "peak": "2008-08-16T21:17:07.362Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2008-09-13T21:14:00.501Z",
+      "end": "2008-09-16T21:14:00.501Z",
+      "peak": "2008-09-15T09:14:00.501Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2008-10-13T08:03:03.424Z",
+      "end": "2008-10-16T08:03:03.424Z",
+      "peak": "2008-10-14T20:03:03.424Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2008-11-11T18:17:58.958Z",
+      "end": "2008-11-14T18:17:58.958Z",
+      "peak": "2008-11-13T06:17:58.958Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2008-12-11T04:37:47.574Z",
+      "end": "2008-12-14T04:37:47.574Z",
+      "peak": "2008-12-12T16:37:47.574Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2009-01-09T15:27:19.462Z",
+      "end": "2009-01-12T15:27:19.462Z",
+      "peak": "2009-01-11T03:27:19.462Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2009-02-08T02:49:42.901Z",
+      "end": "2009-02-11T02:49:42.901Z",
+      "peak": "2009-02-09T14:49:42.901Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2009-03-09T14:38:21.009Z",
+      "end": "2009-03-12T14:38:21.009Z",
+      "peak": "2009-03-11T02:38:21.009Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2009-04-08T02:56:28.151Z",
+      "end": "2009-04-11T02:56:28.151Z",
+      "peak": "2009-04-09T14:56:28.151Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2009-05-07T16:02:05.087Z",
+      "end": "2009-05-10T16:02:05.087Z",
+      "peak": "2009-05-09T04:02:05.087Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2009-06-06T06:12:25.904Z",
+      "end": "2009-06-09T06:12:25.904Z",
+      "peak": "2009-06-07T18:12:25.904Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2009-07-05T21:22:08.376Z",
+      "end": "2009-07-08T21:22:08.376Z",
+      "peak": "2009-07-07T09:22:08.376Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2009-08-04T12:55:33.712Z",
+      "end": "2009-08-07T12:55:33.712Z",
+      "peak": "2009-08-06T00:55:33.712Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2009-09-03T04:03:17.307Z",
+      "end": "2009-09-06T04:03:17.307Z",
+      "peak": "2009-09-04T16:03:17.307Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2009-10-02T18:10:47.993Z",
+      "end": "2009-10-05T18:10:47.993Z",
+      "peak": "2009-10-04T06:10:47.993Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2009-11-01T07:14:29.632Z",
+      "end": "2009-11-04T07:14:29.632Z",
+      "peak": "2009-11-02T19:14:29.632Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2009-11-30T19:31:04.078Z",
+      "end": "2009-12-03T19:31:04.078Z",
+      "peak": "2009-12-02T07:31:04.078Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2009-12-30T07:13:23.070Z",
+      "end": "2010-01-02T07:13:23.070Z",
+      "peak": "2009-12-31T19:13:23.070Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2010-01-28T18:18:10.922Z",
+      "end": "2010-01-31T18:18:10.922Z",
+      "peak": "2010-01-30T06:18:10.922Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2010-02-27T04:38:26.328Z",
+      "end": "2010-03-02T04:38:26.328Z",
+      "peak": "2010-02-28T16:38:26.328Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2010-03-28T14:26:00.818Z",
+      "end": "2010-03-31T14:26:00.818Z",
+      "peak": "2010-03-30T02:26:00.818Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2010-04-27T00:19:04.959Z",
+      "end": "2010-04-30T00:19:04.959Z",
+      "peak": "2010-04-28T12:19:04.959Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2010-05-26T11:07:56.241Z",
+      "end": "2010-05-29T11:07:56.241Z",
+      "peak": "2010-05-27T23:07:56.241Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2010-06-24T23:31:02.487Z",
+      "end": "2010-06-27T23:31:02.487Z",
+      "peak": "2010-06-26T11:31:02.487Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2010-07-24T13:37:15.552Z",
+      "end": "2010-07-27T13:37:15.552Z",
+      "peak": "2010-07-26T01:37:15.552Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2010-08-23T05:05:16.921Z",
+      "end": "2010-08-26T05:05:16.921Z",
+      "peak": "2010-08-24T17:05:16.921Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2010-09-21T21:17:55.080Z",
+      "end": "2010-09-24T21:17:55.080Z",
+      "peak": "2010-09-23T09:17:55.080Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2010-10-21T13:37:10.425Z",
+      "end": "2010-10-24T13:37:10.425Z",
+      "peak": "2010-10-23T01:37:10.425Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2010-11-20T05:27:58.154Z",
+      "end": "2010-11-23T05:27:58.154Z",
+      "peak": "2010-11-21T17:27:58.154Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2010-12-19T20:14:05.627Z",
+      "end": "2010-12-22T20:14:05.627Z",
+      "peak": "2010-12-21T08:14:05.627Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2011-01-18T09:22:02.177Z",
+      "end": "2011-01-21T09:22:02.177Z",
+      "peak": "2011-01-19T21:22:02.177Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2011-02-16T20:36:12.987Z",
+      "end": "2011-02-19T20:36:12.987Z",
+      "peak": "2011-02-18T08:36:12.987Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2011-03-18T06:10:34.049Z",
+      "end": "2011-03-21T06:10:34.049Z",
+      "peak": "2011-03-19T18:10:34.049Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2011-04-16T14:44:32.189Z",
+      "end": "2011-04-19T14:44:32.189Z",
+      "peak": "2011-04-18T02:44:32.189Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2011-05-15T23:09:12.907Z",
+      "end": "2011-05-18T23:09:12.907Z",
+      "peak": "2011-05-17T11:09:12.907Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2011-06-14T08:14:11.070Z",
+      "end": "2011-06-17T08:14:11.070Z",
+      "peak": "2011-06-15T20:14:11.070Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2011-07-13T18:40:16.316Z",
+      "end": "2011-07-16T18:40:16.316Z",
+      "peak": "2011-07-15T06:40:16.316Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2011-08-12T06:58:12.813Z",
+      "end": "2011-08-15T06:58:12.813Z",
+      "peak": "2011-08-13T18:58:12.813Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2011-09-10T21:27:22.744Z",
+      "end": "2011-09-13T21:27:22.744Z",
+      "peak": "2011-09-12T09:27:22.744Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2011-10-10T14:06:28.255Z",
+      "end": "2011-10-13T14:06:28.255Z",
+      "peak": "2011-10-12T02:06:28.255Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2011-11-09T08:16:49.833Z",
+      "end": "2011-11-12T08:16:49.833Z",
+      "peak": "2011-11-10T20:16:49.833Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2011-12-09T02:37:02.891Z",
+      "end": "2011-12-12T02:37:02.891Z",
+      "peak": "2011-12-10T14:37:02.891Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2012-01-07T19:30:43.596Z",
+      "end": "2012-01-10T19:30:43.596Z",
+      "peak": "2012-01-09T07:30:43.596Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2012-02-06T09:54:22.119Z",
+      "end": "2012-02-09T09:54:22.119Z",
+      "peak": "2012-02-07T21:54:22.119Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2012-03-06T21:40:05.909Z",
+      "end": "2012-03-09T21:40:05.909Z",
+      "peak": "2012-03-08T09:40:05.909Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2012-04-05T07:19:15.588Z",
+      "end": "2012-04-08T07:19:15.588Z",
+      "peak": "2012-04-06T19:19:15.588Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2012-05-04T15:35:39.660Z",
+      "end": "2012-05-07T15:35:39.660Z",
+      "peak": "2012-05-06T03:35:39.660Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2012-06-02T23:12:10.611Z",
+      "end": "2012-06-05T23:12:10.611Z",
+      "peak": "2012-06-04T11:12:10.611Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2012-07-02T06:52:30.546Z",
+      "end": "2012-07-05T06:52:30.546Z",
+      "peak": "2012-07-03T18:52:30.546Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2012-07-31T15:28:07.163Z",
+      "end": "2012-08-03T15:28:07.163Z",
+      "peak": "2012-08-02T03:28:07.163Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2012-08-30T01:58:48.601Z",
+      "end": "2012-09-02T01:58:48.601Z",
+      "peak": "2012-08-31T13:58:48.601Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2012-09-28T15:19:20.633Z",
+      "end": "2012-10-01T15:19:20.633Z",
+      "peak": "2012-09-30T03:19:20.633Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2012-10-28T07:50:14.329Z",
+      "end": "2012-10-31T07:50:14.329Z",
+      "peak": "2012-10-29T19:50:14.329Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2012-11-27T02:46:43.625Z",
+      "end": "2012-11-30T02:46:43.625Z",
+      "peak": "2012-11-28T14:46:43.625Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2012-12-26T22:21:55.058Z",
+      "end": "2012-12-29T22:21:55.058Z",
+      "peak": "2012-12-28T10:21:55.058Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2013-01-25T16:39:03.499Z",
+      "end": "2013-01-28T16:39:03.499Z",
+      "peak": "2013-01-27T04:39:03.499Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2013-02-24T08:26:43.059Z",
+      "end": "2013-02-27T08:26:43.059Z",
+      "peak": "2013-02-25T20:26:43.059Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2013-03-25T21:27:57.103Z",
+      "end": "2013-03-28T21:27:57.103Z",
+      "peak": "2013-03-27T09:27:57.103Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2013-04-24T07:57:44.699Z",
+      "end": "2013-04-27T07:57:44.699Z",
+      "peak": "2013-04-25T19:57:44.699Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2013-05-23T16:25:33.149Z",
+      "end": "2013-05-26T16:25:33.149Z",
+      "peak": "2013-05-25T04:25:33.149Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2013-06-21T23:32:52.144Z",
+      "end": "2013-06-24T23:32:52.144Z",
+      "peak": "2013-06-23T11:32:52.144Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2013-07-21T06:16:10.374Z",
+      "end": "2013-07-24T06:16:10.374Z",
+      "peak": "2013-07-22T18:16:10.374Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2013-08-19T13:45:17.178Z",
+      "end": "2013-08-22T13:45:17.178Z",
+      "peak": "2013-08-21T01:45:17.178Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2013-09-17T23:13:30.781Z",
+      "end": "2013-09-20T23:13:30.781Z",
+      "peak": "2013-09-19T11:13:30.781Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2013-10-17T11:38:21.054Z",
+      "end": "2013-10-20T11:38:21.054Z",
+      "peak": "2013-10-18T23:38:21.054Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2013-11-16T03:16:26.915Z",
+      "end": "2013-11-19T03:16:26.915Z",
+      "peak": "2013-11-17T15:16:26.915Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2013-12-15T21:28:48.118Z",
+      "end": "2013-12-18T21:28:48.118Z",
+      "peak": "2013-12-17T09:28:48.118Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2014-01-14T16:52:54.596Z",
+      "end": "2014-01-17T16:52:54.596Z",
+      "peak": "2014-01-16T04:52:54.596Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2014-02-13T11:53:45.405Z",
+      "end": "2014-02-16T11:53:45.405Z",
+      "peak": "2014-02-14T23:53:45.405Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2014-03-15T05:09:02.381Z",
+      "end": "2014-03-18T05:09:02.381Z",
+      "peak": "2014-03-16T17:09:02.381Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2014-04-13T19:42:56.696Z",
+      "end": "2014-04-16T19:42:56.696Z",
+      "peak": "2014-04-15T07:42:56.696Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2014-05-13T07:16:30.233Z",
+      "end": "2014-05-16T07:16:30.233Z",
+      "peak": "2014-05-14T19:16:30.233Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2014-06-11T16:12:01.018Z",
+      "end": "2014-06-14T16:12:01.018Z",
+      "peak": "2014-06-13T04:12:01.018Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2014-07-10T23:25:26.044Z",
+      "end": "2014-07-13T23:25:26.044Z",
+      "peak": "2014-07-12T11:25:26.044Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2014-08-09T06:09:55.846Z",
+      "end": "2014-08-12T06:09:55.846Z",
+      "peak": "2014-08-10T18:09:55.846Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2014-09-07T13:38:44.591Z",
+      "end": "2014-09-10T13:38:44.591Z",
+      "peak": "2014-09-09T01:38:44.591Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2014-10-06T22:51:10.614Z",
+      "end": "2014-10-09T22:51:10.614Z",
+      "peak": "2014-10-08T10:51:10.614Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2014-11-05T10:23:27.953Z",
+      "end": "2014-11-08T10:23:27.953Z",
+      "peak": "2014-11-06T22:23:27.953Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2014-12-05T00:27:27.663Z",
+      "end": "2014-12-08T00:27:27.663Z",
+      "peak": "2014-12-06T12:27:27.663Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2015-01-03T16:54:00.082Z",
+      "end": "2015-01-06T16:54:00.082Z",
+      "peak": "2015-01-05T04:54:00.082Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2015-02-02T11:09:38.493Z",
+      "end": "2015-02-05T11:09:38.493Z",
+      "peak": "2015-02-03T23:09:38.493Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2015-03-04T06:06:06.067Z",
+      "end": "2015-03-07T06:06:06.067Z",
+      "peak": "2015-03-05T18:06:06.067Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2015-04-03T00:06:16.203Z",
+      "end": "2015-04-06T00:06:16.203Z",
+      "peak": "2015-04-04T12:06:16.203Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2015-05-02T15:42:46.256Z",
+      "end": "2015-05-05T15:42:46.256Z",
+      "peak": "2015-05-04T03:42:46.256Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2015-06-01T04:19:39.470Z",
+      "end": "2015-06-04T04:19:39.470Z",
+      "peak": "2015-06-02T16:19:39.470Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2015-06-30T14:20:11.647Z",
+      "end": "2015-07-03T14:20:11.647Z",
+      "peak": "2015-07-02T02:20:11.647Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2015-07-29T22:43:30.352Z",
+      "end": "2015-08-01T22:43:30.352Z",
+      "peak": "2015-07-31T10:43:30.352Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2015-08-28T06:35:46.739Z",
+      "end": "2015-08-31T06:35:46.739Z",
+      "peak": "2015-08-29T18:35:46.739Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2015-09-26T14:51:05.534Z",
+      "end": "2015-09-29T14:51:05.534Z",
+      "peak": "2015-09-28T02:51:05.534Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2015-10-26T00:05:42.224Z",
+      "end": "2015-10-29T00:05:42.224Z",
+      "peak": "2015-10-27T12:05:42.224Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2015-11-24T10:44:49.150Z",
+      "end": "2015-11-27T10:44:49.150Z",
+      "peak": "2015-11-25T22:44:49.150Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2015-12-23T23:12:07.392Z",
+      "end": "2015-12-26T23:12:07.392Z",
+      "peak": "2015-12-25T11:12:07.392Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2016-01-22T13:46:27.501Z",
+      "end": "2016-01-25T13:46:27.501Z",
+      "peak": "2016-01-24T01:46:27.501Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2016-02-21T06:20:35.856Z",
+      "end": "2016-02-24T06:20:35.856Z",
+      "peak": "2016-02-22T18:20:35.856Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2016-03-22T00:01:34.456Z",
+      "end": "2016-03-25T00:01:34.456Z",
+      "peak": "2016-03-23T12:01:34.456Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2016-04-20T17:24:18.820Z",
+      "end": "2016-04-23T17:24:18.820Z",
+      "peak": "2016-04-22T05:24:18.820Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2016-05-20T09:15:07.097Z",
+      "end": "2016-05-23T09:15:07.097Z",
+      "peak": "2016-05-21T21:15:07.097Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2016-06-18T23:02:57.787Z",
+      "end": "2016-06-21T23:02:57.787Z",
+      "peak": "2016-06-20T11:02:57.787Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2016-07-18T10:57:12.678Z",
+      "end": "2016-07-21T10:57:12.678Z",
+      "peak": "2016-07-19T22:57:12.678Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2016-08-16T21:27:12.673Z",
+      "end": "2016-08-19T21:27:12.673Z",
+      "peak": "2016-08-18T09:27:12.673Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2016-09-15T07:05:43.506Z",
+      "end": "2016-09-18T07:05:43.506Z",
+      "peak": "2016-09-16T19:05:43.506Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2016-10-14T16:23:43.762Z",
+      "end": "2016-10-17T16:23:43.762Z",
+      "peak": "2016-10-16T04:23:43.762Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2016-11-13T01:52:40.919Z",
+      "end": "2016-11-16T01:52:40.919Z",
+      "peak": "2016-11-14T13:52:40.919Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2016-12-12T12:06:08.894Z",
+      "end": "2016-12-15T12:06:08.894Z",
+      "peak": "2016-12-14T00:06:08.894Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2017-01-10T23:34:33.600Z",
+      "end": "2017-01-13T23:34:33.600Z",
+      "peak": "2017-01-12T11:34:33.600Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2017-02-09T12:33:31.284Z",
+      "end": "2017-02-12T12:33:31.284Z",
+      "peak": "2017-02-11T00:33:31.284Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2017-03-11T02:54:28.156Z",
+      "end": "2017-03-14T02:54:28.156Z",
+      "peak": "2017-03-12T14:54:28.156Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2017-04-09T18:08:47.600Z",
+      "end": "2017-04-12T18:08:47.600Z",
+      "peak": "2017-04-11T06:08:47.600Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2017-05-09T09:43:09.626Z",
+      "end": "2017-05-12T09:43:09.626Z",
+      "peak": "2017-05-10T21:43:09.626Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2017-06-08T01:10:16.198Z",
+      "end": "2017-06-11T01:10:16.198Z",
+      "peak": "2017-06-09T13:10:16.198Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2017-07-07T16:07:15.968Z",
+      "end": "2017-07-10T16:07:15.968Z",
+      "peak": "2017-07-09T04:07:15.968Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2017-08-06T06:11:18.706Z",
+      "end": "2017-08-09T06:11:18.706Z",
+      "peak": "2017-08-07T18:11:18.706Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2017-09-04T19:03:29.364Z",
+      "end": "2017-09-07T19:03:29.364Z",
+      "peak": "2017-09-06T07:03:29.364Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2017-10-04T06:40:44.012Z",
+      "end": "2017-10-07T06:40:44.012Z",
+      "peak": "2017-10-05T18:40:44.012Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2017-11-02T17:23:29.328Z",
+      "end": "2017-11-05T17:23:29.328Z",
+      "peak": "2017-11-04T05:23:29.328Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2017-12-02T03:47:33.499Z",
+      "end": "2017-12-05T03:47:33.499Z",
+      "peak": "2017-12-03T15:47:33.499Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2017-12-31T14:24:36.341Z",
+      "end": "2018-01-03T14:24:36.341Z",
+      "peak": "2018-01-02T02:24:36.341Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2018-01-30T01:27:14.845Z",
+      "end": "2018-02-02T01:27:14.845Z",
+      "peak": "2018-01-31T13:27:14.845Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2018-02-28T12:51:56.197Z",
+      "end": "2018-03-03T12:51:56.197Z",
+      "peak": "2018-03-02T00:51:56.197Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2018-03-30T00:37:29.673Z",
+      "end": "2018-04-02T00:37:29.673Z",
+      "peak": "2018-03-31T12:37:29.673Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2018-04-28T12:58:50.495Z",
+      "end": "2018-05-01T12:58:50.495Z",
+      "peak": "2018-04-30T00:58:50.495Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2018-05-28T02:20:13.118Z",
+      "end": "2018-05-31T02:20:13.118Z",
+      "peak": "2018-05-29T14:20:13.118Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2018-06-26T16:53:40.817Z",
+      "end": "2018-06-29T16:53:40.817Z",
+      "peak": "2018-06-28T04:53:40.817Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2018-07-26T08:21:03.122Z",
+      "end": "2018-07-29T08:21:03.122Z",
+      "peak": "2018-07-27T20:21:03.122Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2018-08-24T23:56:52.043Z",
+      "end": "2018-08-27T23:56:52.043Z",
+      "peak": "2018-08-26T11:56:52.043Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2018-09-23T14:53:05.982Z",
+      "end": "2018-09-26T14:53:05.982Z",
+      "peak": "2018-09-25T02:53:05.982Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2018-10-23T04:45:50.256Z",
+      "end": "2018-10-26T04:45:50.256Z",
+      "peak": "2018-10-24T16:45:50.256Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2018-11-21T17:39:52.129Z",
+      "end": "2018-11-24T17:39:52.129Z",
+      "peak": "2018-11-23T05:39:52.129Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2018-12-21T05:49:13.549Z",
+      "end": "2018-12-24T05:49:13.549Z",
+      "peak": "2018-12-22T17:49:13.549Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2019-01-19T17:16:37.334Z",
+      "end": "2019-01-22T17:16:37.334Z",
+      "peak": "2019-01-21T05:16:37.334Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2019-02-18T03:54:02.175Z",
+      "end": "2019-02-21T03:54:02.175Z",
+      "peak": "2019-02-19T15:54:02.175Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2019-03-19T13:43:20.218Z",
+      "end": "2019-03-22T13:43:20.218Z",
+      "peak": "2019-03-21T01:43:20.218Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2019-04-17T23:12:43.985Z",
+      "end": "2019-04-20T23:12:43.985Z",
+      "peak": "2019-04-19T11:12:43.985Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2019-05-17T09:11:57.441Z",
+      "end": "2019-05-20T09:11:57.441Z",
+      "peak": "2019-05-18T21:11:57.441Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2019-06-15T20:31:18.009Z",
+      "end": "2019-06-18T20:31:18.009Z",
+      "peak": "2019-06-17T08:31:18.009Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2019-07-15T09:38:53.592Z",
+      "end": "2019-07-18T09:38:53.592Z",
+      "peak": "2019-07-16T21:38:53.592Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2019-08-14T00:29:56.276Z",
+      "end": "2019-08-17T00:29:56.276Z",
+      "peak": "2019-08-15T12:29:56.276Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2019-09-12T16:33:29.081Z",
+      "end": "2019-09-15T16:33:29.081Z",
+      "peak": "2019-09-14T04:33:29.081Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2019-10-12T09:08:35.651Z",
+      "end": "2019-10-15T09:08:35.651Z",
+      "peak": "2019-10-13T21:08:35.651Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2019-11-11T01:35:04.871Z",
+      "end": "2019-11-14T01:35:04.871Z",
+      "peak": "2019-11-12T13:35:04.871Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2019-12-10T17:12:54.270Z",
+      "end": "2019-12-13T17:12:54.270Z",
+      "peak": "2019-12-12T05:12:54.270Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2020-01-09T07:21:53.633Z",
+      "end": "2020-01-12T07:21:53.633Z",
+      "peak": "2020-01-10T19:21:53.633Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2020-02-07T19:33:46.126Z",
+      "end": "2020-02-10T19:33:46.126Z",
+      "peak": "2020-02-09T07:33:46.126Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2020-03-08T05:48:08.103Z",
+      "end": "2020-03-11T05:48:08.103Z",
+      "peak": "2020-03-09T17:48:08.103Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2020-04-06T14:35:30.084Z",
+      "end": "2020-04-09T14:35:30.084Z",
+      "peak": "2020-04-08T02:35:30.084Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2020-05-05T22:45:42.403Z",
+      "end": "2020-05-08T22:45:42.403Z",
+      "peak": "2020-05-07T10:45:42.403Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2020-06-04T07:12:54.511Z",
+      "end": "2020-06-07T07:12:54.511Z",
+      "peak": "2020-06-05T19:12:54.511Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2020-07-03T16:44:58.421Z",
+      "end": "2020-07-06T16:44:58.421Z",
+      "peak": "2020-07-05T04:44:58.421Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2020-08-02T03:59:22.799Z",
+      "end": "2020-08-05T03:59:22.799Z",
+      "peak": "2020-08-03T15:59:22.799Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2020-08-31T17:22:43.258Z",
+      "end": "2020-09-03T17:22:43.258Z",
+      "peak": "2020-09-02T05:22:43.258Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2020-09-30T09:05:58.074Z",
+      "end": "2020-10-03T09:05:58.074Z",
+      "peak": "2020-10-01T21:05:58.074Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2020-10-30T02:49:55.086Z",
+      "end": "2020-11-02T02:49:55.086Z",
+      "peak": "2020-10-31T14:49:55.086Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2020-11-28T21:30:25.267Z",
+      "end": "2020-12-01T21:30:25.267Z",
+      "peak": "2020-11-30T09:30:25.267Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2020-12-28T15:28:52.490Z",
+      "end": "2020-12-31T15:28:52.490Z",
+      "peak": "2020-12-30T03:28:52.490Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2021-01-27T07:16:49.034Z",
+      "end": "2021-01-30T07:16:49.034Z",
+      "peak": "2021-01-28T19:16:49.034Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2021-02-25T20:17:52.299Z",
+      "end": "2021-02-28T20:17:52.299Z",
+      "peak": "2021-02-27T08:17:52.299Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2021-03-27T06:48:41.272Z",
+      "end": "2021-03-30T06:48:41.272Z",
+      "peak": "2021-03-28T18:48:41.272Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2021-04-25T15:32:02.601Z",
+      "end": "2021-04-28T15:32:02.601Z",
+      "peak": "2021-04-27T03:32:02.601Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2021-05-24T23:14:24.796Z",
+      "end": "2021-05-27T23:14:24.796Z",
+      "peak": "2021-05-26T11:14:24.796Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2021-06-23T06:40:15.100Z",
+      "end": "2021-06-26T06:40:15.100Z",
+      "peak": "2021-06-24T18:40:15.100Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2021-07-22T14:37:28.304Z",
+      "end": "2021-07-25T14:37:28.304Z",
+      "peak": "2021-07-24T02:37:28.304Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2021-08-21T00:02:34.244Z",
+      "end": "2021-08-24T00:02:34.244Z",
+      "peak": "2021-08-22T12:02:34.244Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2021-09-19T11:55:20.091Z",
+      "end": "2021-09-22T11:55:20.091Z",
+      "peak": "2021-09-20T23:55:20.091Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2021-10-19T02:57:22.188Z",
+      "end": "2021-10-22T02:57:22.188Z",
+      "peak": "2021-10-20T14:57:22.188Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2021-11-17T20:58:13.111Z",
+      "end": "2021-11-20T20:58:13.111Z",
+      "peak": "2021-11-19T08:58:13.111Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2021-12-17T16:36:15.791Z",
+      "end": "2021-12-20T16:36:15.791Z",
+      "peak": "2021-12-19T04:36:15.791Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2022-01-16T11:49:11.314Z",
+      "end": "2022-01-19T11:49:11.314Z",
+      "peak": "2022-01-17T23:49:11.314Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2022-02-15T04:57:13.183Z",
+      "end": "2022-02-18T04:57:13.183Z",
+      "peak": "2022-02-16T16:57:13.183Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2022-03-16T19:18:12.134Z",
+      "end": "2022-03-19T19:18:12.134Z",
+      "peak": "2022-03-18T07:18:12.134Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2022-04-15T06:55:35.255Z",
+      "end": "2022-04-18T06:55:35.255Z",
+      "peak": "2022-04-16T18:55:35.255Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2022-05-14T16:14:37.265Z",
+      "end": "2022-05-17T16:14:37.265Z",
+      "peak": "2022-05-16T04:14:37.265Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2022-06-12T23:52:11.278Z",
+      "end": "2022-06-15T23:52:11.278Z",
+      "peak": "2022-06-14T11:52:11.278Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2022-07-12T06:38:03.524Z",
+      "end": "2022-07-15T06:38:03.524Z",
+      "peak": "2022-07-13T18:38:03.524Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2022-08-10T13:36:13.433Z",
+      "end": "2022-08-13T13:36:13.433Z",
+      "peak": "2022-08-12T01:36:13.433Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2022-09-08T21:59:33.780Z",
+      "end": "2022-09-11T21:59:33.780Z",
+      "peak": "2022-09-10T09:59:33.780Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2022-10-08T08:55:30.906Z",
+      "end": "2022-10-11T08:55:30.906Z",
+      "peak": "2022-10-09T20:55:30.906Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2022-11-06T23:02:46.423Z",
+      "end": "2022-11-09T23:02:46.423Z",
+      "peak": "2022-11-08T11:02:46.423Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2022-12-06T16:08:52.877Z",
+      "end": "2022-12-09T16:08:52.877Z",
+      "peak": "2022-12-08T04:08:52.877Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2023-01-05T11:08:38.078Z",
+      "end": "2023-01-08T11:08:38.078Z",
+      "peak": "2023-01-06T23:08:38.078Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2023-02-04T06:29:16.684Z",
+      "end": "2023-02-07T06:29:16.684Z",
+      "peak": "2023-02-05T18:29:16.684Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2023-03-06T00:41:02.723Z",
+      "end": "2023-03-09T00:41:02.723Z",
+      "peak": "2023-03-07T12:41:02.723Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2023-04-04T16:35:09.541Z",
+      "end": "2023-04-07T16:35:09.541Z",
+      "peak": "2023-04-06T04:35:09.541Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2023-05-04T05:34:38.677Z",
+      "end": "2023-05-07T05:34:38.677Z",
+      "peak": "2023-05-05T17:34:38.677Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2023-06-02T15:42:15.249Z",
+      "end": "2023-06-05T15:42:15.249Z",
+      "peak": "2023-06-04T03:42:15.249Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2023-07-01T23:39:08.393Z",
+      "end": "2023-07-04T23:39:08.393Z",
+      "peak": "2023-07-03T11:39:08.393Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2023-07-31T06:32:07.672Z",
+      "end": "2023-08-03T06:32:07.672Z",
+      "peak": "2023-08-01T18:32:07.672Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2023-08-29T13:36:07.280Z",
+      "end": "2023-09-01T13:36:07.280Z",
+      "peak": "2023-08-31T01:36:07.280Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2023-09-27T21:58:02.044Z",
+      "end": "2023-09-30T21:58:02.044Z",
+      "peak": "2023-09-29T09:58:02.044Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2023-10-27T08:24:33.489Z",
+      "end": "2023-10-30T08:24:33.489Z",
+      "peak": "2023-10-28T20:24:33.489Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2023-11-25T21:16:53.087Z",
+      "end": "2023-11-28T21:16:53.087Z",
+      "peak": "2023-11-27T09:16:53.087Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2023-12-25T12:33:52.608Z",
+      "end": "2023-12-28T12:33:52.608Z",
+      "peak": "2023-12-27T00:33:52.608Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2024-01-24T05:54:43.297Z",
+      "end": "2024-01-27T05:54:43.297Z",
+      "peak": "2024-01-25T17:54:43.297Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2024-02-23T00:31:10.124Z",
+      "end": "2024-02-26T00:31:10.124Z",
+      "peak": "2024-02-24T12:31:10.124Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2024-03-23T19:01:02.301Z",
+      "end": "2024-03-26T19:01:02.301Z",
+      "peak": "2024-03-25T07:01:02.301Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2024-04-22T11:49:38.266Z",
+      "end": "2024-04-25T11:49:38.266Z",
+      "peak": "2024-04-23T23:49:38.266Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2024-05-22T01:53:43.960Z",
+      "end": "2024-05-25T01:53:43.960Z",
+      "peak": "2024-05-23T13:53:43.960Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2024-06-20T13:08:24.785Z",
+      "end": "2024-06-23T13:08:24.785Z",
+      "peak": "2024-06-22T01:08:24.785Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2024-07-19T22:17:39.778Z",
+      "end": "2024-07-22T22:17:39.778Z",
+      "peak": "2024-07-21T10:17:39.778Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2024-08-18T06:26:17.261Z",
+      "end": "2024-08-21T06:26:17.261Z",
+      "peak": "2024-08-19T18:26:17.261Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2024-09-16T14:34:56.647Z",
+      "end": "2024-09-19T14:34:56.647Z",
+      "peak": "2024-09-18T02:34:56.647Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2024-10-15T23:26:55.910Z",
+      "end": "2024-10-18T23:26:55.910Z",
+      "peak": "2024-10-17T11:26:55.910Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2024-11-14T09:29:03.048Z",
+      "end": "2024-11-17T09:29:03.048Z",
+      "peak": "2024-11-15T21:29:03.048Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2024-12-13T21:02:14.764Z",
+      "end": "2024-12-16T21:02:14.764Z",
+      "peak": "2024-12-15T09:02:14.764Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2025-01-12T10:27:32.237Z",
+      "end": "2025-01-15T10:27:32.237Z",
+      "peak": "2025-01-13T22:27:32.237Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2025-02-11T01:54:03.015Z",
+      "end": "2025-02-14T01:54:03.015Z",
+      "peak": "2025-02-12T13:54:03.015Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2025-03-12T18:55:19.672Z",
+      "end": "2025-03-15T18:55:19.672Z",
+      "peak": "2025-03-14T06:55:19.672Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2025-04-11T12:22:55.612Z",
+      "end": "2025-04-14T12:22:55.612Z",
+      "peak": "2025-04-13T00:22:55.612Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2025-05-11T04:56:34.487Z",
+      "end": "2025-05-14T04:56:34.487Z",
+      "peak": "2025-05-12T16:56:34.487Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2025-06-09T19:44:26.705Z",
+      "end": "2025-06-12T19:44:26.705Z",
+      "peak": "2025-06-11T07:44:26.705Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2025-07-09T08:37:22.564Z",
+      "end": "2025-07-12T08:37:22.564Z",
+      "peak": "2025-07-10T20:37:22.564Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2025-08-07T19:55:38.270Z",
+      "end": "2025-08-10T19:55:38.270Z",
+      "peak": "2025-08-09T07:55:38.270Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2025-09-06T06:09:23.804Z",
+      "end": "2025-09-09T06:09:23.804Z",
+      "peak": "2025-09-07T18:09:23.804Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2025-10-05T15:48:03.710Z",
+      "end": "2025-10-08T15:48:03.710Z",
+      "peak": "2025-10-07T03:48:03.710Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2025-11-04T01:19:46.227Z",
+      "end": "2025-11-07T01:19:46.227Z",
+      "peak": "2025-11-05T13:19:46.227Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2025-12-03T11:14:34.291Z",
+      "end": "2025-12-06T11:14:34.291Z",
+      "peak": "2025-12-04T23:14:34.291Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2026-01-01T22:03:26.043Z",
+      "end": "2026-01-04T22:03:26.043Z",
+      "peak": "2026-01-03T10:03:26.043Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2026-01-31T10:09:49.657Z",
+      "end": "2026-02-03T10:09:49.657Z",
+      "peak": "2026-02-01T22:09:49.657Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2026-03-01T23:38:32.022Z",
+      "end": "2026-03-04T23:38:32.022Z",
+      "peak": "2026-03-03T11:38:32.022Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2026-03-31T14:12:36.809Z",
+      "end": "2026-04-03T14:12:36.809Z",
+      "peak": "2026-04-02T02:12:36.809Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2026-04-30T05:23:47.564Z",
+      "end": "2026-05-03T05:23:47.564Z",
+      "peak": "2026-05-01T17:23:47.564Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2026-05-29T20:45:48.291Z",
+      "end": "2026-06-01T20:45:48.291Z",
+      "peak": "2026-05-31T08:45:48.291Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2026-06-28T11:57:17.744Z",
+      "end": "2026-07-01T11:57:17.744Z",
+      "peak": "2026-06-29T23:57:17.744Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2026-07-28T02:36:19.011Z",
+      "end": "2026-07-31T02:36:19.011Z",
+      "peak": "2026-07-29T14:36:19.011Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2026-08-26T16:19:06.085Z",
+      "end": "2026-08-29T16:19:06.085Z",
+      "peak": "2026-08-28T04:19:06.085Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2026-09-25T04:49:32.233Z",
+      "end": "2026-09-28T04:49:32.233Z",
+      "peak": "2026-09-26T16:49:32.233Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2026-10-24T16:12:15.538Z",
+      "end": "2026-10-27T16:12:15.538Z",
+      "peak": "2026-10-26T04:12:15.538Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2026-11-23T02:54:04.191Z",
+      "end": "2026-11-26T02:54:04.191Z",
+      "peak": "2026-11-24T14:54:04.191Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2026-12-22T13:28:45.040Z",
+      "end": "2026-12-25T13:28:45.040Z",
+      "peak": "2026-12-24T01:28:45.040Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    }
+  ]
+}

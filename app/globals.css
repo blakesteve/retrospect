@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "@blakesteve/roster/style.css";
+@import "@blakesteve/roster/tokens.css";
+
+/* Roster, dressed for the observatory: gold primary, navy-slate grays.
+   Overrides come after tokens.css so they win. */
+:root {
+  --roster-primary-50: #fdf9e9;
+  --roster-primary-100: #faf0c6;
+  --roster-primary-200: #f3e08d;
+  --roster-primary-300: #eaca55;
+  --roster-primary-400: #dfb93f;
+  --roster-primary-500: #d4af37;
+  --roster-primary-600: #b8901c;
+  --roster-primary-700: #96731a;
+  --roster-primary-800: #7a5c1c;
+  --roster-primary-900: #684d1d;
+  --roster-primary-950: #3d2b0d;
+  --roster-gray-50: #f4f5fa;
+  --roster-gray-100: #e7e9f3;
+  --roster-gray-200: #ccd0e3;
+  --roster-gray-300: #a6adc9;
+  --roster-gray-400: #7a82a6;
+  --roster-gray-500: #5a628a;
+  --roster-gray-600: #464d72;
+  --roster-gray-700: #3a405e;
+  --roster-gray-800: #2c3152;
+  --roster-gray-900: #171c3d;
+  --roster-gray-950: #10142e;
+}
+
+:root {
+  color-scheme: dark;
+  /* Surfaces */
+  --sky: #0b1026; /* page */
+  --surface-1: #10142e; /* panels / chart surface */
+  --surface-2: #171c3d;
+  --hairline: rgba(212, 175, 55, 0.28);
+  /* Ink */
+  --text-primary: #f2efe6;
+  --text-secondary: #b9b6ab;
+  --text-muted: #83816f;
+  /* Brand (decorative only — never a data mark) */
+  --gold: #d4af37;
+  /* Data marks — validated against --surface-1 (dark) */
+  --series-1: #7487ea; /* indigo: histogram bars, yearly counts */
+  --accent-mark: #ab8410; /* ochre: observed marker, retrograde bands */
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@theme inline {
+  --color-sky: var(--sky);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-muted);
+  --color-gold: var(--gold);
+  --color-series-1: var(--series-1);
+  --color-accent-mark: var(--accent-mark);
+}
+
+body {
+  background: var(--sky);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  /* A sparse fixed starfield, in CSS so it costs nothing */
+  background-image: radial-gradient(1px 1px at 20% 30%, rgba(242, 239, 230, 0.35) 0, transparent 100%),
+    radial-gradient(1px 1px at 70% 12%, rgba(242, 239, 230, 0.28) 0, transparent 100%),
+    radial-gradient(1.5px 1.5px at 84% 64%, rgba(242, 239, 230, 0.22) 0, transparent 100%),
+    radial-gradient(1px 1px at 42% 80%, rgba(242, 239, 230, 0.3) 0, transparent 100%),
+    radial-gradient(1px 1px at 8% 62%, rgba(242, 239, 230, 0.2) 0, transparent 100%);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Staggered section reveals on the report */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  opacity: 0;
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  animation-delay: var(--rise-delay, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg); /* retrograde, naturally */
+  }
+}
+.orbiter {
+  animation: orbit 3.2s linear infinite;
+  transform-origin: 60px 60px;
+}

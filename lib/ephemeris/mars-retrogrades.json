@@ -1,0 +1,74 @@
+{
+  "body": "Mars",
+  "generatedBy": "astronomy-engine",
+  "startYear": 2002,
+  "endYear": 2026,
+  "windows": [
+    {
+      "start": "2003-07-29T07:38:05.156Z",
+      "end": "2003-09-27T07:50:02.343Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2005-10-01T22:02:13.593Z",
+      "end": "2005-12-10T04:05:02.343Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2007-11-15T08:28:00.468Z",
+      "end": "2008-01-30T22:33:52.031Z",
+      "sign": "Cancer",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2009-12-20T13:28:14.531Z",
+      "end": "2010-03-10T17:13:14.531Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2012-01-24T00:55:53.906Z",
+      "end": "2012-04-14T03:53:05.156Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2014-03-01T16:25:25.781Z",
+      "end": "2014-05-20T01:32:27.656Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2016-04-17T12:15:49.218Z",
+      "end": "2016-06-29T23:39:57.656Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2018-06-26T21:12:18.281Z",
+      "end": "2018-08-27T14:01:17.343Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2020-09-09T22:26:50.156Z",
+      "end": "2020-11-14T00:33:23.906Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2022-10-30T13:25:25.781Z",
+      "end": "2023-01-12T20:58:56.718Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2024-12-06T23:34:20.156Z",
+      "end": "2025-02-24T02:00:35.156Z",
+      "sign": "Leo",
+      "signAtDirect": "Cancer"
+    }
+  ]
+}
