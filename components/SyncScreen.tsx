@@ -96,6 +96,17 @@ interface Planet {
   r: number; // body radius
   color: string;
   born: number; // ms timestamp, for pop-in scale
+  ring: { ratio: number; tilt: number; spin: number } | null;
+}
+
+/** Nobody gets to be Jupiter. Collisions grow the survivor only up to this. */
+const MAX_PLANET_R = 6.5;
+
+function shade(hex: string, factor: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (shiftN: number) =>
+    Math.max(0, Math.min(255, Math.round(((n >> shiftN) & 0xff) * factor)));
+  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
 }
 
 interface Particle {
@@ -128,7 +139,7 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const SIZE = 340;
+    const SIZE = 380;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = SIZE * dpr;
     canvas.height = SIZE * dpr;
@@ -138,16 +149,28 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
 
     const spawnPlanet = (): Planet => {
       const n = planetsRef.current.length;
-      const a = 30 + n * 9 + Math.random() * 7;
+      // Orbits span the full canvas and are spaced so the outermost one
+      // still fits with margin, however many planets load.
+      const minA = 34;
+      const maxA = SIZE / 2 - 14;
+      const a = minA + (n * (maxA - minA)) / 21 + Math.random() * 5;
       return {
         a,
-        b: a * (0.55 + Math.random() * 0.4), // properly oval
+        b: a * (0.5 + Math.random() * 0.38), // properly oval
         tilt: Math.random() * Math.PI,
         phase: Math.random() * Math.PI * 2,
-        speed: (0.55 + Math.random() * 0.9) * (Math.random() < 0.12 ? -1 : 1),
-        r: 2.5 + Math.random() * 3.5,
+        speed: (0.45 + Math.random() * 0.8) * (Math.random() < 0.12 ? -1 : 1),
+        r: 2.2 + Math.random() * 2.8,
         color: PLANET_COLORS[n % PLANET_COLORS.length],
         born: performance.now(),
+        ring:
+          Math.random() < 0.32
+            ? {
+                ratio: 1.7 + Math.random() * 0.5,
+                tilt: (Math.random() - 0.5) * 1.2,
+                spin: (Math.random() - 0.5) * 0.6,
+              }
+            : null,
       };
     };
 
@@ -215,7 +238,7 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Planets
+      // Planets: lit by the sun they orbit, some with rings.
       const positions: { x: number; y: number }[] = [];
       for (const p of planetsRef.current) {
         const { x, y } = pos(p, t);
@@ -225,10 +248,39 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
         const age = Math.min(1, Math.max(0, (now - p.born) / 450));
         const scale = 1 - Math.pow(1 - age, 3); // pop in
         const radius = Math.max(0.01, p.r * scale);
+
+        if (p.ring) p.ring.tilt += p.ring.spin * dt;
+
+        // Back half of the ring, hidden partly by the body drawn after it.
+        if (p.ring && radius > 1.5) {
+          ctx.beginPath();
+          ctx.strokeStyle = shade(p.color, 1.25);
+          ctx.lineWidth = 1;
+          ctx.ellipse(x, y, radius * p.ring.ratio, radius * 0.42, p.ring.tilt, Math.PI, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Body with sun-facing light: highlight offset toward the sun.
+        const sunAngle = Math.atan2(y - cy, x - cx);
+        const hx = x - Math.cos(sunAngle) * radius * 0.45;
+        const hy = y - Math.sin(sunAngle) * radius * 0.45;
+        const grad = ctx.createRadialGradient(hx, hy, radius * 0.1, x, y, radius);
+        grad.addColorStop(0, shade(p.color, 1.45));
+        grad.addColorStop(0.55, p.color);
+        grad.addColorStop(1, shade(p.color, 0.45));
         ctx.beginPath();
-        ctx.fillStyle = p.color;
+        ctx.fillStyle = grad;
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Front half of the ring passes over the body.
+        if (p.ring && radius > 1.5) {
+          ctx.beginPath();
+          ctx.strokeStyle = shade(p.color, 1.25);
+          ctx.lineWidth = 1.2;
+          ctx.ellipse(x, y, radius * p.ring.ratio, radius * 0.42, p.ring.tilt, 0, Math.PI);
+          ctx.stroke();
+        }
       }
 
       // Collisions (as requested: they explode)
@@ -243,8 +295,12 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
             const survivor = smaller === i ? j : i;
             const { x, y } = positions[smaller];
             explode(x, y, planetsRef.current[smaller].color, planetsRef.current[smaller].r);
-            // The survivor gets a little bigger. Space is metal.
-            planetsRef.current[survivor].r += 0.6;
+            // The survivor gets a little bigger, but nobody gets to be
+            // Jupiter. Space is metal, not rude.
+            planetsRef.current[survivor].r = Math.min(
+              MAX_PLANET_R,
+              planetsRef.current[survivor].r + 0.5
+            );
             planetsRef.current.splice(smaller, 1);
             positions.splice(smaller, 1);
             break outer; // at most one collision per frame; plenty
@@ -278,7 +334,7 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: 340, height: 340 }}
+      style={{ width: 380, height: 380 }}
       aria-label="Your listening history forming a solar system"
       role="img"
     />
