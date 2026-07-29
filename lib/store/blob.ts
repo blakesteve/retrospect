@@ -70,6 +70,19 @@ let active: BlobStore | null = null;
 export function getBlobStore(): BlobStore {
   if (active) return active;
   const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
+
+  // On Vercel the filesystem is read-only, so a silent fallback would only
+  // produce confusing ENOENT errors later. Fail loudly, naming the gap.
+  const missing = Object.entries({ R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET })
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  if (process.env.VERCEL && missing.length > 0) {
+    throw new Error(
+      `R2 storage is not configured: missing env var(s) ${missing.join(", ")}. ` +
+        `Set them in Vercel (Settings > Environment Variables, enabled for Production) and redeploy.`
+    );
+  }
+
   if (R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET) {
     active = new R2BlobStore({
       accountId: R2_ACCOUNT_ID.trim(),
