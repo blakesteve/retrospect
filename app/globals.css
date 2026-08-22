@@ -1,3 +1,17 @@
+/* Layer order, declared up front so it never depends on import order.
+   `roster` must sit ABOVE `base`, or Tailwind's preflight
+   (`*{margin:0;padding:0;border:0 solid}`) outranks Roster's own spacing and
+   border utilities and silently erases them; and BELOW `utilities`, so this
+   app's own classes still win.
+
+   Roster 4.x declares this same order in its own stylesheet, but layers rank by
+   first registration and Tailwind is imported first below, which would register
+   `utilities` before `roster` existed and leave Roster outranking this app.
+   `roster-preflight` is listed so it registers first rather than last: this app
+   runs Tailwind and does not import Roster's optional preflight, so the layer
+   stays empty, but a reset landing after `utilities` would be worse than none. */
+@layer roster-preflight, theme, base, components, roster, utilities;
+
 @import "tailwindcss";
 @import "@blakesteve/roster/style.css";
 @import "@blakesteve/roster/tokens.css";
