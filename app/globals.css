@@ -131,3 +131,31 @@ body {
   animation: orbit 3.2s linear infinite;
   transform-origin: 60px 60px;
 }
+
+/* ===========================================================================
+   Roster overrides
+   Plain and unlayered on purpose: Roster's compiled sheet is unlayered too and
+   is imported above, so later source order is what wins. Wrapping these in
+   @layer would put them *under* Roster rather than over it.
+   ======================================================================== */
+
+/* Solid primary is a light gold fill, and a light fill cannot carry white text.
+   Roster hardcodes `text-white` there because its own primary is a mid-blue;
+   `primary` here is mapped to gold, where white lands at 2.98:1 against a 4.5:1
+   bar — and 2.10:1 once hovered in dark mode.
+
+   Two changes, and the second is what makes the first work. Dark ink, taken
+   from the app's own `--roster-gray-950` so it reads as deep indigo rather than
+   black. And the light-mode hover now *lightens* to primary-500 instead of
+   darkening to primary-700: a dark-ink scheme loses contrast when its fill goes
+   darker, which is the same polarity Roster corrected on its own dark-text
+   schemes. Dark mode already lightened, so it is untouched.
+
+   Result: 6.06:1 at rest, 8.60:1 hovered, in both themes. */
+.rst\:bg-primary-600.rst\:text-white {
+  color: var(--roster-gray-950);
+}
+.rst\:bg-primary-600.rst\:hover\:bg-primary-700:hover {
+  background-color: var(--roster-primary-500);
+}
+

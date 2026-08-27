@@ -42,7 +42,11 @@ export function UsernameForm() {
         router.push(`/u/${encodeURIComponent(trimmed)}${q ? `?${q}` : ""}`);
       }}
     >
-      <div className="flex w-full max-w-md gap-3">
+      {/* `items-center` because Roster's Button pins its own height and will not
+          stretch, so without it the pair is top-aligned and the button rides
+          high. `h-11` matches Button's `size="lg"` exactly, so the two read as
+          one control rather than two that happen to sit side by side. */}
+      <div className="flex w-full max-w-md items-center gap-3">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -51,7 +55,7 @@ export function UsernameForm() {
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className="flex-1 rounded-md bg-surface-1 border border-[var(--hairline)] px-4 py-3
+          className="h-11 flex-1 rounded-md bg-surface-1 border border-[var(--hairline)] px-4
                      text-ink placeholder:text-ink-3 outline-none focus:border-gold transition-colors"
         />
         <Button type="submit" colorScheme="primary" variant="solid" size="lg">
