@@ -140,20 +140,34 @@ body {
    ======================================================================== */
 
 /* Solid primary is a light gold fill, and a light fill cannot carry white text.
-   Roster hardcodes `text-white` there because its own primary is a mid-blue;
-   `primary` here is mapped to gold, where white lands at 2.98:1 against a 4.5:1
-   bar — and 2.10:1 once hovered in dark mode.
+   `primary` here is mapped to gold, where Roster's default ink puts white at
+   2.98:1 against a 4.5:1 bar — and 2.10:1 once hovered.
 
-   Two changes, and the second is what makes the first work. Dark ink, taken
-   from the app's own `--roster-gray-950` so it reads as deep indigo rather than
-   black. And the light-mode hover now *lightens* to primary-500 instead of
-   darkening to primary-700: a dark-ink scheme loses contrast when its fill goes
-   darker, which is the same polarity Roster corrected on its own dark-text
-   schemes. Dark mode already lightened, so it is untouched.
+   As of Roster 4.7.0 the ink is a token, so darkening it no longer means
+   overriding a class. This replaces a rule that matched
+   `.rst\:bg-primary-600.rst\:text-white`; 4.7.0 removed that class from solid
+   variants, so the old rule would now match nothing and revert silently to
+   white. The value is the app's own `--roster-gray-950`, so it reads as deep
+   indigo rather than black.
 
-   Result: 6.06:1 at rest, 8.60:1 hovered, in both themes. */
-.rst\:bg-primary-600.rst\:text-white {
-  color: var(--roster-gray-950);
+   What actually renders here: `<html>` is hardcoded `.dark` with no toggle, and
+   `dark:hover:` is emitted after `hover:`, so a solid primary Button only ever
+   shows `dark:bg-primary-600` at rest (6.06:1) and `dark:hover:bg-primary-500`
+   hovered (8.60:1). The light-mode pair is unreachable today.
+
+   The other two lines are for the day that stops being true, and the reason
+   they are not obvious is worth writing down. `--roster-primary-700-ink` pairs
+   with the *rule below*, which redirects the light hover off primary-700 —
+   where even this ink reaches only 4.10:1, and Roster's own would reach 4.48:1.
+   No ink rescues that fill. But Roster still renders the class
+   `hover:text-primary-700-ink`, because ink follows the class, not the fill you
+   substituted. Set the fill override without the 700 token and light mode would
+   fall back to white on light gold at 1.83:1 — worse than the bug all of this
+   replaces. */
+:root {
+  --roster-primary-600-ink: var(--roster-gray-950); /* rest */
+  --roster-primary-700-ink: var(--roster-gray-950); /* light hover, see above */
+  --roster-primary-500-ink: var(--roster-gray-950); /* dark hover */
 }
 .rst\:bg-primary-600.rst\:hover\:bg-primary-700:hover {
   background-color: var(--roster-primary-500);
