@@ -1,43 +1,48 @@
 # retrospect — Roadmap
 
+## Done
+
+### Roster sweep (5 September 2026)
+
+Bumped to `^4.8.0` and replaced 17 of the 19 raw controls the 27 Aug audit
+found. Both things that blocked the `UsernameForm` swap were fixed in 4.8.0
+itself: `Input` gained `Button`'s size scale, so `size="lg"` is `h-11` on each
+and the pair is height-matched by construction rather than by a hardcoded
+number; and `outline` now reads `--roster-control-bg` / `-border` /
+`-border-focus` / `-text` instead of hardcoding them, so the deep indigo field
+with the gold hairline is reachable from `app/globals.css`. `inputClassName`
+covers what the tokens do not.
+
+Two raw controls remain, each with the reason at the usage:
+
+- [ ] **The UTC-offset `<select>` in `BirthChartPanel`.** 53 options — every
+      half hour from UTC-12 to UTC+14 — and Roster's `Select` menu still has no
+      max-height and no scroll, so swapping it would render a menu taller than
+      the viewport with no way to reach the end. The native control also gets
+      the platform picker on mobile, which for a list this long is better than
+      anything we would build. Swap it when Roster's menu lands; it is the
+      remaining half of the `Select` work in Roster's `CANDIDATES.md`.
+- [ ] **The threshold `<input type="range">` in `Report`.** Roster has no
+      Slider. The native control reads `accent-color`, so it already takes the
+      gold. Would be a reasonable Roster candidate.
+
+Not visually verified: the `/u/{username}` report page. The two era month
+fields, the slider, `replay the reveal`, `GenresPanel`, `SkyScan` and
+`StoryIntro` are typecheck- and build-clean with every layout class preserved,
+but no report finished syncing during the work. Worth an eyeball, especially
+the `threshold` refactor.
+
 ## Next
-
-### Swap hand-rolled markup for Roster components
-
-The app already imports `Button`, `Checkbox`, `Countdown`, `Disclosure`,
-`LiquidTabs`, `MatchupCard`, `Select` and `Spinner`, but a sweep on 27 Aug 2026
-still found **19 raw elements Roster has a component for**: 12 `<input>`,
-6 `<button>`, 1 `<select>`. `UsernameForm` is the clearest case — it imports
-four Roster components and then hand-rolls the username field sitting right next
-to a Roster `Button`.
-
-- [ ] Audit every `<input>`, `<button>` and `<select>` under `components/` and
-      `app/` and replace what Roster covers. Start with `UsernameForm`, which is
-      the most visible.
-
-**Two things block the `UsernameForm` swap specifically**, and both are Roster
-gaps rather than reasons not to do it. Filed in Roster's `CANDIDATES.md`:
-
-1. **Roster's `Input` cannot be height-matched to its `Button`.** `Input` is
-   42px, fixed by `py-2.5` + `text-sm`; `Button` is 40px (`default`) or 44px
-   (`lg`). `Input` takes no `size` prop, and its `className` lands on the outer
-   `Field` wrapper rather than the `<input>`, so the height is not reachable
-   from outside. Every existing `Input` usage across the workspace is a stacked
-   `flex-col` form where heights never have to line up, which is why this has
-   not surfaced before.
-2. **`Input`'s variants hardcode their border and background** rather than
-   reading a token the way `Button` does. This field is deep indigo with a gold
-   hairline (`rgba(212,175,55,0.28)`); the closest variant, `outline`, gives a
-   transparent fill and an `--roster-gray-300` border. Its focus border does
-   land on gold, since that reads `--roster-primary-500`.
-
-Until those land, `UsernameForm`'s field stays a raw `<input>` pinned to `h-11`
-so it matches `Button size="lg"` exactly. See the comment there.
 
 ### Quality
 
-- [ ] Two `react-hooks/set-state-in-effect` errors, in `BirthChartPanel.tsx:60`
-      and `Report.tsx:228`, plus an unused `PhenomenonKey` import in
-      `app/api/og/route.tsx`. `npm run lint` has been failing on these; nothing
-      runs it on the way in.
-- [ ] Run `lint` + `typecheck` + `test` in CI so that cannot drift again.
+- [x] ~~Two `react-hooks/set-state-in-effect` errors and an unused import.~~
+      Lint is at zero. `Report`'s was a real fix: `threshold` started at a
+      hardcoded 365 and was corrected a frame later by an effect, and is now
+      seeded from `body`/`metricChoice` and adjusted during render, which is
+      the same end state with one less render. `BirthChartPanel`'s is
+      suppressed with the reasoning inline — it reads `localStorage` on mount,
+      and a lazy initializer there renders "your chart" against a server that
+      rendered "add your birth chart", which is a hydration mismatch.
+- [x] ~~Run `lint` + `typecheck` + `test` in CI.~~ `.github/workflows/ci.yml`,
+      matching bb-memorial's. Added a `typecheck` script, which did not exist.

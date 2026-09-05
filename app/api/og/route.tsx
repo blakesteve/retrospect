@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { buildReport } from "@/lib/report";
-import { getPhenomenon, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
+import { getPhenomenon } from "@/lib/ephemeris/phenomena";
 import { METRICS } from "@/lib/analysis/metrics";
 
 export const dynamic = "force-dynamic";

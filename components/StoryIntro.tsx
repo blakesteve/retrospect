@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Report } from "@/lib/report";
 import { PHENOMENA } from "@/lib/ephemeris/phenomena";
 import { AlbumArt } from "./AlbumArt";
+import { Button } from "@blakesteve/roster";
 
 /**
  * The Wrapped-style opening: one revelation at a time, full screen, before
@@ -119,15 +120,17 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
       role="dialog"
       aria-label="Your Retrospect reveal"
     >
-      <button
-        className="absolute top-5 right-6 text-ink-3 hover:text-ink-2 text-xs tracking-[0.2em] uppercase"
+      <Button
+        variant="ghost"
+        size="xs"
+        className="absolute top-5 right-6 h-auto px-0 text-xs uppercase tracking-[0.2em] text-ink-3 hover:bg-transparent hover:text-ink-2"
         onClick={(e) => {
           e.stopPropagation();
           onDone();
         }}
       >
         Skip to the data →
-      </button>
+      </Button>
 
       {/* keyed so each slide re-runs its entrance animation */}
       <div key={i} className="rise max-w-2xl flex flex-col items-center gap-6">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Spinner } from "@blakesteve/roster";
+import { Button, Spinner } from "@blakesteve/roster";
 import type { GenreAnalysis } from "@/lib/genres";
 import { PHENOMENA, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 
@@ -110,10 +110,16 @@ export function GenresPanel({ username, body }: { username: string; body: Phenom
             const isOpen = expanded === g.genre;
             return (
               <li key={g.genre}>
-                <button
+                {/* `ghost` for the behavior, not the look: this row IS the
+                    layout, so the height, padding and hover all have to come
+                    from here. What Roster adds is the focus-visible ring the
+                    raw element never had, which matters for a control that is
+                    the only way to open these rows. */}
+                <Button
+                  variant="ghost"
                   onClick={() => setExpanded(isOpen ? null : g.genre)}
                   aria-expanded={isOpen}
-                  className="flex items-center gap-3 text-xs w-full rounded-md px-1 py-0.5 hover:bg-surface-2 transition-colors text-left"
+                  className="flex h-auto w-full items-center justify-start gap-3 rounded-md px-1 py-0.5 text-left text-xs transition-colors hover:bg-surface-2"
                 >
                   <span className="w-32 text-ink-2 shrink-0 truncate">
                     <span className={`inline-block mr-1 transition-transform ${isOpen ? "rotate-90" : ""}`}>
@@ -140,7 +146,7 @@ export function GenresPanel({ username, body }: { username: string; body: Phenom
                       <span className="text-ink-3">chance?</span>
                     )}
                   </span>
-                </button>
+                </Button>
                 {isOpen && (
                   <div className="ml-6 mt-2 mb-3 rounded-md bg-surface-2 border border-[var(--hairline)] p-3">
                     <p className="text-ink-3 text-[11px] mb-2 uppercase tracking-[0.15em]">

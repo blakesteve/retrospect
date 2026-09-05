@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Checkbox, LiquidTabs, Spinner } from "@blakesteve/roster";
+import { Button, Checkbox, Input, LiquidTabs, Spinner } from "@blakesteve/roster";
 import type { Report as ReportData } from "@/lib/report";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 import { METRICS, type MetricKey } from "@/lib/analysis/metrics";
@@ -90,7 +90,6 @@ export function Report({ username }: { username: string }) {
   const searchParams = useSearchParams();
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [report, setReport] = useState<ReportData | null>(null);
-  const [threshold, setThreshold] = useState(365);
   const [level, setLevel] = useState<"track" | "artist">("track");
   // Everything configurable up front arrives via the URL from the landing page.
   const [body, setBody] = useState<PhenomenonKey>(() => {
@@ -101,6 +100,13 @@ export function Report({ username }: { username: string }) {
     const m = searchParams.get("metric");
     return m && m in METRICS ? (m as MetricKey) : null;
   });
+  /* Declared after `body` and `metricChoice` so it can be seeded from them.
+     It used to start at a hardcoded 365 and be corrected a frame later by an
+     effect, which is the same end state by way of an extra render — and the
+     effect was the one lint has been failing on. */
+  const [threshold, setThreshold] = useState(
+    () => METRICS[metricChoice ?? PHENOMENA[body].metric].slider?.default ?? 365,
+  );
   const [natal, setNatal] = useState<NatalChart | null>(null);
   const [fromMonth, setFromMonth] = useState<string>(() => {
     const f = searchParams.get("from") ?? "";
@@ -223,10 +229,21 @@ export function Report({ username }: { username: string }) {
       setMetricChoice(null);
     }
   }, [body]);
-  useEffect(() => {
+  /* Adjusted during render rather than in an effect. React supports setting a
+     component's own state while rendering it for exactly this — state that has
+     to follow a change in something else — and it lands in the same commit
+     instead of painting the old threshold first. The mount case is gone
+     entirely: the initial value above already accounts for it. */
+  const sliderKey = `${body}:${metricChoice ?? ""}`;
+  /* State rather than a ref: refs cannot be read during render, and this is
+     React's own documented shape for adjusting state when something it depends
+     on changes. */
+  const [lastSliderKey, setLastSliderKey] = useState(sliderKey);
+  if (lastSliderKey !== sliderKey) {
+    setLastSliderKey(sliderKey);
     const slider = METRICS[metricChoice ?? PHENOMENA[body].metric].slider;
     if (slider) setThreshold(slider.default);
-  }, [body, metricChoice]);
+  }
 
   const displayIndex = useCountUp(report?.index ?? NaN);
 
@@ -440,24 +457,29 @@ export function Report({ username }: { username: string }) {
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-ink-2">
-            <input
+            <Input
               type="month"
               value={fromMonth}
               min={`${r.historyStartYear}-01`}
               max={toMonth || `${r.historyEndYear}-12`}
               onChange={(e) => setFromMonth(e.target.value)}
               aria-label="Era start month"
-              className="rounded-md bg-surface-2 border border-[var(--hairline)] px-2 py-1.5 text-ink outline-none focus:border-gold"
+              variant="outline"
+              size="sm"
+              /* One step lighter than the panel the control token is set to. */
+              inputClassName="bg-surface-2 text-xs"
             />
             <span className="text-ink-3">&ndash;</span>
-            <input
+            <Input
               type="month"
               value={toMonth}
               min={fromMonth || `${r.historyStartYear}-01`}
               max={`${r.historyEndYear}-12`}
               onChange={(e) => setToMonth(e.target.value)}
               aria-label="Era end month"
-              className="rounded-md bg-surface-2 border border-[var(--hairline)] px-2 py-1.5 text-ink outline-none focus:border-gold"
+              variant="outline"
+              size="sm"
+              inputClassName="bg-surface-2 text-xs"
             />
             {(fromMonth || toMonth) && (
               <Button
@@ -653,6 +675,9 @@ export function Report({ username }: { username: string }) {
           {metric.slider && (
             <label className="flex items-center gap-3 text-xs text-ink-2">
               {metric.slider.label}
+              {/* Stays a native range input: Roster has no Slider, and the
+                  platform control already reads `accent-color`, so it takes the
+                  gold without a wrapper. Revisit if a Slider lands. */}
               <input
                 type="range"
                 min={metric.slider.min}
@@ -708,9 +733,18 @@ export function Report({ username }: { username: string }) {
       >
         Retrograde dates computed from real planetary positions (astronomy-engine) &middot;
         picture of the day courtesy of NASA &middot; entertainment with error bars &middot;{" "}
-        <button className="underline hover:text-ink-2" onClick={() => setShowStory(true)}>
+        {/* `h-auto px-0` because every Button size pins a height and side
+            padding, which would break this inline run inside the footer
+            sentence. Worth the override for the focus ring the raw element
+            never had. */}
+        <Button
+          variant="link"
+          size="xs"
+          className="h-auto px-0 underline"
+          onClick={() => setShowStory(true)}
+        >
           ↺ replay the reveal
-        </button>
+        </Button>
       </footer>
     </div>
   );

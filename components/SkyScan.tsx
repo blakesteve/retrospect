@@ -124,10 +124,13 @@ export function SkyScan({
             const grip = gripLevel(h.index, h.confirmed, !h.confirmed);
             return (
               <li key={`${h.body}-${h.metric}`}>
-                <button
+                {/* Same call as GenresPanel: the chip is the layout, Roster
+                    supplies the focus ring and the disabled semantics. */}
+                <Button
+                  variant="ghost"
                   onClick={() => onPick(h.body, h.metric)}
                   title={h.detail}
-                  className={`rounded-lg border bg-surface-2 px-3 py-2 text-left text-xs transition-colors ${
+                  className={`h-auto rounded-lg border bg-surface-2 px-3 py-2 text-left text-xs transition-colors ${
                     h.confirmed
                       ? "border-gold/50 hover:border-gold"
                       : "border-[var(--hairline)] hover:border-[var(--accent-mark)]"
@@ -145,7 +148,7 @@ export function SkyScan({
                     {Math.round((h.index - 1) * 100)}% ·{" "}
                     {h.confirmed ? `${grip.label.toLowerCase()} ✦` : "a lead 🔍"}
                   </span>
-                </button>
+                </Button>
               </li>
             );
           })}

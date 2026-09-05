@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Checkbox, Disclosure, Select } from "@blakesteve/roster";
+import { Button, Checkbox, Disclosure, Input, Select } from "@blakesteve/roster";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 import { METRICS, type MetricKey } from "@/lib/analysis/metrics";
 import { BirthChartPanel } from "./BirthChartPanel";
@@ -20,10 +20,6 @@ export function UsernameForm() {
   const [fromMonth, setFromMonth] = useState("");
   const [toMonth, setToMonth] = useState("");
   const [excludeNoise, setExcludeNoise] = useState(true);
-
-  const monthCls =
-    "rounded-md bg-surface-1 border border-[var(--hairline)] px-2 py-1.5 text-ink text-xs " +
-    "outline-none focus:border-gold transition-colors";
 
   return (
     <form
@@ -44,10 +40,14 @@ export function UsernameForm() {
     >
       {/* `items-center` because Roster's Button pins its own height and will not
           stretch, so without it the pair is top-aligned and the button rides
-          high. `h-11` matches Button's `size="lg"` exactly, so the two read as
-          one control rather than two that happen to sit side by side. */}
+          high. `size="lg"` on both is the height match: Roster 4.8.0 gave
+          `Input` the same size scale as `Button`, and `lg` is `h-11` on each,
+          so the two read as one control rather than two that happen to sit
+          side by side. That, and `outline` reading `--roster-control-*`
+          instead of hardcoding its own border and fill, is what let this stop
+          being a raw element. */}
       <div className="flex w-full max-w-md items-center gap-3">
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="your Last.fm username"
@@ -55,8 +55,12 @@ export function UsernameForm() {
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className="h-11 flex-1 rounded-md bg-surface-1 border border-[var(--hairline)] px-4
-                     text-ink placeholder:text-ink-3 outline-none focus:border-gold transition-colors"
+          variant="outline"
+          size="lg"
+          className="flex-1"
+          /* The one thing the tokens do not cover: `outline` hardcodes a gray
+             placeholder, and this app's muted ink is a cooler blue. */
+          inputClassName="placeholder:text-ink-3"
         />
         <Button type="submit" colorScheme="primary" variant="solid" size="lg">
           Consult
@@ -97,22 +101,26 @@ export function UsernameForm() {
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-2">
             <span className="text-ink-3">Focus on an era (optional):</span>
-            <input
+            <Input
               type="month"
               value={fromMonth}
               max={toMonth || undefined}
               onChange={(e) => setFromMonth(e.target.value)}
               aria-label="Era start month"
-              className={monthCls}
+              variant="outline"
+              size="sm"
+              inputClassName="text-xs"
             />
             <span className="text-ink-3">&ndash;</span>
-            <input
+            <Input
               type="month"
               value={toMonth}
               min={fromMonth || undefined}
               onChange={(e) => setToMonth(e.target.value)}
               aria-label="Era end month"
-              className={monthCls}
+              variant="outline"
+              size="sm"
+              inputClassName="text-xs"
             />
             <span className="text-ink-3 italic">
               &ldquo;that stretch of 2023 when I was going through it&rdquo;

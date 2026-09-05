@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@blakesteve/roster";
+import { Button, Input } from "@blakesteve/roster";
 import { computeNatalChart, type NatalChart } from "@/lib/astro/natal";
 import type { ZodiacSign } from "@/lib/ephemeris/retrogrades";
 
@@ -49,7 +49,14 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
   const [chart, setChart] = useState<NatalChart | null>(null);
   const [editing, setEditing] = useState(false);
 
-  // Load saved birth data once, client-side only.
+  /* Load saved birth data once, client-side only.
+   *
+   * `set-state-in-effect` is suppressed rather than worked around, because the
+   * workaround is worse. A lazy `useState` initializer cannot read
+   * `localStorage`: the server renders "add your birth chart" and a client
+   * that already has a saved chart would render "your chart" on its first
+   * pass, which is a hydration mismatch. Reading persisted state after mount
+   * is the case effects exist for. */
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -57,8 +64,10 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
       const saved: StoredBirth = JSON.parse(raw);
       const c = chartFromBirth(saved);
       if (c) {
+        /* eslint-disable react-hooks/set-state-in-effect */
         setBirth(saved);
         setChart(c);
+        /* eslint-enable react-hooks/set-state-in-effect */
         onChart(c);
       }
     } catch {
@@ -83,9 +92,24 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
     onChart(null);
   };
 
-  const inputCls =
-    "rounded-md bg-surface-2 border border-[var(--hairline)] px-2 py-1.5 text-ink text-xs " +
+  /* Only the UTC-offset `<select>` still needs this. See the comment at its
+     usage: Roster's `Select` is not a safe swap for a 53-option list yet. */
+  /* `h-[34px]` is Roster's `size="sm"` control height. It used to be implicit,
+     because every field in this row was the same hand-rolled string; now the
+     others are Roster and this one has to be told, or it sits 5px shorter than
+     its neighbors. */
+  const selectCls =
+    "h-[34px] rounded-md bg-surface-2 border border-[var(--hairline)] px-2 text-ink text-xs " +
     "outline-none focus:border-gold transition-colors";
+
+  /* These fields sit on `surface-2`, one step lighter than the panel the
+     `--roster-control-bg` token is set to. Everything else about them — the
+     hairline border, the gold focus, the ink — comes from the tokens. */
+  const fieldProps = {
+    variant: "outline",
+    size: "sm",
+    inputClassName: "bg-surface-2 text-xs",
+  } as const;
 
   if (chart && !editing) {
     return (
@@ -93,9 +117,28 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
         <div className="flex items-baseline justify-between flex-wrap gap-2 mb-3">
           <p className="text-ink-3 text-xs uppercase tracking-[0.2em]">Your chart</p>
           <span className="text-xs text-ink-3">
-            <button className="underline hover:text-ink-2" onClick={() => setEditing(true)}>edit</button>
+            {/* `h-auto px-0` because every Button size pins a height and side
+                padding, which would break this inline run and push the
+                separator off the baseline. The variant is still worth having:
+                it carries the focus ring and the disabled handling that the
+                raw elements did not. */}
+            <Button
+              variant="link"
+              size="xs"
+              className="h-auto px-0 underline"
+              onClick={() => setEditing(true)}
+            >
+              edit
+            </Button>
             {" · "}
-            <button className="underline hover:text-ink-2" onClick={clear}>forget me</button>
+            <Button
+              variant="link"
+              size="xs"
+              className="h-auto px-0 underline"
+              onClick={clear}
+            >
+              forget me
+            </Button>
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -130,18 +173,35 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
       <div className="flex flex-wrap items-end gap-3 text-xs text-ink-2">
         <label className="flex flex-col gap-1">
           birth date
-          <input type="date" value={birth.date} onChange={(e) => setBirth({ ...birth, date: e.target.value })} className={inputCls} />
+          <Input
+            type="date"
+            value={birth.date}
+            onChange={(e) => setBirth({ ...birth, date: e.target.value })}
+            {...fieldProps}
+          />
         </label>
         <label className="flex flex-col gap-1">
           time (local)
-          <input type="time" value={birth.time} onChange={(e) => setBirth({ ...birth, time: e.target.value })} className={inputCls} />
+          <Input
+            type="time"
+            value={birth.time}
+            onChange={(e) => setBirth({ ...birth, time: e.target.value })}
+            {...fieldProps}
+          />
         </label>
         <label className="flex flex-col gap-1">
           birthplace UTC offset
+          {/* Deliberately still a native `<select>`. Roster's `Select` menu has
+              no max-height and no scroll (filed in Roster's CANDIDATES.md), and
+              this list is 53 options — every half hour from UTC-12 to UTC+14 —
+              so swapping it would render a menu taller than the viewport with
+              no way to reach the end of it. The native control also gives the
+              platform picker on mobile, which for a list this long is better
+              than anything we would build. Swap it when Roster's menu lands. */}
           <select
             value={birth.offset}
             onChange={(e) => setBirth({ ...birth, offset: Number(e.target.value) })}
-            className={inputCls}
+            className={selectCls}
           >
             {OFFSETS.map((o) => (
               <option key={o} value={o}>{fmtOffset(o)}</option>
@@ -150,11 +210,23 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
         </label>
         <label className="flex flex-col gap-1">
           latitude (optional)
-          <input placeholder="41.88" value={birth.lat} onChange={(e) => setBirth({ ...birth, lat: e.target.value })} className={`${inputCls} w-20`} />
+          <Input
+            placeholder="41.88"
+            value={birth.lat}
+            onChange={(e) => setBirth({ ...birth, lat: e.target.value })}
+            className="w-20"
+            {...fieldProps}
+          />
         </label>
         <label className="flex flex-col gap-1">
           longitude
-          <input placeholder="-87.63" value={birth.lon} onChange={(e) => setBirth({ ...birth, lon: e.target.value })} className={`${inputCls} w-20`} />
+          <Input
+            placeholder="-87.63"
+            value={birth.lon}
+            onChange={(e) => setBirth({ ...birth, lon: e.target.value })}
+            className="w-20"
+            {...fieldProps}
+          />
         </label>
         <Button
           type="button"
