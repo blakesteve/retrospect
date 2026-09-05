@@ -55,8 +55,26 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 ```bash
 npm test             # analysis + store unit tests
 npm run lint
+npm run typecheck
 npm run ephemeris    # regenerate retrograde/full-moon/eclipse windows
 ```
+
+All three of the first ones run in CI on every pull request, which is new — the
+lint errors they now catch had been sitting in the tree because nothing ran
+them on the way in.
+
+### A note on form controls
+
+Controls come from Roster, not hand-rolled markup. Two do not, and both have
+the reason written at the usage rather than here: the UTC-offset `<select>` in
+`BirthChartPanel` is 53 options and Roster's menu has no scroll yet, and the
+threshold slider has no Roster equivalent.
+
+Roster's `Input` takes its surface, border, focus border and text from four
+`--roster-control-*` variables, mapped in `app/globals.css` to this app's own
+`--surface-1`, `--hairline`, `--gold` and `--text-primary`. Point new controls
+at `variant="outline"` and they inherit the palette. `className` lands on the
+outer field wrapper — use `inputClassName` to reach the control itself.
 
 ## Deploy (free tier, on purpose)
 

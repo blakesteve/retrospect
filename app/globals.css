@@ -41,6 +41,17 @@
   --roster-gray-800: #2c3152;
   --roster-gray-900: #171c3d;
   --roster-gray-950: #10142e;
+
+  /* Roster 4.8.0 made `Input`'s `outline` variant read these four instead of
+     hardcoding its border and background, which is what unblocked the swap in
+     `UsernameForm`: the field is deep indigo with a gold hairline, and before
+     4.8.0 there was no variant for that and no token to point at. The values
+     are this app's own, so a Roster field is now the same object as the
+     hand-rolled ones it replaced rather than an approximation of it. */
+  --roster-control-bg: var(--surface-1);
+  --roster-control-border: var(--hairline);
+  --roster-control-border-focus: var(--gold);
+  --roster-control-text: var(--text-primary);
 }
 
 :root {

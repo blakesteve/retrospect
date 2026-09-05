@@ -2,16 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@blakesteve/roster";
+import { Button, Input } from "@blakesteve/roster";
 
 export function VersusForm() {
   const router = useRouter();
   const [a, setA] = useState("");
   const [b, setB] = useState("");
 
-  const inputCls =
-    "flex-1 min-w-0 rounded-md bg-surface-1 border border-[var(--hairline)] px-3 py-2 " +
-    "text-ink text-sm placeholder:text-ink-3 outline-none focus:border-gold transition-colors";
+  /* `size="sm"` on the fields and on the Fight button is the height match —
+     the same trick as the front door, one size down. The surface, hairline and
+     gold focus all come from `--roster-control-*`, so the only thing left to
+     say by hand is the placeholder ink. */
+  const fieldProps = {
+    variant: "outline",
+    size: "sm",
+    className: "flex-1 min-w-0",
+    inputClassName: "placeholder:text-ink-3",
+  } as const;
 
   return (
     <form
@@ -29,9 +36,21 @@ export function VersusForm() {
         Or settle it: whose sky is stronger?
       </p>
       <div className="flex w-full items-center gap-2">
-        <input value={a} onChange={(e) => setA(e.target.value)} placeholder="you" aria-label="First Last.fm username" className={inputCls} />
+        <Input
+          value={a}
+          onChange={(e) => setA(e.target.value)}
+          placeholder="you"
+          aria-label="First Last.fm username"
+          {...fieldProps}
+        />
         <span className="text-gold font-display">vs</span>
-        <input value={b} onChange={(e) => setB(e.target.value)} placeholder="your rival" aria-label="Second Last.fm username" className={inputCls} />
+        <Input
+          value={b}
+          onChange={(e) => setB(e.target.value)}
+          placeholder="your rival"
+          aria-label="Second Last.fm username"
+          {...fieldProps}
+        />
         <Button type="submit" colorScheme="primary" variant="outline" size="sm">
           Fight
         </Button>
