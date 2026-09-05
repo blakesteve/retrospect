@@ -130,7 +130,12 @@ export function SkyScan({
                   variant="ghost"
                   onClick={() => onPick(h.body, h.metric)}
                   title={h.detail}
-                  className={`h-auto rounded-lg border bg-surface-2 px-3 py-2 text-left text-xs transition-colors ${
+                  /* `flex-col items-start` and `whitespace-normal` because
+                     Roster's Button base is `inline-flex items-center
+                     justify-center whitespace-nowrap`: without them the chip's
+                     two block spans become flex items side by side on one
+                     unwrappable line instead of stacking. */
+                  className={`flex h-auto flex-col items-start justify-start whitespace-normal rounded-lg border bg-surface-2 px-3 py-2 text-left text-xs transition-colors ${
                     h.confirmed
                       ? "border-gold/50 hover:border-gold"
                       : "border-[var(--hairline)] hover:border-[var(--accent-mark)]"

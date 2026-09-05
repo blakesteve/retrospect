@@ -94,12 +94,11 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
 
   /* Only the UTC-offset `<select>` still needs this. See the comment at its
      usage: Roster's `Select` is not a safe swap for a 53-option list yet. */
-  /* `h-[34px]` is Roster's `size="sm"` control height. It used to be implicit,
-     because every field in this row was the same hand-rolled string; now the
-     others are Roster and this one has to be told, or it sits 5px shorter than
-     its neighbors. */
+  /* `h-9` is Roster's `size="sm"` control height, so this sits level with its
+     Roster neighbors instead of shorter than them. It used to be implicit,
+     because every field in this row was the same hand-rolled string. */
   const selectCls =
-    "h-[34px] rounded-md bg-surface-2 border border-[var(--hairline)] px-2 text-ink text-xs " +
+    "h-9 rounded-md bg-surface-2 border border-[var(--hairline)] px-2 text-ink text-xs " +
     "outline-none focus:border-gold transition-colors";
 
   /* These fields sit on `surface-2`, one step lighter than the panel the
@@ -119,13 +118,16 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
           <span className="text-xs text-ink-3">
             {/* `h-auto px-0` because every Button size pins a height and side
                 padding, which would break this inline run and push the
-                separator off the baseline. The variant is still worth having:
-                it carries the focus ring and the disabled handling that the
-                raw elements did not. */}
+                separator off the baseline, and the ink because `link` defaults
+                to `colorScheme="primary"` — gold here — where these inherited
+                the muted ink of the line they sit in. The variant is still
+                worth having: it carries the focus ring, the disabled handling,
+                and `type="button"`, which these lacked while sitting inside a
+                form. */}
             <Button
               variant="link"
               size="xs"
-              className="h-auto px-0 underline"
+              className="h-auto px-0 text-ink-3 underline hover:text-ink-2"
               onClick={() => setEditing(true)}
             >
               edit
@@ -134,7 +136,7 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
             <Button
               variant="link"
               size="xs"
-              className="h-auto px-0 underline"
+              className="h-auto px-0 text-ink-3 underline hover:text-ink-2"
               onClick={clear}
             >
               forget me

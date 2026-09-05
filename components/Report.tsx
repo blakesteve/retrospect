@@ -466,6 +466,10 @@ export function Report({ username }: { username: string }) {
               aria-label="Era start month"
               variant="outline"
               size="sm"
+              /* `Input`'s field wrapper is `w-full`, which in this row would
+                 squeeze the separator and the "all time" button to their
+                 min-content. */
+              className="w-auto"
               /* One step lighter than the panel the control token is set to. */
               inputClassName="bg-surface-2 text-xs"
             />
@@ -479,6 +483,7 @@ export function Report({ username }: { username: string }) {
               aria-label="Era end month"
               variant="outline"
               size="sm"
+              className="w-auto"
               inputClassName="bg-surface-2 text-xs"
             />
             {(fromMonth || toMonth) && (
@@ -740,7 +745,10 @@ export function Report({ username }: { username: string }) {
         <Button
           variant="link"
           size="xs"
-          className="h-auto px-0 underline"
+          /* `link` defaults to `colorScheme="primary"`, which here is gold.
+             This one inherited the footer's muted ink and should keep it —
+             it is an aside, not a call to action. */
+          className="h-auto px-0 text-ink-3 underline hover:text-ink-2"
           onClick={() => setShowStory(true)}
         >
           ↺ replay the reveal

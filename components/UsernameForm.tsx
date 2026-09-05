@@ -74,6 +74,16 @@ export function UsernameForm() {
         <div className="flex flex-col gap-4 pt-2">
           <div className="grid sm:grid-cols-2 gap-3">
             <Select
+              /* `Select`'s trigger reads the same `--roster-control-*` tokens
+                 as `Input`, but its dropdown panel does not — that one is still
+                 hardcoded to Roster's grays, which this app remaps. Left alone,
+                 the trigger would sit on `--surface-1` with a gold hairline and
+                 the menu falling out of it on a different surface entirely.
+                 So the tokens are reset to the grays the menu uses, locally,
+                 until Roster's menu is themeable. That is the same gap that
+                 keeps the UTC-offset field in `BirthChartPanel` a native
+                 `<select>`. */
+              triggerClassName="[--roster-control-bg:var(--roster-gray-800)] [--roster-control-border:var(--roster-gray-700)]"
               label="Sky on trial"
               value={body}
               onChange={(v) => setBody(v as PhenomenonKey)}
@@ -83,6 +93,7 @@ export function UsernameForm() {
               }))}
             />
             <Select
+              triggerClassName="[--roster-control-bg:var(--roster-gray-800)] [--roster-control-border:var(--roster-gray-700)]"
               label="Measure"
               value={metric}
               onChange={(v) => setMetric(v as "classic" | MetricKey)}
@@ -109,6 +120,9 @@ export function UsernameForm() {
               aria-label="Era start month"
               variant="outline"
               size="sm"
+              /* `Input`'s field wrapper is `w-full`, so in a flex row each one
+                 takes a whole line unless told otherwise. */
+              className="w-auto"
               inputClassName="text-xs"
             />
             <span className="text-ink-3">&ndash;</span>
@@ -120,6 +134,7 @@ export function UsernameForm() {
               aria-label="Era end month"
               variant="outline"
               size="sm"
+              className="w-auto"
               inputClassName="text-xs"
             />
             <span className="text-ink-3 italic">
