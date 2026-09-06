@@ -52,6 +52,40 @@
   --roster-control-border: var(--hairline);
   --roster-control-border-focus: var(--gold);
   --roster-control-text: var(--text-primary);
+
+  /* Roster 4.8.1 gave floating panels their own family, separate from the
+     control one because the defaults have to differ — `--roster-control-bg` is
+     `transparent`, which is right for a field on a page and wrong for a menu
+     over it. `surface-2` rather than `surface-1` so the menu reads as raised
+     off the panel it opens on.
+
+     At `:root` and not on a container, deliberately: the menu is portaled to
+     `<body>`, so custom properties set on a wrapper reach the trigger and stop
+     at the portal boundary. Restated under `.dark` below, which is not
+     optional here — see the comment there. */
+  --roster-popover-bg: var(--surface-2);
+  --roster-popover-border: var(--hairline);
+  --roster-popover-text: var(--text-primary);
+}
+
+/* Both scopes, which Roster's README says and this app was getting away with
+   not doing. `<html>` carries `dark`, so Roster's own `.dark` block redefines
+   every one of these — and for the popover family that is not a theoretical
+   loss. `Select` copies the `.dark` class onto its PORTALED panel, so Roster's
+   `.dark` declarations land on that element directly and beat anything
+   inherited from `:root`: the menu came back at Roster's gray-800 instead of
+   this app's surface-2, measured, while the trigger above it was correct.
+   Restating both families here rather than only the one that broke, because a
+   half-populated counterpart is what teaches the next person the wrong shape. */
+.dark {
+  --roster-control-bg: var(--surface-1);
+  --roster-control-border: var(--hairline);
+  --roster-control-border-focus: var(--gold);
+  --roster-control-text: var(--text-primary);
+
+  --roster-popover-bg: var(--surface-2);
+  --roster-popover-border: var(--hairline);
+  --roster-popover-text: var(--text-primary);
 }
 
 :root {

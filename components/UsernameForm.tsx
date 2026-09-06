@@ -73,17 +73,12 @@ export function UsernameForm() {
       >
         <div className="flex flex-col gap-4 pt-2">
           <div className="grid sm:grid-cols-2 gap-3">
+            {/* No trigger override any more. These used to reset the control
+                tokens back to Roster's grays so the trigger would match a menu
+                that could not be themed; 4.8.1 gave the panel
+                `--roster-popover-*`, so both halves take this app's palette and
+                the trigger can go back to looking like every other field. */}
             <Select
-              /* `Select`'s trigger reads the same `--roster-control-*` tokens
-                 as `Input`, but its dropdown panel does not — that one is still
-                 hardcoded to Roster's grays, which this app remaps. Left alone,
-                 the trigger would sit on `--surface-1` with a gold hairline and
-                 the menu falling out of it on a different surface entirely.
-                 So the tokens are reset to the grays the menu uses, locally,
-                 until Roster's menu is themeable. That is the same gap that
-                 keeps the UTC-offset field in `BirthChartPanel` a native
-                 `<select>`. */
-              triggerClassName="[--roster-control-bg:var(--roster-gray-800)] [--roster-control-border:var(--roster-gray-700)]"
               label="Sky on trial"
               value={body}
               onChange={(v) => setBody(v as PhenomenonKey)}
@@ -93,7 +88,6 @@ export function UsernameForm() {
               }))}
             />
             <Select
-              triggerClassName="[--roster-control-bg:var(--roster-gray-800)] [--roster-control-border:var(--roster-gray-700)]"
               label="Measure"
               value={metric}
               onChange={(v) => setMetric(v as "classic" | MetricKey)}

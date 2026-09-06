@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Input } from "@blakesteve/roster";
+import { Button, Input, Select } from "@blakesteve/roster";
 import { computeNatalChart, type NatalChart } from "@/lib/astro/natal";
 import type { ZodiacSign } from "@/lib/ephemeris/retrogrades";
 
@@ -91,15 +91,6 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
     setBirth({ date: "", time: "", offset: -5, lat: "", lon: "" });
     onChart(null);
   };
-
-  /* Only the UTC-offset `<select>` still needs this. See the comment at its
-     usage: Roster's `Select` is not a safe swap for a 53-option list yet. */
-  /* `h-9` is Roster's `size="sm"` control height, so this sits level with its
-     Roster neighbors instead of shorter than them. It used to be implicit,
-     because every field in this row was the same hand-rolled string. */
-  const selectCls =
-    "h-9 rounded-md bg-surface-2 border border-[var(--hairline)] px-2 text-ink text-xs " +
-    "outline-none focus:border-gold transition-colors";
 
   /* These fields sit on `surface-2`, one step lighter than the panel the
      `--roster-control-bg` token is set to. Everything else about them — the
@@ -193,22 +184,34 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
         </label>
         <label className="flex flex-col gap-1">
           birthplace UTC offset
-          {/* Deliberately still a native `<select>`. Roster's `Select` menu has
-              no max-height and no scroll (filed in Roster's CANDIDATES.md), and
-              this list is 53 options — every half hour from UTC-12 to UTC+14 —
-              so swapping it would render a menu taller than the viewport with
-              no way to reach the end of it. The native control also gives the
-              platform picker on mobile, which for a list this long is better
-              than anything we would build. Swap it when Roster's menu lands. */}
-          <select
-            value={birth.offset}
-            onChange={(e) => setBirth({ ...birth, offset: Number(e.target.value) })}
-            className={selectCls}
-          >
-            {OFFSETS.map((o) => (
-              <option key={o} value={o}>{fmtOffset(o)}</option>
-            ))}
-          </select>
+          {/* A real `Select` now. It was left native on the grounds that
+              Roster's menu had no max-height and no scroll, and that turned
+              out to be false: Headless UI's `size` middleware has always
+              written `overflow: auto` and a `max-height` inline on the panel.
+              What was actually blocking it was theming — a menu that ignored
+              this app's palette and opened as a white sheet — and 4.8.1 fixed
+              that with `--roster-popover-*`.
+
+              Still 53 options, so the height matters: the panel caps at the
+              space between the trigger and the viewport edge and scrolls
+              inside it, which is Headless UI's doing rather than something
+              this file has to arrange.
+
+              The wrapping `<label>` gives the trigger its accessible name the
+              same way it does for the fields either side of it. Select's own
+              `label` prop would work too, but it renders Roster's label
+              styling, and these are the app's smaller, quieter ones. */}
+          <Select
+            value={String(birth.offset)}
+            onChange={(v) => setBirth({ ...birth, offset: Number(v) })}
+            options={OFFSETS.map((o) => ({
+              value: String(o),
+              label: fmtOffset(o),
+            }))}
+            variant="outline"
+            size="sm"
+            triggerClassName="bg-surface-2 text-xs"
+          />
         </label>
         <label className="flex flex-col gap-1">
           latitude (optional)

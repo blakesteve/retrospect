@@ -13,15 +13,18 @@ number; and `outline` now reads `--roster-control-bg` / `-border` /
 with the gold hairline is reachable from `app/globals.css`. `inputClassName`
 covers what the tokens do not.
 
-Two raw controls remain, each with the reason at the usage:
+One raw control remains, with the reason at the usage:
 
-- [ ] **The UTC-offset `<select>` in `BirthChartPanel`.** 53 options — every
-      half hour from UTC-12 to UTC+14 — and Roster's `Select` menu still has no
-      max-height and no scroll, so swapping it would render a menu taller than
-      the viewport with no way to reach the end. The native control also gets
-      the platform picker on mobile, which for a list this long is better than
-      anything we would build. Swap it when Roster's menu lands; it is the
-      remaining half of the `Select` work in Roster's `CANDIDATES.md`.
+- [x] ~~**The UTC-offset `<select>` in `BirthChartPanel`.**~~ Swapped on
+      6 September 2026 against Roster 4.8.1. The stated reason for keeping it
+      native was wrong: Roster's menu has always had a max-height and scrolled,
+      because Headless UI's `size` middleware writes `overflow: auto` and
+      `max-height: min(var(--anchor-max-height, 100vh), Npx)` inline on the
+      panel whenever `anchor` is set. What actually blocked it was theming — the
+      menu ignored this app's palette — and 4.8.1 fixed that with
+      `--roster-popover-*`. Verified open: 53 options, capped at 480px on a
+      1000px viewport, scrolling, on `--surface-2` with the gold hairline and
+      this app's ink.
 - [ ] **The threshold `<input type="range">` in `Report`.** Roster has no
       Slider. The native control reads `accent-color`, so it already takes the
       gold. Would be a reasonable Roster candidate.

@@ -65,14 +65,24 @@ them on the way in.
 
 ### A note on form controls
 
-Controls come from Roster, not hand-rolled markup. Two do not, and both have
-the reason written at the usage rather than here: the UTC-offset `<select>` in
-`BirthChartPanel` is 53 options and Roster's menu has no scroll yet, and the
-threshold slider has no Roster equivalent.
+Controls come from Roster, not hand-rolled markup. One does not, and the reason
+is written at the usage rather than here: the threshold slider has no Roster
+equivalent.
+
+The UTC-offset field used to be the second exception, on the grounds that
+Roster's menu had no scroll. That was wrong — Headless UI caps and scrolls the
+panel itself — and what actually blocked it was theming, which Roster 4.8.1
+fixed.
 
 Roster's `Input` takes its surface, border, focus border and text from four
-`--roster-control-*` variables, mapped in `app/globals.css` to this app's own
-`--surface-1`, `--hairline`, `--gold` and `--text-primary`. Point new controls
+`--roster-control-*` variables, and floating panels take three more from
+`--roster-popover-*`. Both are mapped in `app/globals.css` to this app's own
+`--surface-1`/`--surface-2`, `--hairline`, `--gold` and `--text-primary`, in
+**both** `:root` and `.dark`. Both scopes are load-bearing, not belt and
+braces: `Select` copies the `dark` class onto its portaled menu, so Roster's
+own `.dark` token block lands on that element directly and beats anything
+inherited from `:root`. Set only `:root` and the trigger themes while the menu
+comes back in Roster's grays. Point new controls
 at `variant="outline"` and they inherit the palette. `className` lands on the
 outer field wrapper — use `inputClassName` to reach the control itself.
 
