@@ -80,7 +80,10 @@ export async function GET(req: Request) {
       : NextResponse.json({ error: "no picture available" }, { status: 404 });
   }
 
-  const key = process.env.NASA_API_KEY ?? "DEMO_KEY";
+  /* `||`, not `??`. A blank key produces `api_key=`, which NASA rejects, and
+     the catch below reports that as "no picture available" rather than as a
+     configuration problem. */
+  const key = process.env.NASA_API_KEY?.trim() || "DEMO_KEY";
   try {
     for (const offset of [0, -1, 1, -2]) {
       const candidate = shiftDate(date, offset);
