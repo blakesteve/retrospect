@@ -3,7 +3,9 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"),
+  // `||`, not `??`: `??` lets a present-but-empty value through to `new URL("")`,
+  // which throws. This is the root layout, so that is every route, not one page.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL?.trim() || "http://localhost:3000"),
   title: "Retrospect — Your Music Taste vs. the Actual Sky",
   description:
     "Retrospect turns your Last.fm history into a music horoscope backed by real math. Does Mercury retrograde change what you play? Find out, with proof.",

@@ -15,10 +15,21 @@ import type { Scrobble } from "./analysis/nostalgia";
  * boundaries and can duplicate rows across pages; the store dedupes on read.
  * After backfill, refreshes use from=newestUts and prepend cleanly.
  */
-const BUDGET_MS = Number(process.env.SYNC_BUDGET_MS ?? 8_000);
-const PAGE_DELAY_MS = Number(process.env.SYNC_PAGE_DELAY_MS ?? 250);
-const BATCH_PAGES = Number(process.env.SYNC_BATCH_PAGES ?? 4);
-const REFRESH_SECONDS = Number(process.env.SYNC_REFRESH_SECONDS ?? 3600);
+/* `||`, not `??`, and the guard sits on the string rather than on the number.
+   `??` only falls back on null and undefined, so a variable that is present but
+   empty reaches `Number("")`, which is 0 rather than NaN. A budget of 0 ms ends
+   the backfill loop before its first page and leaves the sync permanently
+   "syncing", with the client re-polling a worker that can never finish.
+   Guarding the string instead of the result keeps an explicit "0" meaningful,
+   which matters for the delay: 0 is a legitimate setting there.
+
+   Exported for `sync-env.test.ts`, which is the only thing that can tell a
+   working guard from a broken one: under test these variables are simply
+   absent, and absent resolves the same either way. */
+export const BUDGET_MS = Number(process.env.SYNC_BUDGET_MS?.trim() || 8_000);
+export const PAGE_DELAY_MS = Number(process.env.SYNC_PAGE_DELAY_MS?.trim() || 250);
+export const BATCH_PAGES = Number(process.env.SYNC_BATCH_PAGES?.trim() || 4);
+export const REFRESH_SECONDS = Number(process.env.SYNC_REFRESH_SECONDS?.trim() || 3600);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

@@ -17,7 +17,13 @@ export interface BlobStore {
 
 /** Local-folder implementation: the default for `npm run dev`. */
 export class FsBlobStore implements BlobStore {
-  constructor(private dir = process.env.DATA_DIR ?? ".data") {}
+  /* `||`, not `??`: `??` passes an empty `DATA_DIR` through, and `path.join("",
+     "sync/x.json")` is "sync/x.json", so every blob lands relative to the
+     process working directory instead of inside `.data`. Reads and writes both
+     agree on the wrong place, so it looks like it works until something else
+     needs to find the folder. `dir` is readable so the test can assert which
+     path was chosen. */
+  constructor(readonly dir = process.env.DATA_DIR?.trim() || ".data") {}
 
   private pathFor(key: string): string {
     // Keys are internal and already safe, but never trust a path join.

@@ -6,8 +6,12 @@ import { getStore } from "./store/jsonStore";
  * a budgeted chunk of artist.getTopTags lookups, checkpoints to disk, and the
  * polling client re-kicks it until every top artist is tagged.
  */
-const BUDGET_MS = Number(process.env.TAGSYNC_BUDGET_MS ?? 8_000);
-const CALL_DELAY_MS = Number(process.env.TAGSYNC_DELAY_MS ?? 200);
+/* `||`, not `??`: an empty value reaches `Number("")`, which is 0, and a 0 ms
+   budget lets this loop through at most one artist per poll. See the longer
+   note in `sync.ts`. Exported so `sync-env.test.ts` can see the resolved
+   values, which is the only way to distinguish the two operators in a test. */
+export const BUDGET_MS = Number(process.env.TAGSYNC_BUDGET_MS?.trim() || 8_000);
+export const CALL_DELAY_MS = Number(process.env.TAGSYNC_DELAY_MS?.trim() || 200);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const inFlight = new Set<string>();
