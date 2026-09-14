@@ -37,6 +37,47 @@ the `threshold` refactor.
 
 ## Next
 
+### Product
+
+- [ ] **Deep-dive UX investigation.** The app has a genuinely good idea in it
+      and the landing page does not spend it well. This is an investigation, not
+      a redesign: the deliverable is a written finding with evidence, and the
+      redesign is whatever that finding argues for.
+
+      **The question to answer.** A first-time visitor arrives, reads the pitch,
+      and has to decide whether to type their Last.fm username in. What are they
+      being asked to trust, and what do they get back? The page asks for the
+      commitment before it shows the payoff, and there is no sample reading
+      anywhere on it. For a tool whose whole value is a surprising personal
+      result, one stranger's result on the landing page would do more than any
+      amount of copy.
+
+      **Three things to look at first**, all visible without an account:
+
+      - **Two primary actions compete above the fold.** "Consult" takes one
+        username; "OR SETTLE IT: WHOSE SKY IS STRONGER?" takes two and a Fight
+        button. They carry equal weight. Which one is the product, and which is
+        the party trick? Answering that probably reorders the whole page.
+      - **"With a p-value" is the thesis and the risk in one phrase.** Real
+        statistics applied to something soft is the best thing about this app,
+        and most visitors do not know what a p-value is. Does the report teach
+        it or assume it? If it assumes, the most defensible thing here reads as
+        noise to the people it was meant to convince.
+      - **"THE SKY, CURRENTLY" and the countdown take a large share of the first
+        screen**, and nothing about them is actionable. Ambient mood against
+        showing what a reading actually looks like is a real trade. It has been
+        made in favor of mood by default rather than on purpose.
+
+      Then the report itself, which needs a real account to see and is where
+      "not intuitive" most likely bites hardest.
+
+      **Out of scope:** the `/u/{username}` control sweep below. That is a
+      separate and much smaller job, and bundling them would bury this one.
+
+      This section exists because the file did not have one. Everything else
+      here is maintenance: a Roster sweep, lint, and CI. Nothing in it was about
+      the product, which is part of why the product has not moved.
+
 ### Quality
 
 - [x] ~~Two `react-hooks/set-state-in-effect` errors and an unused import.~~
