@@ -2,6 +2,113 @@
 
 ## Done
 
+### Roster 4.12.1 (16 September 2026)
+
+Bumped `^4.8.1` to `^4.12.1`, four minors. The API gap is additive and the
+build never moved, so the work was the visual diff, not the version number.
+
+Of the ten changes after 4.8.1, four reach this app: one hit-target change that
+repaints nothing, two small repaints, and one that changes how a component
+sizes itself:
+
+- **#176 touch targets.** Every `Checkbox` now carries a 44x44 hit area on a
+  `before:` pseudo-element. Measured at all three sizes: the visible box is
+  still 16 / 20 / 24px and the target is 44x44 on each. The overhang has two
+  documented hazards, neither of which bites here. Nothing interactive overlaps
+  either checkbox's target rect, and no ancestor of either clips it.
+- **#162 control boundaries.** The default `--roster-control-border` moved from
+  gray-300 / gray-700 to gray-500 / gray-400. This app sets all four
+  `--roster-control-*` in both scopes, so `Input` and the `Select` triggers did
+  not move. The one repaint is the unchecked `Checkbox`, which used to hardcode
+  `border-gray-300` / `dark:border-gray-700` and now reads the same token as
+  every other field: its border goes from this app's gray-700 (`#3a405e`) to
+  `--hairline`, the gold at 28%. It matches the `Input` above it now.
+
+  The boundary got slightly more contrast, not less: `#3a405e` on the
+  `gray-900` fill was 1.63:1 and the gold hairline is 1.75:1. But 1.4.11 is the
+  point of #162 and this app opts out of it either way, since Roster's own
+  default would have reached 3:1. That is the same trade the `Input` has been
+  making since 4.8.0, and it is a palette decision, not a bump regression.
+
+  `Input` did change, and the reason it does not show here is worth writing
+  down rather than being lucky about: its `Label` moved from
+  `text-gray-900 dark:text-gray-100` to `--roster-control-text`, which under
+  this palette would be `#e7e9f3` to `#f2efe6`. No `Input` in this app passes
+  `label`; every field is titled by `aria-label` or by a nearby element the app
+  owns. The two `Select`s DO pass `label`, and theirs moved from `text-inherit`
+  to the same token, which resolves to `#f2efe6` either way here. Measured both
+  labels at `rgb(242, 239, 230)`, identical to the body ink.
+- **#170 container sizing.** `Countdown` in `SkyCalendar` sizes against its own
+  container now, and the steps moved from viewport breakpoints to container
+  ones. The section is `max-w-2xl` inside `px-6`, so the container is
+  `viewport - 48` up to 672px, and the effect is not one-directional. Measured:
+
+  | Viewport | Container | Gutter before | Gutter after | Label |
+  |---|---|---|---|---|
+  | 1280px | 672px | 32px | 32px | 12px, unchanged |
+  | 700px | 652px | 24px | 32px | 12px, unchanged |
+  | 620px | 572px | 16px | 32px | 12px, unchanged |
+  | 500px | 452px | 16px | 24px | 12px, unchanged |
+  | 390px | 342px | 16px | 12px | 12px to 9px |
+  | 375px | 327px | 16px | 12px | 12px to 9px |
+
+  `gap-8` now starts at a 608px viewport rather than 768px, so it is roomier
+  through the whole tablet and large-phone band, doubling at 620px, and tighter
+  only below a 400px viewport, where the labels also drop to 9px with the
+  tracking cut. Nothing clips and nothing overflows at any width. The 9px
+  labels are the one place this reads as a loss, on a row that already fit at
+  12px. Filed rather than worked around.
+- **#173 elevation.** The only Roster surface here that took a level is the
+  `Select` panel, now `elevation-anchored` in place of `shadow-lg`. Same size,
+  same fill, same gold ring, a firmer shadow.
+
+Four more were verified as no-ops rather than assumed to be. #168 restyled
+anchored panels, and the `Select` menu keeps this app's `--roster-popover-*`
+fill; it also gained `font-ui`, so the menu stops inheriting `--font-body` and
+reads `--roster-font-ui`, which this app never sets and whose fallback lands on
+the same `ui-sans-serif`. #172 renamed two things, not one: `--rst-font-mono`
+to `--roster-font-mono`, and `--rst-enter-duration` / `-easing` to
+`--roster-enter-*`. This app reads no `--rst-` property at all, so neither
+rename touches it. #176 also retuned `CheckboxGroup` row gaps, and this app has
+no `CheckboxGroup`.
+
+`Button`, `Spinner`, `LiquidTabs`, `MatchupCard` and `Disclosure` have no
+source change at all across the four minors.
+
+The bundle grew for a reason that has nothing to do with this app, and the
+weight is the smaller half of it.
+
+`Toast` shipped in 4.9.0, and 4.12.x declares `react-hot-toast` as a
+NON-OPTIONAL peer dependency. Roster's ESM entry imports it at the top level,
+unconditionally, so it is required at runtime by ANY import from the barrel,
+not just by `Toast`. This app imports `Toast` nowhere and needs it anyway.
+`goober` comes along as react-hot-toast's own dependency, and both land in the
+client chunk.
+
+Neither is declared in this app's `package.json`. It resolves today because
+npm auto-installs a non-optional peer and the lockfile records both, so
+`npm ci` is fine. It is still an undeclared runtime dependency, and the failure
+mode is the quiet one: anything that prunes to declared dependencies stays
+green through lint, typecheck, tests and build, and breaks on first render.
+
+Deliberately NOT patched here. Adding `react-hot-toast` to this app's
+dependencies is the per-app workaround that leaves six apps carrying six copies
+of one packaging bug. The fix belongs in Roster: bundle it, or move `Toast`
+behind a subpath export so the barrel stops importing it.
+
+Total client JS goes from 1,658,229 to 1,790,737 bytes raw and 483,556 to
+518,197 gzipped. Roster's vendor code is emitted in two near-identical chunks, so a
+single copy is about +64.7 kB raw and +16.9 kB gzipped. CSS adds 10.7 kB raw
+and 1.5 kB gzipped. It is a known Roster defect and `sideEffects` in 4.12.1
+does not shake it loose.
+
+This bump made a dent in the 5 September entry's open eyeball, not more than
+that. The `/u/{username}` report page did finish syncing this time, so
+`LiquidTabs`, the two era month fields and the noise checkbox were opened and
+measured, and all are unchanged but for that checkbox border. The slider,
+`replay the reveal`, `GenresPanel`, `SkyScan` and `StoryIntro` are still
+unverified and the 5 September note stands.
+
 ### Roster sweep (5 September 2026)
 
 Bumped to `^4.8.0` and replaced 17 of the 19 raw controls the 27 Aug audit
