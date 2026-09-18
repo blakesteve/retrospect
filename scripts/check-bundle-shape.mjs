@@ -353,8 +353,27 @@ let componentPins = 0;
 const barrelPins = [];
 
 for (const file of manifestFiles) {
-  /* One context per file so a parse failure names the file that caused it. */
-  const context = createContext({});
+  /* One context per file so a parse failure names the file that caused it.
+   *
+   * `process.env` is in the sandbox because Vercel's manifests reference
+   * `process` and an empty sandbox can not evaluate them. This failed a real
+   * deploy with:
+   *
+   *     could not evaluate .next/server/app/_global-error/
+   *     page_client-reference-manifest.js: process is not defined
+   *
+   * and it failed only there. None of the 13 manifests this app emits locally
+   * touches `process`, so the guard was green on every local build and red on
+   * the first deploy. Worth noting the guard behaved correctly: it hard-exited
+   * rather than skipping the file, which is the whole point of every unreadable
+   * input being an exit. It just exited for the wrong reason.
+   *
+   * Scoped to `env` rather than passing the whole `process`, deliberately. A
+   * manifest needs environment values and nothing else. One that reaches for
+   * `process.exit`, `process.cwd` or `process.argv` is doing something this
+   * check has not accounted for, and it should fail loudly here rather than
+   * work by accident and quietly grade something unexpected. */
+  const context = createContext({ process: { env: process.env } });
   context.globalThis = context;
   try {
     runInContext(readFileSync(file, "utf8"), context);
