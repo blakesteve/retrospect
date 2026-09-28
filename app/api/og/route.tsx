@@ -23,12 +23,14 @@ export async function GET(req: Request) {
   let sub = "Does the sky run your listening? Find out.";
   if (username) {
     try {
-      const report = await buildReport(username, {
+      const outcome = await buildReport(username, {
         thresholdDays: metric.slider?.default ?? 365,
         level: "track",
         body: phen.key,
         excludeNoise: true,
       });
+      // A warming-up trial has no index, so it keeps the generic card too.
+      const report = outcome.kind === "report" ? outcome.report : null;
       if (report && Number.isFinite(report.index)) {
         index = report.index.toFixed(2);
         headline = report.verdict.headline;

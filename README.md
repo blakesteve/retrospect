@@ -32,7 +32,8 @@ chance can't fake it. Astrology is the question; statistics is the answer.
   phenomenon ("your emo rises 30% under full moons"), plus rising genres and
   a personal forecast for upcoming events.
 - **Listener fingerprints**: archetypes, golden hour, streaks, and rhythms
-  computed from your data, interesting even when the sky is innocent.
+  computed from your data, interesting even when the sky is innocent. Habits
+  that need more history wait until there's enough, and say when they'll start.
 - **Birth charts, in-browser**: sun, moon, and rising sign (ascendant validated
   against sunrise) computed client-side; birth data never touches a server.
 - **Head-to-head**: two usernames, whose sky is stronger.
@@ -53,7 +54,7 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 `.data/` after that.
 
 ```bash
-npm test             # analysis + store unit tests
+npm test             # analysis, report, profile, sync, store and error-copy tests
 npm run lint
 npm run typecheck
 npm run ephemeris    # regenerate retrograde/full-moon/eclipse windows
@@ -85,6 +86,16 @@ inherited from `:root`. Set only `:root` and the trigger themes while the menu
 comes back in Roster's grays. Point new controls
 at `variant="outline"` and they inherit the palette. `className` lands on the
 outer field wrapper — use `inputClassName` to reach the control itself.
+
+### A note on error messages
+
+Visitors never see an API's `error` text. It's written for whoever is
+debugging, and it can name environment variables, storage settings or HTTP
+statuses. Every error a page can show carries a `code` instead, and the page
+renders the plain-English message for that code from `lib/visitorErrors.ts`,
+logging the raw text to the console. Adding a new failure means adding a code
+there, not passing a message through. A test checks every message for
+developer text, and checks the page source for the old hints.
 
 ## Deploy (free tier, on purpose)
 
@@ -127,6 +138,18 @@ structure and your listening's autocorrelation, and asking how often chance
 beats you. Rare-event measures get a "lead" tier for effects that are large
 but unconfirmed. Sleep-noise artists (rain sounds, ASMR) can be excluded so
 eight hours of Rolling Thunder doesn't drown your actual taste.
+
+Three measures ignore the start of a history, because nothing in it can count
+yet: a song can't be an old favorite a week after you first heard it.
+Nostalgia and Old Flames skip their own threshold (365 and 548 days by
+default), and Discovery skips the first year. A history younger than that has
+nothing to test, so instead of a verdict it gets "Too soon to tell", the month
+its plays start counting, and every part of the report that doesn't need the
+warm-up: the timeline, the anthem, the listener fingerprints (from 500
+scrobbles), and the two measures with no warm-up at all, Night Owl and
+Intensity. The API marks such a
+report `trialStatus: "warming-up"`, which is a different answer from a user
+with no scrobbles at all.
 
 ## Credits
 

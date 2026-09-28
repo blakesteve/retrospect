@@ -3,8 +3,35 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Report } from "@/lib/report";
 import { PHENOMENA } from "@/lib/ephemeris/phenomena";
+import { METRICS } from "@/lib/analysis/metrics";
 import { AlbumArt } from "./AlbumArt";
 import { Button } from "@blakesteve/roster";
+import { TOO_SOON_HEADLINE, warmupExplanation } from "@/lib/readiness";
+
+const DAY = 86400;
+
+/**
+ * "8 years", or for a history under a year, "3 months" or "20 days". The
+ * year count stays the calendar-year difference it always was, so an older
+ * history's reveal reads exactly as before, apart from "1 year" losing its
+ * stray "s".
+ */
+function historyLength(firstUts: number, lastUts: number): string {
+  const days = (lastUts - firstUts) / DAY;
+  if (days < 60) {
+    const d = Math.max(1, Math.round(days));
+    return `${d} ${d === 1 ? "day" : "days"}`;
+  }
+  if (days < 365) {
+    const m = Math.round(days / 30.44);
+    return `${m} months`;
+  }
+  const years = Math.max(
+    1,
+    new Date(lastUts * 1000).getUTCFullYear() - new Date(firstUts * 1000).getUTCFullYear(),
+  );
+  return `${years} ${years === 1 ? "year" : "years"}`;
+}
 
 /**
  * The Wrapped-style opening: one revelation at a time, full screen, before
@@ -12,11 +39,11 @@ import { Button } from "@blakesteve/roster";
  */
 export function StoryIntro({ report, onDone }: { report: Report; onDone: () => void }) {
   const r = report;
-  const years = Math.max(
-    1,
-    new Date(r.lastScrobbleUts * 1000).getUTCFullYear() -
-      new Date(r.firstScrobbleUts * 1000).getUTCFullYear()
-  );
+  // Too young to test: the reveal skips the two slides built on the tested
+  // span and ends on "too soon" instead of a verdict.
+  const warming = r.trialStatus === "warming-up" ? r.warmup : null;
+  // Read once: whether the warm-up's end date is still ahead.
+  const [now] = useState(() => Date.now());
 
   const slides: React.ReactNode[] = [];
 
@@ -24,7 +51,7 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
     <>
       <Eyebrow>First, the scale of this</Eyebrow>
       <Big>
-        {years} years.
+        {historyLength(r.firstScrobbleUts, r.lastScrobbleUts)}.
         <br />
         {r.scrobbleCount.toLocaleString()} songs.
       </Big>
@@ -39,13 +66,16 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
       <Eyebrow>Meanwhile, in the sky</Eyebrow>
       <Big>
         {meta.glyph} {meta.title} happened{" "}
-        <span className="text-gold">{r.windowCount} times</span> on you.
+        <span className="text-gold">
+          {r.windowCount} {r.windowCount === 1 ? "time" : "times"}
+        </span>{" "}
+        on you.
       </Big>
       <Sub>{meta.explainer}</Sub>
     </>
   );
 
-  slides.push(
+  if (!warming) slides.push(
     <>
       <Eyebrow>And you kept listening</Eyebrow>
       <Big>
@@ -81,7 +111,16 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
     );
   }
 
-  slides.push(
+  slides.push(warming ? (
+    <>
+      <Eyebrow>The verdict</Eyebrow>
+      {/* The young reveal skips the slides that set up the question, so it
+          asks it here: otherwise "too soon" never says too soon for what. */}
+      <Sub>{METRICS[r.metric].question(meta.qSubject)}</Sub>
+      <Big>{TOO_SOON_HEADLINE}</Big>
+      <Sub>{warmupExplanation(r.metric, warming, meta.when, now)}</Sub>
+    </>
+  ) : (
     <>
       <Eyebrow>The verdict</Eyebrow>
       <div className="font-display text-[7rem] leading-none text-gold tabular">
@@ -91,7 +130,7 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
       <Big>{r.verdict.headline}</Big>
       <Sub>{r.verdict.detail}</Sub>
     </>
-  );
+  ));
 
   const [i, setI] = useState(0);
   const last = i >= slides.length - 1;

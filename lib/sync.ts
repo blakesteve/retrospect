@@ -1,4 +1,5 @@
-import { getRecentTracksPage, isTransientError } from "./lastfm";
+import { getRecentTracksPage, isTransientError, syncErrorCode } from "./lastfm";
+import type { VisitorErrorCode } from "./visitorErrors";
 import { getStore } from "./store/jsonStore";
 import type { SyncState } from "./store/types";
 import type { Scrobble } from "./analysis/nostalgia";
@@ -58,6 +59,7 @@ export async function runSyncChunk(username: string): Promise<SyncState> {
         ...existing,
         status: "syncing",
         error: undefined,
+        errorCode: undefined,
       });
     }
     return await refresh(username, existing); // ready but stale
@@ -87,7 +89,12 @@ async function backfill(username: string, state: SyncState): Promise<SyncState> 
   // flush per invocation instead of one per batch keeps a big backfill at
   // ~100 writes instead of ~600.
   const collected: Scrobble[] = [];
-  let fatal: string | null = null;
+  let fatal: { message: string; code: VisitorErrorCode } | null = null;
+
+  /* Nothing collected yet means there's nothing to resume past: read from
+     page 1. This is also what frees a state stuck under the old rule, whose
+     cursor sits dozens of empty pages past the end. */
+  if (state.newestUts === 0) state.pagesDone = 0;
 
   try {
     while (Date.now() < deadline) {
@@ -113,6 +120,15 @@ async function backfill(username: string, state: SyncState): Promise<SyncState> 
           if (!state.oldestUts || s.uts < state.oldestUts) state.oldestUts = s.uts;
         }
       }
+      /* A blank reply ("no pages at all") never moves the cursor, or the
+         pages it stood for would be skipped for good. Before anything has
+         been collected it counts as one read of an empty account. Either
+         way the next poll asks for the same pages again. */
+      if (results.some((r) => r.totalPages === 0)) {
+        if (state.newestUts === 0) state.emptyReads = (state.emptyReads ?? 0) + 1;
+        break;
+      }
+      state.emptyReads = 0;
       state.totalPages = results[0].totalPages;
       state.totalScrobbles = results[0].totalScrobbles;
       state.pagesDone = start + count - 1;
@@ -122,7 +138,10 @@ async function backfill(username: string, state: SyncState): Promise<SyncState> 
     }
   } catch (err) {
     if (!isTransientError(err)) {
-      fatal = err instanceof Error ? err.message : String(err);
+      fatal = {
+        message: err instanceof Error ? err.message : String(err),
+        code: syncErrorCode(err),
+      };
     }
     // Transient: flush what we have and let the next poll resume.
   }
@@ -130,12 +149,23 @@ async function backfill(username: string, state: SyncState): Promise<SyncState> 
   if (collected.length > 0) {
     await store.appendScrobbles(username, collected);
   }
+  /* An account with no scrobbles reports `totalPages: 0`, and the old rule
+     only called a sync done when there was at least one page. So it stayed
+     "syncing" for good: every poll fetched one more empty page past the end,
+     and the wait screen spun for as long as the tab stayed open.
+
+     Zero pages is now accepted as "this account is empty", but only when it
+     can't be a glitch: nothing has ever been collected, and page 1 has come
+     back blank twice in a row. That costs an empty account one extra poll,
+     and a single bad reply can't pass for an empty account. */
+  const confirmedEmpty = state.newestUts === 0 && (state.emptyReads ?? 0) >= 2;
   state.status = fatal
     ? "error"
-    : state.totalPages > 0 && state.pagesDone >= state.totalPages
+    : confirmedEmpty || (state.totalPages > 0 && state.pagesDone >= state.totalPages)
       ? "ready"
       : "syncing";
-  state.error = fatal ?? undefined;
+  state.error = fatal?.message;
+  state.errorCode = fatal?.code;
   state.updatedAt = Date.now();
   await store.setSyncState(state);
   return state;

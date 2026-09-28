@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ListeningProfile as ProfileData } from "@/lib/profile";
+import { pendingHabitsSentence } from "@/lib/readiness";
 
 const fmtHour = (h: number) => {
   const hr = h % 12 === 0 ? 12 : h % 12;
@@ -21,25 +22,60 @@ export function ListeningProfile({
   excludeNoise: boolean;
 }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  /* Set when the history is too small for a profile at all. Without it the
+     panel just didn't appear, and a brand-new visitor had no way to know it
+     was coming. */
+  const [tooFew, setTooFew] = useState<{ have: number; needed: number } | null>(null);
+  // Read once: whether a pending habit's start date is still ahead.
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams({ tzm: String(-new Date().getTimezoneOffset()) });
     if (excludeNoise) params.set("noise", "exclude");
+    /* Every answer replaces both, failures included, so toggling the noise
+       filter can't leave the last setting's panel up under the new one. */
+    const clear = () => {
+      if (cancelled) return;
+      setProfile(null);
+      setTooFew(null);
+    };
     fetch(`/api/user/${encodeURIComponent(username)}/profile?${params}`)
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => res.json().catch(() => null))
       .then((data) => {
-        if (!cancelled && data && !data.error) setProfile(data);
+        if (cancelled) return;
+        if (!data) return clear();
+        const few =
+          data.error && typeof data.have === "number" && typeof data.needed === "number"
+            ? { have: data.have, needed: data.needed }
+            : null;
+        setProfile(data.error ? null : data);
+        setTooFew(few);
       })
-      .catch(() => {});
+      .catch(clear);
     return () => {
       cancelled = true;
     };
   }, [username, excludeNoise]);
 
-  if (!profile) return null;
+  if (!profile) {
+    if (!tooFew) return null;
+    return (
+      <div className="rounded-lg bg-surface-1 border border-[var(--hairline)] p-5">
+        <h3 className="text-ink text-sm font-medium mb-1">
+          Sky aside: what actually runs your listening
+        </h3>
+        <p className="text-ink-3 text-xs max-w-xl leading-relaxed">
+          Your listening fingerprints (when you listen, how much, and what you reach
+          for) show up once there are {tooFew.needed.toLocaleString()} of your plays
+          to read. So far there are {tooFew.have.toLocaleString()}.
+        </p>
+      </div>
+    );
+  }
   const p = profile;
   const maxShare = Math.max(...p.hourShares);
+  const pending = pendingHabitsSentence(p.pending, now);
 
   return (
     <div className="rounded-lg bg-surface-1 border border-[var(--hairline)] p-5">
@@ -51,19 +87,22 @@ export function ListeningProfile({
         yours, computed from every play, no horoscope required.
       </p>
 
-      <div className="grid sm:grid-cols-3 gap-3 mb-5">
-        {p.archetypes.map((a) => (
-          <div
-            key={a.label}
-            className="rounded-md bg-surface-2 border border-gold/30 p-3"
-          >
-            <p className="text-gold text-sm font-medium">
-              {a.emoji} {a.label}
-            </p>
-            <p className="text-ink-3 text-xs mt-1.5 leading-relaxed">{a.why}</p>
-          </div>
-        ))}
-      </div>
+      {p.archetypes.length > 0 && (
+        <div className="grid sm:grid-cols-3 gap-3 mb-5">
+          {p.archetypes.map((a) => (
+            <div
+              key={a.label}
+              className="rounded-md bg-surface-2 border border-gold/30 p-3"
+            >
+              <p className="text-gold text-sm font-medium">
+                {a.emoji} {a.label}
+              </p>
+              <p className="text-ink-3 text-xs mt-1.5 leading-relaxed">{a.why}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {pending && <p className="text-ink-3 text-xs mb-5 max-w-xl leading-relaxed">{pending}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-center">
         <MiniTile

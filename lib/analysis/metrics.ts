@@ -36,6 +36,9 @@ export interface MetricMeta {
   slider: { label: string; min: number; max: number; default: number } | null;
   /** Whether the track/artist level toggle applies. */
   hasLevelToggle: boolean;
+  /** True when the first stretch of a history can't count toward this
+      measure, so a young enough history has nothing to test. */
+  hasWarmup: boolean;
 }
 
 export const METRICS: Record<MetricKey, MetricMeta> = {
@@ -56,6 +59,7 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
     peakDayBody: (n) => `${n.toLocaleString()} old favorites in a single day. Whatever happened, the music remembers.`,
     slider: { label: "“Old favorite” = first heard over", min: 90, max: 1825, default: 365 },
     hasLevelToggle: true,
+    hasWarmup: true,
   },
   oldflame: {
     key: "oldflame",
@@ -74,6 +78,7 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
     peakDayBody: (n) => `${n.toLocaleString()} old flames rekindled in a single day. Somebody was going through it.`,
     slider: { label: "A “reunion” needs a silence of", min: 180, max: 1460, default: 548 },
     hasLevelToggle: false,
+    hasWarmup: true,
   },
   intensity: {
     key: "intensity",
@@ -92,6 +97,7 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
     peakDayBody: (n) => `${n.toLocaleString()} plays in a single day. The neighbors know your taste by now.`,
     slider: null,
     hasLevelToggle: false,
+    hasWarmup: false,
   },
   nightowl: {
     key: "nightowl",
@@ -110,6 +116,7 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
     peakDayBody: (n) => `${n.toLocaleString()} plays between midnight and 4am. The moon saw everything.`,
     slider: null,
     hasLevelToggle: false,
+    hasWarmup: false,
   },
   discovery: {
     key: "discovery",
@@ -128,12 +135,13 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
     peakDayBody: (n) => `${n.toLocaleString()} brand-new tracks in a single day. A whole new chapter, timestamped.`,
     slider: null,
     hasLevelToggle: false,
+    hasWarmup: true,
   },
 };
 
-function humanDays(days: number): string {
+export function humanDays(days: number): string {
   return days >= 365
-    ? `${(days / 365).toFixed(days % 365 === 0 ? 0 : 1)} year${days >= 548 ? "s" : ""}`
+    ? `${(days / 365).toFixed(days % 365 === 0 ? 0 : 1)} year${days > 365 ? "s" : ""}`
     : `${days} days`;
 }
 

@@ -4,6 +4,7 @@ import { runTagChunk } from "@/lib/tagsync";
 import { getStore } from "@/lib/store/jsonStore";
 import { getBlobStore } from "@/lib/store/blob";
 import { isNoiseArtist } from "@/lib/report";
+import { emptyHistoryResponse } from "@/lib/emptyHistory";
 
 export const dynamic = "force-dynamic";
 // The genre analysis runs every genre against every phenomenon with 400
@@ -26,11 +27,14 @@ async function handler(
   const { name } = await params;
   const username = decodeURIComponent(name).trim();
 
-  const scrobbles = (await getStore().getScrobbles(username)).filter(
-    (s) => !isNoiseArtist(s.artist)
-  );
+  const all = await getStore().getScrobbles(username);
+  if (all.length === 0) return emptyHistoryResponse(username);
+  const scrobbles = all.filter((s) => !isNoiseArtist(s.artist));
   if (scrobbles.length === 0) {
-    return NextResponse.json({ error: "No scrobbles synced yet" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Every scrobble in this history is a sleep or noise track, so there's no music to sort into genres." },
+      { status: 404 },
+    );
   }
 
   const sync = await runTagChunk(username);
@@ -77,6 +81,6 @@ export async function GET(
   } catch (err) {
     const routeError = err instanceof Error ? err.message : String(err);
     console.error(`[retrospect] route failure:`, err);
-    return NextResponse.json({ error: routeError }, { status: 500 });
+    return NextResponse.json({ error: routeError, code: "server" }, { status: 500 });
   }
 }

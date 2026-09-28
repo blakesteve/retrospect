@@ -1,4 +1,5 @@
 import type { Scrobble } from "./analysis/nostalgia";
+import type { VisitorErrorCode } from "./visitorErrors";
 
 const API_ROOT = "https://ws.audioscrobbler.com/2.0/";
 const PAGE_SIZE = 200;
@@ -38,6 +39,27 @@ export function isTransientError(err: unknown): boolean {
   if (err instanceof LastfmError) return err.transient;
   // fetch() network failures (DNS blip, reset connection) surface as TypeError.
   return err instanceof TypeError;
+}
+
+/** Last.fm error codes that are this app's problem, not the visitor's: bad or
+    suspended API key, a malformed request. */
+const OUR_SIDE_API_CODES = new Set([4, 9, 10, 13, 26]);
+
+/**
+ * Which visitor-facing explanation a failed sync gets.
+ *
+ * Only Last.fm's own "no such user" (6) and "login required" (17, what it
+ * returns for a history the owner has hidden) are about the visitor. Our key
+ * or request being wrong is ours to fix, and so is anything that is not a
+ * Last.fm error at all, such as a missing API key or unconfigured storage:
+ * both are "server", so a visitor never reads a setting's name.
+ */
+export function syncErrorCode(err: unknown): VisitorErrorCode {
+  if (!(err instanceof LastfmError)) return err instanceof TypeError ? "lastfm-unavailable" : "server";
+  if (err.code === 6) return "user-not-found";
+  if (err.code === 17) return "private-history";
+  if (err.code !== undefined && OUR_SIDE_API_CODES.has(err.code)) return "server";
+  return "lastfm-unavailable";
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -92,9 +114,14 @@ async function fetchPage(
 
   const res = await fetch(url, { cache: "no-store" });
   if (res.status === 429) throw new LastfmError("Rate limited", undefined, 429);
-  if (!res.ok) throw new LastfmError(`Last.fm HTTP ${res.status}`, undefined, res.status);
-  const json: any = await res.json();
-  if (json.error) throw new LastfmError(json.message ?? "Last.fm error", json.error);
+  /* Read the body before judging the status. Last.fm sends its own error code
+     WITH a non-2xx status: an unknown user is HTTP 404 and {"error":6},
+     checked against the live API on 28 Sept 2026. Throwing on the status first
+     dropped that code, so a mistyped username was reported as Last.fm being
+     down. The status still rides along, so 5xx stays transient. */
+  const json: any = await res.json().catch(() => null);
+  if (json?.error) throw new LastfmError(json.message ?? "Last.fm error", json.error, res.status);
+  if (!res.ok || !json) throw new LastfmError(`Last.fm HTTP ${res.status}`, undefined, res.status);
 
   const rt = json.recenttracks;
   const attr = rt["@attr"];

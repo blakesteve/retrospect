@@ -19,7 +19,7 @@ async function handler(
   const { name } = await params;
   const username = decodeURIComponent(name).trim();
   if (!/^[a-zA-Z0-9_ .-]{1,50}$/.test(username)) {
-    return NextResponse.json({ error: "Invalid username" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
   }
 
   const state = await runSyncChunk(username);
@@ -31,10 +31,13 @@ async function handler(
     newestUts: state.newestUts || null,
     oldestUts: state.oldestUts ?? null,
     error: state.error ?? null,
+    // A state saved before codes existed has none; "server" blames nobody.
+    code: state.status === "error" ? (state.errorCode ?? "server") : null,
   });
 }
 
-/** Surface real error messages instead of opaque empty 500s. */
+/** Surface real error messages instead of opaque empty 500s. The message is
+    for whoever is debugging; `code` is what a visitor is told. */
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ name: string }> }
@@ -44,6 +47,6 @@ export async function GET(
   } catch (err) {
     const routeError = err instanceof Error ? err.message : String(err);
     console.error(`[retrospect] route failure:`, err);
-    return NextResponse.json({ error: routeError }, { status: 500 });
+    return NextResponse.json({ error: routeError, code: "server" }, { status: 500 });
   }
 }
