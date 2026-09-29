@@ -323,6 +323,8 @@ export interface VerdictSubjectFull {
   plural?: boolean;
   /** One event and several: "full moon" / "full moons". */
   eventNoun: { one: string; many: string };
+  /** "Venus goes retrograde about every 19 months": see Phenomenon.cadence. */
+  cadence: string;
 }
 
 export function metricVerdict(
@@ -357,9 +359,16 @@ export function metricVerdict(
     );
   }
   if (status === "too-few-events") {
+    /* Calm and about the sky's pace, not a failure: for a rare event most
+       visitors get this rather than a verdict. Nothing here is specific to
+       retrogrades; the cadence and the noun come from the event. */
+    /* "This test has" and not "your history has had": the count is the
+       events the test used, which an era, a warm-up or a window with no
+       listening in it can make smaller than the ones you lived through. */
     const n = evidence.events;
+    const have = n === 1 ? `one ${subject.eventNoun.one}` : `${n} ${subject.eventNoun.many}`;
     return withheld(
-      `This rests on ${n === 1 ? `a single ${subject.eventNoun.one}` : `just ${n} ${subject.eventNoun.many}`}, the ${n === 1 ? "one" : "ones"} this measure can test. Each one is a single stretch of your life, so one odd week can look like a pattern. Retrospect waits for ${MIN_EVENTS} before calling it either way: with fewer, even every one of them pointing the same way happens by chance too often to mean much.`,
+      `${subject.cadence}, so this test has only ${have} to go on, not enough to call a pattern. Retrospect waits for ${MIN_EVENTS}, because with fewer, one unusual stretch of your life can look like a pattern either way.`,
     );
   }
   if (p < 0.05 && index > 1) {

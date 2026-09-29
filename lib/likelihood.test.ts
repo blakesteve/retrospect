@@ -110,6 +110,7 @@ describe("verdict details stay plain English", () => {
     name: "Mercury",
     when: "when Mercury is retrograde",
     eventNoun: PHENOMENA.mercury.eventNoun,
+    cadence: PHENOMENA.mercury.cadence,
   };
   const cases: [number, number, { retroN: number; events: number }][] = [
     [1.4, 0.01, { retroN: 5000, events: 20 }],
@@ -140,8 +141,12 @@ describe("verdict details stay plain English", () => {
     const v = metricVerdict(METRICS.nightowl, 0.56, 0.0355, { retroN: 6658, events: 3 }, subject);
     expect(v.status).toBe("too-few-events");
     expect(v.significant).toBe(false);
-    expect(v.detail).toContain("just 3 Mercury retrogrades, the ones this measure can test");
-    expect(v.detail).toContain("waits for 6");
+    // The exact sentence, pinned: it's what most visitors see for a rare sky.
+    expect(v.detail).toBe(
+      "Mercury goes retrograde about three times a year, so this test has only 3 Mercury " +
+        "retrogrades to go on, not enough to call a pattern. Retrospect waits for 6, because " +
+        "with fewer, one unusual stretch of your life can look like a pattern either way.",
+    );
   });
 });
 
@@ -196,7 +201,7 @@ describe("one reading of a trial, everywhere", () => {
     // 25,000 plays, but Venus only turned retrograde three times.
     expect(
       duelUnscoredReason("listener-a", trial({ index: 0.9, p: 0.5, status: "too-few-events" }), "Venus retrogrades"),
-    ).toBe("listener-a's history has too few Venus retrogrades to test");
+    ).toBe("listener-a's history hasn't had enough Venus retrogrades yet to call a pattern");
     expect(
       duelUnscoredReason("listener-b", trial({ index: NaN, p: NaN, status: "warming-up" }), "full moons"),
     ).toBe("there isn't enough of listener-b's listening to test yet");

@@ -19,8 +19,8 @@ interface Hit {
 }
 
 /**
- * The full sweep: every sky × every measure, 25 trials, surfacing only the
- * verdicts that survive the scramble test. Each trial is served (and cached)
+ * The full sweep: every sky × every measure, 25 trials, surfacing the
+ * convictions and the leads. Each trial is served (and cached)
  * by the normal report endpoint, so tapping a result is instant.
  */
 export function SkyScan({
@@ -115,9 +115,8 @@ export function SkyScan({
             🔭 Where does the sky actually get you?
           </h3>
           <p className="text-ink-3 text-xs leading-relaxed">
-            Run every sky against every measure, {TOTAL} trials, and surface only the
-            verdicts that survive the scramble test. No more guessing which combination
-            to try.
+            Run every sky against every measure, {TOTAL} trials, and surface the
+            convictions and the leads. No more guessing which combination to try.
           </p>
         </div>
         {!running && (
@@ -180,8 +179,11 @@ export function SkyScan({
       )}
       {hits && hits.length > 0 && (
         <p className="text-ink-3 text-xs mt-2">
-          Tap to open a trial above. ✦ = survived the scramble test · 🔍 = big lean chance
-          could still fake, worth chasing in a narrower era.
+          {/* What a lead is, not what to do with it: "chase it in a narrower era"
+              was advice to keep slicing until chance produced a conviction. */}
+          Tap to open a trial above. ✦ = passed the scramble test, judged on its own ·
+          🔍 = a lead: a big swing that chance could still have produced, so a maybe,
+          not an answer.
         </p>
       )}
 

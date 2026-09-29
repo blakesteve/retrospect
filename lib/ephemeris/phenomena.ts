@@ -21,6 +21,10 @@ export interface Phenomenon {
   subjectPlural?: boolean;
   /** One event and several, for counting them: "full moon" / "full moons". */
   eventNoun: { one: string; many: string };
+  /** How often it happens, as the start of a sentence: "Venus goes retrograde
+      about every 19 months". Explains a too-few-events verdict as the sky's
+      pace, not a problem with the history. */
+  cadence: string;
   /** Mid-sentence subject for questions: "Does {qSubject} keep you up late?" */
   qSubject: string;
   /** "when Mercury is retrograde" — verdict phrasing. */
@@ -57,6 +61,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "☿",
     title: "Mercury Retrograde",
     subjectName: "Mercury",
+    cadence: "Mercury goes retrograde about three times a year",
     eventNoun: { one: "Mercury retrograde", many: "Mercury retrogrades" },
     when: "when Mercury is retrograde",
     tileLabel: "While Mercury was retrograde",
@@ -74,6 +79,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "♀",
     title: "Venus Retrograde",
     subjectName: "Venus",
+    cadence: "Venus goes retrograde about every 19 months",
     eventNoun: { one: "Venus retrograde", many: "Venus retrogrades" },
     when: "when Venus is retrograde",
     tileLabel: "While Venus was retrograde",
@@ -91,6 +97,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "♂",
     title: "Mars Retrograde",
     subjectName: "Mars",
+    cadence: "Mars goes retrograde about every 26 months",
     eventNoun: { one: "Mars retrograde", many: "Mars retrogrades" },
     when: "when Mars is retrograde",
     tileLabel: "While Mars was retrograde",
@@ -108,6 +115,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "🌕",
     title: "Full Moon",
     subjectName: "The Moon",
+    cadence: "A full moon comes about once a month",
     eventNoun: { one: "full moon", many: "full moons" },
     when: "under a full moon",
     tileLabel: "Under a full moon",
@@ -125,6 +133,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "\u{1F318}",
     title: "Eclipses",
     subjectName: "The eclipses",
+    cadence: "Eclipses come about four or five times a year",
     eventNoun: { one: "eclipse", many: "eclipses" },
     subjectPlural: true,
     when: "around eclipses",

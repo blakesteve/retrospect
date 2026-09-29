@@ -395,8 +395,11 @@ export function Report({ username }: { username: string }) {
               </div>
               {tier === "lead" && (
                 <p className="text-ink-3 text-sm mt-4 max-w-md mx-auto">
-                  Sharpen the test: zoom into an era where it happened, or adjust the knobs
-                  below; leads become convictions in focused slices.
+                  {/* It used to advise zooming into an era until the lead
+                      converted: slicing until chance obliges. */}
+                  A lead is a swing big enough to notice, on listening uneven enough that
+                  chance could have made it. It isn&rsquo;t an answer yet. More listening over more{" "}
+                  {meta.eventNoun.many} is what firms it up or makes it fade.
                 </p>
               )}
               {tier === "null" && (

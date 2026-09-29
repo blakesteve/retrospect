@@ -3,8 +3,9 @@
 **Index**
 
 - **Done:** The report tells the truth about its own confidence (28 Sept 2026) ·
-  A young history gets a real report (28 Sept) · Roster 4.12.1 (16 Sept) ·
-  Roster sweep (5 Sept)
+  A young history gets a real report (28 Sept) · The bundle-shape guard
+  (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster 4.12.1
+  (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
@@ -69,17 +70,30 @@ Also:
   tagged plays in the windows, at 0, and its axis no longer goes below 0. On
   an untested trial the panel no longer tells you how to read the line.
 - "1.0 years" reads "1 year" wherever a length of time is shown.
+- The genre panel's own scramble test had both defects. Its p could be 0,
+  and dropping the shuffles with none of a genre inside the windows made p
+  too small: in a synthetic history, a burst of folk that happened to land in
+  one Venus window read p = 0.20 where the honest figure is 0.74, and the
+  panel's headline is decided by p. It now uses the same rule and formula as
+  the trials, and the stored genre analysis is versioned so returning
+  listeners get it recomputed.
+- A lead used to come with advice to narrow the era until it converted
+  ("leads become convictions in focused slices", "worth chasing in a narrower
+  era"), which is slicing until chance obliges. It now says what a lead is: a
+  swing chance could still have produced, a maybe and not an answer.
+- A too-few-events verdict explains the sky's pace calmly ("Venus goes
+  retrograde about every 19 months, so…") rather than reading as a failure.
+  Under the 6-event floor most visitors get this for Venus and Mars; the
+  redesign gives them more to measure (see Next).
 
 Left alone on purpose, as the redesign's: the 25-trial sweep and the genre
 headline have no multiple-comparisons correction, so across 25 trials a
-"very unlikely to be chance" conviction can still be chance; the sign table's
-claims; and the lead copy that suggests narrowing the era until a lead
-converts ("leads become convictions in focused slices"), which is the same
-problem in words.
+"very unlikely to be chance" conviction can still be chance; and the sign
+table's claims.
 
-Client JS over `main` at 99eac00, both built locally: 1,627,019 to 1,635,931,
-up 8,912 bytes (0.55%). `/u/` +4,620, `/vs/` +4,098. Guard headroom 66,981 to
-58,069.
+Client JS over `main` at 99eac00, both built locally: 1,627,019 to 1,636,886,
+up 9,867 bytes (0.61%). `/u/` +5,017, `/vs/` +4,387. Guard headroom 66,981 to
+57,114.
 
 ### A young history gets a real report (28 September 2026)
 
@@ -140,6 +154,58 @@ Client JS, summed across routes, over `main` at 1f8d285 with both built
 locally: 1,616,209 to 1,627,019, up 10,810 bytes (0.67%). A visitor to `/u/`
 downloads 8,226 of those and a visitor to `/vs/` 2,504. The bundle guard's
 headroom goes from 77,791 bytes to 66,981.
+
+### The bundle-shape guard (18 September 2026)
+
+`scripts/check-bundle-shape.mjs`, ported from blakeb-dev and run as
+`postbuild`, so every `npm run build` checks it, Vercel's included (a bare
+`next build` doesn't). It fails the
+build if Roster's barrel appears in a client reference manifest, if client JS
+passes 1,694,000 bytes, or if client CSS passes 175,000. At merge those were
+1,616,209 and 167,298, so about 4.8% and 4.6% of headroom. The CSS ceiling
+matters as much as the JS one: Roster's stylesheet is 142,426 of the app's
+CSS bytes and doesn't shake.
+
+Why it exists: Roster 4.13.0 regressed a sibling app by 18.49% with every gate
+green. Nothing else here can see that. Vitest never imports Roster, eslint
+reads source and `tsc` reads types.
+
+Mutations run against it, each confirmed to change its target: a barrel pin,
+a renamed barrel, padded JS, padded CSS, a missing build and a renamed
+`clientModules` all fail it, and a negative control passes. (PR 14 says eight;
+it lists these seven.) A follow-up
+(`c361dae`) gave the manifest sandbox `process.env`, which it needs to run on
+Vercel.
+
+Limits: all of this app's Roster importers are `"use client"`, so the barrel
+check is a tripwire for a shape the app doesn't have yet. CI runs no build,
+but Vercel's preview build does, so a guard failure shows as a red Vercel
+check on the pull request. Nothing requires that check to pass before a
+merge: `main` has no branch protection.
+
+### Roster 5.0.0 (17 September 2026)
+
+The declared range and the lockfile only; no source changed. 5.0.0 moves the
+`"use client"` boundary onto Roster's component modules. This app was never
+pinned by that boundary, so no change was expected. PR 13 says client JS was
+byte-identical, but its figure was left as a placeholder, so no measurement
+is on record. The next recorded figure, the guard's 1,616,209 the following
+day, is 395 bytes over 4.13.0's 1,615,814, and nothing on record explains
+the difference.
+
+### Roster 4.13.0 (17 September 2026)
+
+`^4.12.1` to `^4.13.0`, with no source changes. 4.13.0 emits one module per
+source file and marks its module-scope calls as side-effect free, so unused
+components shake out. Client JS went from 1,790,737 to 1,615,814 bytes, down
+174,923 (9.77%), CSS unchanged. Of the saving, Roster's own unused components
+are about 54%, unused Headless UI about 30%, and Radix about 10%; Radix left
+the bundle entirely.
+
+Two things it didn't do. CSS doesn't shake, so after this the stylesheet is
+the larger Roster cost. And the saving is contingent: one Roster import in a
+server component would make it a client entry and undo it. The bundle-shape
+guard above is what now catches that.
 
 ### Roster 4.12.1 (16 September 2026)
 
@@ -294,8 +360,14 @@ the `threshold` refactor.
         about one false conviction.
       - The sign table's claims: no row gets its own test, and rows rest on
         one or two events.
-      - The lead copy and the sweep key both suggest narrowing the era until
-        a lead converts, which is the multiple-comparisons problem in words.
+      - Blake's direction (28 Sept 2026, in the private finding): measure
+        the sky every day, not only its rare events. Each planet's sign,
+        dignity and aspects, and the Moon's phase and sign, with retrogrades
+        and eclipses as one lens among several. Venus and Mars have to be
+        first-class: through the signs they change state dozens of times in
+        a few years, against one retrograde. Plus an honest early read for
+        each rare event below the 6-event floor, labeled as too few to call
+        a pattern.
       - A withheld verdict's explanation runs to seven lines in the hero at
         phone width.
       - A brand-new history under 500 scrobbles gets a thin page: no

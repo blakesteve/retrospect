@@ -196,7 +196,7 @@ export function duelSideLabel(r: Report | undefined): string {
 export function duelUnscoredReason(name: string, r: Report, eventsMany: string): string {
   switch (r.verdict.status) {
     case "too-few-events":
-      return `${name}'s history has too few ${eventsMany} to test`;
+      return `${name}'s history hasn't had enough ${eventsMany} yet to call a pattern`;
     case "no-comparison":
       return `${name}'s listening has nothing to compare here`;
     default:

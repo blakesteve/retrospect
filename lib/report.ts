@@ -414,6 +414,7 @@ export async function buildReport(
         when: phen.when,
         plural: phen.subjectPlural,
         eventNoun: phen.eventNoun,
+        cadence: phen.cadence,
       },
     ),
     mostNostalgicDay,

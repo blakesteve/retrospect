@@ -277,7 +277,9 @@ describe("a conviction needs separate events, not just plays", () => {
     expect(r.retroN).toBeGreaterThanOrEqual(500);
     expect(r.verdict.status).toBe("too-few-events");
     expect(r.verdict.significant).toBe(false);
-    expect(r.verdict.detail).toContain("just 3 full moons");
+    expect(r.verdict.detail).toContain(
+      "A full moon comes about once a month, so this test has only 3 full moons to go on, not enough to call a pattern.",
+    );
   });
 
   it("gives the same pattern over seven full moons a verdict", async () => {
