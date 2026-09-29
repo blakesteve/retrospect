@@ -7,6 +7,8 @@ import { METRICS } from "@/lib/analysis/metrics";
 import { AlbumArt } from "./AlbumArt";
 import { Button } from "@blakesteve/roster";
 import { TOO_SOON_HEADLINE, warmupExplanation } from "@/lib/readiness";
+import { pValueNote, readTrial } from "@/lib/likelihood";
+import { useShowPValues } from "./usePValues";
 
 const DAY = 86400;
 
@@ -44,6 +46,7 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
   const warming = r.trialStatus === "warming-up" ? r.warmup : null;
   // Read once: whether the warm-up's end date is still ahead.
   const [now] = useState(() => Date.now());
+  const showP = useShowPValues();
 
   const slides: React.ReactNode[] = [];
 
@@ -75,17 +78,24 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
     </>
   );
 
-  if (!warming) slides.push(
+  /* Every play inside those windows, the same plays the anthem below is
+     picked from. It used to count only the plays the trial tested, so a
+     12-month history read "0 songs played when Mercury is retrograde" and
+     then "7 plays when Mercury is retrograde" for its anthem. */
+  if (r.windowPlays > 0) slides.push(
     <>
       <Eyebrow>And you kept listening</Eyebrow>
       <Big>
-        {r.retroN.toLocaleString()} songs played
+        {r.windowPlays.toLocaleString()} {r.windowPlays === 1 ? "song" : "songs"} played
         <br />
         {meta.when}.
       </Big>
       <Sub>{meta.lore}</Sub>
     </>
   );
+
+  // The same answer the dashboard gives, from the same function.
+  const reading = warming ? null : readTrial(r);
 
   if (r.retroAnthem) {
     slides.push(
@@ -123,12 +133,20 @@ export function StoryIntro({ report, onDone }: { report: Report; onDone: () => v
   ) : (
     <>
       <Eyebrow>The verdict</Eyebrow>
-      <div className="font-display text-[7rem] leading-none text-gold tabular">
-        {Number.isFinite(r.index) ? r.index.toFixed(2) : "—"}
-        <span className="text-5xl">&times;</span>
-      </div>
-      <Big>{r.verdict.headline}</Big>
-      <Sub>{r.verdict.detail}</Sub>
+      <Sub>{METRICS[r.metric].question(meta.qSubject)}</Sub>
+      <div className="font-display text-6xl sm:text-7xl leading-none text-gold">{reading!.big}</div>
+      <Sub>{reading!.sub}</Sub>
+      {reading!.likelihood && (
+        <p className="text-ink-2 text-base max-w-md">
+          <strong className="text-ink">{reading!.likelihood.label}</strong>{" "}
+          {reading!.likelihood.sentence}
+          {showP && (
+            <span className="block text-ink-3 text-xs mt-2 tabular">
+              {pValueNote(r.p, r.iterations)}
+            </span>
+          )}
+        </p>
+      )}
     </>
   ));
 

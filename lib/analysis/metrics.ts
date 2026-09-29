@@ -3,6 +3,7 @@ import { firstListens, tagScrobbles } from "./nostalgia";
 import type { WindowBounds } from "@/lib/ephemeris/retrogrades";
 import { makeInWindow } from "@/lib/ephemeris/retrogrades";
 import { mulberry32, type Rng } from "./rng";
+import { MIN_EVENTS, MIN_RETRO_N, evidenceStatus, permutationP, type Evidence } from "./confidence";
 
 const DAY = 86400;
 
@@ -26,9 +27,9 @@ export interface MetricMeta {
   question: (qSubject: string) => string;
   /** Hero "in plain terms" line. */
   plainTerms: (when: string, up: boolean, pct: number) => string;
-  /** Verdict detail lines. */
-  detailUp: (pct: string, when: string, pStr: string) => string;
-  detailDown: (pct: string, when: string, pStr: string) => string;
+  /** Verdict detail lines. Never carry a p-value: see Verdict.detail. */
+  detailUp: (pct: string, when: string) => string;
+  detailDown: (pct: string, when: string) => string;
   /** Label for the peak-day card. */
   peakDayLabel: string;
   peakDayBody: (count: number) => string;
@@ -53,8 +54,8 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
       `A play counts as nostalgic if you first played it more than ${humanDays(t)} earlier. New discoveries don't count; comfort listens do.`,
     plainTerms: (when, up, pct) =>
       `In plain terms: ${when}, your urge to replay music you already love goes ${up ? "up" : "down"} by about ${pct}%.`,
-    detailUp: (pct, when, p) => `You revisit old music ${pct} more ${when} (${p}).`,
-    detailDown: (pct, when, p) => `You revisit old music ${pct} LESS ${when} (${p}).`,
+    detailUp: (pct, when) => `You revisit old music ${pct} more ${when}.`,
+    detailDown: (pct, when) => `You revisit old music ${pct} LESS ${when}.`,
     peakDayLabel: "Your most nostalgic day",
     peakDayBody: (n) => `${n.toLocaleString()} old favorites in a single day. Whatever happened, the music remembers.`,
     slider: { label: "“Old favorite” = first heard over", min: 90, max: 1825, default: 365 },
@@ -72,8 +73,8 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
       `A play counts as a reunion when you return to an artist you'd played at least 10 times before, then not touched for over ${humanDays(t)}. Not a casual repeat: a genuine "we need to talk."`,
     plainTerms: (when, up, pct) =>
       `In plain terms: ${when}, long-lost favorite artists come back into rotation about ${pct}% ${up ? "more" : "less"} often.`,
-    detailUp: (pct, when, p) => `Long-lost favorite artists resurface ${pct} more often ${when} (${p}).`,
-    detailDown: (pct, when, p) => `Long-lost favorite artists resurface ${pct} LESS often ${when} (${p}).`,
+    detailUp: (pct, when) => `Long-lost favorite artists resurface ${pct} more often ${when}.`,
+    detailDown: (pct, when) => `Long-lost favorite artists resurface ${pct} LESS often ${when}.`,
     peakDayLabel: "Your biggest reunion day",
     peakDayBody: (n) => `${n.toLocaleString()} old flames rekindled in a single day. Somebody was going through it.`,
     slider: { label: "A “reunion” needs a silence of", min: 180, max: 1460, default: 548 },
@@ -91,8 +92,8 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
       `No tagging tricks here: we simply count how much you listen per day. Mars rules drive and momentum; the question is whether yours stalls (or floors it) when Mars reverses.`,
     plainTerms: (when, up, pct) =>
       `In plain terms: ${when}, you play about ${pct}% ${up ? "more" : "less"} music per day than usual.`,
-    detailUp: (pct, when, p) => `You play ${pct} more music per day ${when} (${p}).`,
-    detailDown: (pct, when, p) => `You play ${pct} LESS music per day ${when} (${p}).`,
+    detailUp: (pct, when) => `You play ${pct} more music per day ${when}.`,
+    detailDown: (pct, when) => `You play ${pct} LESS music per day ${when}.`,
     peakDayLabel: "Your loudest day",
     peakDayBody: (n) => `${n.toLocaleString()} plays in a single day. The neighbors know your taste by now.`,
     slider: null,
@@ -110,8 +111,8 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
       `A play counts as nocturnal if it lands between midnight and 4am, your local time. Full moon lore says nobody sleeps; your scrobbles kept the receipts.`,
     plainTerms: (when, up, pct) =>
       `In plain terms: ${when}, you're about ${pct}% ${up ? "more" : "less"} likely to be up past midnight with headphones on.`,
-    detailUp: (pct, when, p) => `You're up past midnight with music ${pct} more often ${when} (${p}).`,
-    detailDown: (pct, when, p) => `You're up past midnight with music ${pct} LESS often ${when} (${p}).`,
+    detailUp: (pct, when) => `You're up past midnight with music ${pct} more often ${when}.`,
+    detailDown: (pct, when) => `You're up past midnight with music ${pct} LESS often ${when}.`,
     peakDayLabel: "Your most nocturnal night",
     peakDayBody: (n) => `${n.toLocaleString()} plays between midnight and 4am. The moon saw everything.`,
     slider: null,
@@ -129,8 +130,8 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
       `A play counts as a discovery if it's the very first time you ever played that track. Eclipse lore is all sudden endings and new chapters. Does your library agree?`,
     plainTerms: (when, up, pct) =>
       `In plain terms: ${when}, you try brand-new music about ${pct}% ${up ? "more" : "less"} often.`,
-    detailUp: (pct, when, p) => `You discover new music ${pct} more often ${when} (${p}).`,
-    detailDown: (pct, when, p) => `You discover new music ${pct} LESS often ${when} (${p}).`,
+    detailUp: (pct, when) => `You discover new music ${pct} more often ${when}.`,
+    detailDown: (pct, when) => `You discover new music ${pct} LESS often ${when}.`,
     peakDayLabel: "Your biggest discovery day",
     peakDayBody: (n) => `${n.toLocaleString()} brand-new tracks in a single day. A whole new chapter, timestamped.`,
     slider: null,
@@ -140,9 +141,10 @@ export const METRICS: Record<MetricKey, MetricMeta> = {
 };
 
 export function humanDays(days: number): string {
-  return days >= 365
-    ? `${(days / 365).toFixed(days % 365 === 0 ? 0 : 1)} year${days > 365 ? "s" : ""}`
-    : `${days} days`;
+  if (days < 365) return `${days} days`;
+  // One decimal at most, and never "1.0 years": 370 days is "1 year".
+  const years = Math.round((days / 365) * 10) / 10;
+  return `${years} ${years === 1 ? "year" : "years"}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -278,18 +280,19 @@ export function volumePermutationTest(
   observedIndex: number,
   iterations = 2000,
   rng: Rng = mulberry32(0x5eed)
-): { p: number; iterations: number; samples: number[] } {
+): { p: number; matches: number; iterations: number; samples: number[] } {
   const spanLen = spanEnd - spanStart;
   if (!Number.isFinite(observedIndex) || spanLen <= 0 || uts.length === 0) {
-    return { p: NaN, iterations: 0, samples: [] };
+    return { p: NaN, matches: 0, iterations: 0, samples: [] };
   }
   const inWindow = makeInWindow(bounds);
   const windowSec = overlapSeconds(bounds, spanStart, spanEnd);
   const outSec = Math.max(1, spanEnd - spanStart - windowSec);
   const observed = Math.abs(Math.log(observedIndex));
   const samples: number[] = [];
-  let asExtreme = 0;
+  let matches = 0;
   let valid = 0;
+  if (windowSec <= 0) return { p: NaN, matches: 0, iterations: 0, samples };
 
   for (let i = 0; i < iterations; i++) {
     const offset = Math.floor(rng() * spanLen);
@@ -299,53 +302,86 @@ export function volumePermutationTest(
       if (inWindow(shifted)) inN++;
     }
     const outN = uts.length - inN;
-    if (!inN || !outN || windowSec <= 0) continue;
-    const sim = inN / (windowSec / DAY) / (outN / (outSec / DAY));
-    if (sim <= 0) continue;
+    /* A rotation with every play inside the windows, or none, is a total
+       swing (an index of infinity or 0). These used to be dropped, which let
+       p come out 0; see permutationTest in nostalgia.ts. */
+    const sim = outN ? inN / (windowSec / DAY) / (outN / (outSec / DAY)) : Infinity;
     valid++;
-    samples.push(sim);
-    if (Math.abs(Math.log(sim)) >= observed) asExtreme++;
+    if (Number.isFinite(sim)) samples.push(sim);
+    if (Math.abs(Math.log(sim)) >= observed) matches++;
   }
-  return { p: valid ? asExtreme / valid : NaN, iterations: valid, samples };
+  return { p: permutationP(matches, valid), matches, iterations: valid, samples };
 }
 
 /* ------------------------------------------------------------------ */
 /* Verdict from metric copy                                            */
 /* ------------------------------------------------------------------ */
 
+export interface VerdictSubjectFull {
+  name: string;
+  when: string;
+  plural?: boolean;
+  /** One event and several: "full moon" / "full moons". */
+  eventNoun: { one: string; many: string };
+}
+
 export function metricVerdict(
   metric: MetricMeta,
   index: number,
   p: number,
-  minN: boolean,
-  subject: { name: string; when: string; plural?: boolean }
+  evidence: Evidence,
+  subject: VerdictSubjectFull
 ): Verdict {
   const pct = (x: number) => `${Math.round(Math.abs(x) * 100)}%`;
-  if (!minN || !Number.isFinite(index) || !Number.isFinite(p)) {
-    return {
-      headline: "The stars withhold judgment.",
-      detail: "Not enough listening history for a verdict yet. Keep scrobbling.",
-      significant: false,
-    };
+  const status = evidenceStatus(index, p, evidence);
+  const withheld = (detail: string): Verdict => ({
+    headline: "The stars withhold judgment.",
+    detail,
+    significant: false,
+    status,
+  });
+  if (status === "no-comparison") {
+    return withheld(
+      `There's nothing to measure against yet: this needs some of your ${metric.tagNoun} both ${subject.when} and the rest of the time.`,
+    );
   }
-  const pStr = p < 0.001 ? "p<0.001" : `p=${p.toFixed(3)}`;
+  if (status === "too-few-plays") {
+    return withheld(
+      /* `retroN` counts the plays this measure can test, which for a measure
+         with a warm-up is fewer than every play in the windows (the reveal's
+         count). Saying "your plays" put "None of your plays" beside "6,658
+         songs played when Mercury is retrograde". */
+      evidence.retroN === 0
+        ? `None of the plays this measure can test fall ${subject.when} yet, so there's nothing to compare. Retrospect waits for ${MIN_RETRO_N} before calling it either way.`
+        : `Only ${evidence.retroN.toLocaleString()} of the plays this measure can test fall ${subject.when}, and Retrospect waits for ${MIN_RETRO_N} before calling it either way. Keep scrobbling.`,
+    );
+  }
+  if (status === "too-few-events") {
+    const n = evidence.events;
+    return withheld(
+      `This rests on ${n === 1 ? `a single ${subject.eventNoun.one}` : `just ${n} ${subject.eventNoun.many}`}, the ${n === 1 ? "one" : "ones"} this measure can test. Each one is a single stretch of your life, so one odd week can look like a pattern. Retrospect waits for ${MIN_EVENTS} before calling it either way: with fewer, even every one of them pointing the same way happens by chance too often to mean much.`,
+    );
+  }
   if (p < 0.05 && index > 1) {
     return {
       headline: "The heavens have a measurable grip on you.",
-      detail: metric.detailUp(pct(index - 1), subject.when, pStr),
+      detail: metric.detailUp(pct(index - 1), subject.when),
       significant: true,
+      status,
     };
   }
   if (p < 0.05 && index < 1) {
     return {
       headline: "Reverse-cursed.",
-      detail: metric.detailDown(pct(1 - index), subject.when, pStr),
+      detail: metric.detailDown(pct(1 - index), subject.when),
       significant: true,
+      status,
     };
   }
   return {
     headline: `${subject.name} ${subject.plural ? "are" : "is"} innocent.`,
-    detail: `Your ${metric.tagNoun} hold steady no matter what this sky does; chance explains everything we found (p=${p.toFixed(2)}).`,
+    detail: `Your ${metric.tagNoun} didn't move with this sky by more than chance could explain.`,
     significant: false,
+    status,
   };
 }

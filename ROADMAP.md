@@ -2,14 +2,84 @@
 
 **Index**
 
-- **Done:** A young history gets a real report (28 Sept 2026) · Roster 4.12.1
-  (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The report tells the truth about its own confidence ·
-  The redesign
+- **Done:** The report tells the truth about its own confidence (28 Sept 2026) ·
+  A young history gets a real report (28 Sept) · Roster 4.12.1 (16 Sept) ·
+  Roster sweep (5 Sept)
+- **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### The report tells the truth about its own confidence (28 September 2026)
+
+The numbers the report showed claimed more certainty than the data
+supported, in five places. The shared change comes first: every verdict now
+has a `status` (`tested`, `too-few-plays`, `too-few-events`, `no-comparison`,
+`warming-up`), so every consumer can tell "not enough to test" from "tested,
+and nothing there". Before, both were `significant: false`.
+
+- **The p-value.** The scramble test dropped every shuffle that found none of
+  the tagged plays inside the windows, so an observed zero could never be
+  matched and printed "p<0.001", on 0 of 10,991 plays in one account. Those
+  shuffles now count, and p is (matches + 1) / (shuffles + 1), never 0. P is
+  out of every verdict sentence. By default a result reads as plain-English
+  likelihood, in four bands from "very unlikely to be chance" to "could easily
+  be chance", with the shuffles as a plain frequency. The last band starts
+  where a lead ends (p 0.35), so a lead never reads "could easily be chance".
+  P-values are a toggle in the skeptic's panel, kept in the browser, and
+  appear beside the plain sentence with what they mean, only for a tested
+  trial, and never rounded across a line the words depend on.
+- **The sweep.** A lead or a conviction must now be a tested trial, so a
+  withheld one can't surface as "-100% · a lead". The sweep counts as judged
+  only the trials it tested, and says how many are waiting on more history.
+- **Convictions on three events.** A verdict now needs 6 separate events as
+  well as 500 plays, because plays inside one window move together. Six is the
+  fewest at which the events alone could clear the 5% bar (see README). Below
+  it, the page says so in plain English. It costs rare skies most: about two
+  years of testable history for Mercury, ten for Venus, thirteen for Mars.
+- **Windows "on you".** One definition, the windows overlapping your listening,
+  on every path; step 2 says separately how many the test used. The reveal's
+  "songs played when Mercury is retrograde" counts the same plays as the
+  anthem. The reveal and the dashboard read a trial through one function, so
+  they can't give it two verdicts a click apart.
+- **Loudest month** compares plays per day in each calendar month against
+  plays per day overall, over the days the history covers. A three-month
+  history no longer reads +329%.
+
+Also:
+- The grip meter reads "Not enough to measure yet" for an untested trial
+  instead of "No measurable grip".
+- The duel labels an untested side "not enough to test" with no score, scores
+  a round only when both sides were tested, says which floor a side missed
+  (too few full moons is not too little listening), and no longer calls a duel
+  with no scored rounds "a perfect stalemate". A tested, unremarkable side
+  reads "within chance" instead of "no real effect".
+- The share card and the sweep's tooltips use the dashboard's own reading, so
+  a lead can't unfurl as "Mercury is innocent", and an untested trial gets the
+  generic card.
+- An untested trial's page no longer prints its ratio ("0.00×") as a result,
+  and one with no ratio at all no longer reads "100% fewer" or "scrambled 0
+  times" in the skeptic's panel.
+- The verdict's withheld copy counts "the plays this measure can test", so it
+  can't say "None of your plays" beside the reveal's "6,658 songs played".
+- A flat result no longer reads "0% blips"; the null-result lines no longer
+  say "well inside what pure chance produces" beside a likelihood of 1 in 17.
+- The skeptic's histogram now draws the shuffles that found none of the
+  tagged plays in the windows, at 0, and its axis no longer goes below 0. On
+  an untested trial the panel no longer tells you how to read the line.
+- "1.0 years" reads "1 year" wherever a length of time is shown.
+
+Left alone on purpose, as the redesign's: the 25-trial sweep and the genre
+headline have no multiple-comparisons correction, so across 25 trials a
+"very unlikely to be chance" conviction can still be chance; the sign table's
+claims; and the lead copy that suggests narrowing the era until a lead
+converts ("leads become convictions in focused slices"), which is the same
+problem in words.
+
+Client JS over `main` at 99eac00, both built locally: 1,627,019 to 1,635,931,
+up 8,912 bytes (0.55%). `/u/` +4,620, `/vs/` +4,098. Guard headroom 66,981 to
+58,069.
 
 ### A young history gets a real report (28 September 2026)
 
@@ -215,20 +285,19 @@ the `threshold` refactor.
 
 ### Product
 
-- [ ] **The report tells the truth about its own confidence.** Next. The
-      numbers shown overstate what the data supports, in four places: the
-      p-value, the sweep promoting withheld trials, convictions on as few as
-      three events, and the reveal undercounting the sky's windows. The first
-      two share one change: the report has to tell "untested" from
-      "unremarkable", and `trialStatus` is the field for it. The sweep's
-      summary also still counts a withheld verdict as judged, so it can call a
-      set of trials "all clean" when some had too few plays to say. One more
-      belongs here: "loudest month" compares against a twelve-month average, so any
-      history under a year reads a large, meaningless number (+329% on a
-      three-month history).
-- [ ] **The redesign.** After that, because designing around live defects
-      bakes them in. The young-history work left these for it rather than
+- [ ] **The redesign.** Next, now that the live defects are fixed. The
+      young-history and confidence work left these for it rather than
       redesigning in passing:
+      - Whether the 25-trial sweep and the genre headline get a
+        multiple-comparisons correction, or are cut. Each trial is judged
+        alone at 5%, so a sweep with no real effect anywhere still expects
+        about one false conviction.
+      - The sign table's claims: no row gets its own test, and rows rest on
+        one or two events.
+      - The lead copy and the sweep key both suggest narrowing the era until
+        a lead converts, which is the multiple-comparisons problem in words.
+      - A withheld verdict's explanation runs to seven lines in the hero at
+        phone width.
       - A brand-new history under 500 scrobbles gets a thin page: no
         fingerprints yet, just a line saying when they arrive.
       - The genre panel shows "Reading the liner notes" for a while on a small
@@ -238,8 +307,8 @@ the `threshold` refactor.
         "too soon to tell".
 - [x] ~~**Deep-dive UX investigation.**~~ Delivered 27 September 2026 as a
       private finding with evidence. It shows real listening histories, so it
-      stays out of this repo. Its follow-ups are the young-history work under
-      Done and the two items above.
+      stays out of this repo. Its follow-ups are the young-history and
+      confidence work under Done, and the redesign above.
 
       The original brief, kept for the record: the app has a genuinely good idea in it
       and the landing page does not spend it well. This is an investigation, not

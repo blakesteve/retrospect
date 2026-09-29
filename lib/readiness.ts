@@ -139,15 +139,16 @@ export function pendingHabitsSentence(pending: PendingHabit[], nowMs: number): s
  * It used to say "All 25 trials came back clean" whatever happened, even when
  * most trials had nothing to test and were skipped. A young history reaches
  * that on the same page as "Too soon to tell", so an untested trial read as a
- * tested, unremarkable one. This only counts the trials that could be judged,
- * and only blames history length for the ones still warming up; a trial that
- * failed or couldn't be computed is said to be untested, not young. Which
- * trials count as hits, and whether a withheld verdict counts as judged, is
- * unchanged: that is the next piece of work.
+ * tested, unremarkable one. `judged` counts only trials that were actually
+ * tested (verdict status "tested"), and history length is only blamed for the
+ * ones waiting on more of it; a trial that failed or had nothing to compare
+ * is said to be untested, not young.
  */
 export function sweepNoHitsSentence(counts: {
+  /** Trials whose verdict status is "tested". */
   judged: number;
-  /** Trials whose report came back "warming-up". */
+  /** Trials waiting on more history: warming up, or too few plays or
+      separate events for a verdict. */
   waiting: number;
   total: number;
 }): string {

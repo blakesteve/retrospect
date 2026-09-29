@@ -1,5 +1,6 @@
 import { makeInWindow, type WindowBounds } from "@/lib/ephemeris/retrogrades";
 import { mulberry32, type Rng } from "./rng";
+import { evidenceStatus, permutationP, type Evidence, type VerdictStatus } from "./confidence";
 
 export interface Scrobble {
   uts: number; // unix seconds
@@ -31,10 +32,16 @@ export interface IndexResult {
 }
 
 export interface PermutationResult {
-  /** Two-tailed p-value: share of rotations with |log(index)| >= observed. */
+  /** Two-tailed p-value, (matches + 1) / (iterations + 1): see permutationP. */
   p: number;
+  /** Rotations that matched or beat the observed swing, either way. */
+  matches: number;
+  /** Rotations that produced a comparison at all. */
   iterations: number;
-  /** Null-distribution index samples, for the skeptic-mode histogram. */
+  /** Null-distribution index samples, for the skeptic-mode histogram. A
+      rotation with none of the tagged plays outside the windows (an infinite
+      index) counts toward `matches` and `iterations` but can't be drawn, so
+      it's left out; one with none inside (index 0) is drawn at 0. */
   samples: number[];
 }
 
@@ -127,11 +134,13 @@ export function permutationTest(
 ): PermutationResult {
   const spanLen = spanEnd - spanStart;
   if (!Number.isFinite(observedIndex) || spanLen <= 0 || tagged.length === 0) {
-    return { p: NaN, iterations: 0, samples: [] };
+    return { p: NaN, matches: 0, iterations: 0, samples: [] };
   }
+  // An observed index of 0 (none of the tagged plays inside the windows) is
+  // an infinite swing, and only an equally total swing can match it.
   const observed = Math.abs(Math.log(observedIndex));
   const samples: number[] = [];
-  let asExtreme = 0;
+  let matches = 0;
   let valid = 0;
 
   for (let i = 0; i < iterations; i++) {
@@ -151,20 +160,31 @@ export function permutationTest(
         if (s.nostalgic) directNost++;
       }
     }
-    if (!retroN || !directN || !directNost) continue;
-    const sim = retroNost / retroN / (directNost / directN);
-    if (sim <= 0) continue;
+    // No plays on one side: this rotation has nothing to compare.
+    if (!retroN || !directN) continue;
+    /* Rotations where one side has none of the tagged plays used to be
+       dropped. They are the most extreme outcomes chance can produce, so
+       dropping them meant an observed index of 0 could never be matched and
+       came out p = 0. Count them: none inside is an index of 0, none outside
+       an infinite one, and both are a total swing. */
+    const sim = directNost ? retroNost / retroN / (directNost / directN) : Infinity;
     valid++;
-    samples.push(sim);
-    if (Math.abs(Math.log(sim)) >= observed) asExtreme++;
+    if (Number.isFinite(sim)) samples.push(sim);
+    if (Math.abs(Math.log(sim)) >= observed) matches++;
   }
-  return { p: valid ? asExtreme / valid : NaN, iterations: valid, samples };
+  return { p: permutationP(matches, valid), matches, iterations: valid, samples };
 }
 
 export interface Verdict {
   headline: string;
+  /** Plain English, and never a p-value: pages add the likelihood, and the
+      p-value only for a visitor who has asked for it. */
   detail: string;
+  /** Passed the scramble test. Only ever true when status is "tested". */
   significant: boolean;
+  /** Whether there was enough to test at all. Untested and unremarkable both
+      have `significant: false`; this is what tells them apart. */
+  status: VerdictStatus;
 }
 
 export interface VerdictSubject {
@@ -176,38 +196,44 @@ export interface VerdictSubject {
 
 const MERCURY: VerdictSubject = { name: "Mercury", when: "when Mercury is retrograde" };
 
+/** The Mercury × Nostalgia verdict. The report uses `metricVerdict`, which
+    is this for any measure; the two share their floors and their status. */
 export function verdict(
   index: number,
   p: number,
-  minN: boolean,
+  evidence: Evidence,
   subject: VerdictSubject = MERCURY
 ): Verdict {
   const pct = (x: number) => `${Math.round(Math.abs(x) * 100)}%`;
-  if (!minN || !Number.isFinite(index) || !Number.isFinite(p)) {
+  const status = evidenceStatus(index, p, evidence);
+  if (status !== "tested") {
     return {
       headline: "The stars withhold judgment.",
       detail: "Not enough listening history for a verdict yet. Keep scrobbling.",
       significant: false,
+      status,
     };
   }
-  const pStr = p < 0.001 ? "p<0.001" : `p=${p.toFixed(3)}`;
   if (p < 0.05 && index > 1) {
     return {
       headline: "The heavens have a measurable grip on you.",
-      detail: `You revisit old music ${pct(index - 1)} more ${subject.when} (${pStr}).`,
+      detail: `You revisit old music ${pct(index - 1)} more ${subject.when}.`,
       significant: true,
+      status,
     };
   }
   if (p < 0.05 && index < 1) {
     return {
       headline: "Reverse-cursed.",
-      detail: `You revisit old music ${pct(1 - index)} LESS ${subject.when} (${pStr}).`,
+      detail: `You revisit old music ${pct(1 - index)} LESS ${subject.when}.`,
       significant: true,
+      status,
     };
   }
   return {
     headline: `${subject.name} is innocent.`,
-    detail: `Your nostalgia does not follow the sky (p=${p.toFixed(2)}).`,
+    detail: "Nothing here is bigger than what chance produces on its own.",
     significant: false,
+    status,
   };
 }

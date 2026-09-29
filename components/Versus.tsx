@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MatchupCard, Spinner } from "@blakesteve/roster";
 import type { Report } from "@/lib/report";
+import { duelSideLabel, duelUnscoredReason } from "@/lib/likelihood";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 import { METRICS } from "@/lib/analysis/metrics";
 import {
@@ -51,6 +52,8 @@ const emptyUser = (): UserState => ({
 const strength = (r: Report | undefined) =>
   r && Number.isFinite(r.index) ? Math.round(Math.abs(r.index - 1) * 100) : 0;
 const significant = (r: Report | undefined) => Boolean(r?.verdict.significant);
+/** A side with no report, or one whose verdict was withheld, wasn't tested. */
+const tested = (r: Report | undefined) => r?.verdict.status === "tested";
 
 export function Versus({ a, b }: { a: string; b: string }) {
   const [users, setUsers] = useState<Record<"a" | "b", UserState>>({
@@ -113,12 +116,8 @@ export function Versus({ a, b }: { a: string; b: string }) {
         if (!res.ok) continue;
         const report: Report = await res.json();
         if (cancelled) return;
-        // Too young for this measure: nothing was tested, so drop it exactly
-        // as the old 404 was dropped. The win count then skips the round. The
-        // card still labels the missing side "no real effect", which is the
-        // untested-reads-as-unremarkable problem the confidence work will fix;
-        // this keeps today's behavior rather than adding to it.
-        if (report.trialStatus === "warming-up") continue;
+        // Kept even when untested (warming up, or withheld): the card says so,
+        // and the round isn't scored.
         setUsers((u) => ({
           ...u,
           [slot]: { ...u[slot], reports: { ...u[slot].reports, [key]: report } },
@@ -157,10 +156,13 @@ export function Versus({ a, b }: { a: string; b: string }) {
   const loading = users.a.status !== "ready" || users.b.status !== "ready";
   let winsA = 0;
   let winsB = 0;
+  let scored = 0;
   for (const key of PHENOMENON_KEYS) {
     const ra = users.a.reports[key];
     const rb = users.b.reports[key];
-    if (!ra || !rb) continue;
+    // Only a round both sides were tested in can be won.
+    if (!tested(ra) || !tested(rb)) continue;
+    scored++;
     const sa = significant(ra) ? strength(ra) : 0;
     const sb = significant(rb) ? strength(rb) : 0;
     if (sa > sb) winsA++;
@@ -178,9 +180,14 @@ export function Versus({ a, b }: { a: string; b: string }) {
         </h1>
         {!loading && (
           <p className="text-ink-2 mt-4">
-            {winsA === winsB
-              ? "A perfect stalemate. The sky refuses to pick a favorite."
-              : `${winsA > winsB ? a : b} is the more sky-ruled listener, ${Math.max(winsA, winsB)}–${Math.min(winsA, winsB)}.`}
+            {/* A draw needs rounds to draw: with none scored it isn't one. */}
+            {scored === 0
+              ? "No round could be scored yet: there isn't enough to test on one side or both."
+              : winsA === winsB
+                ? scored === PHENOMENON_KEYS.length
+                  ? "A perfect stalemate. The sky refuses to pick a favorite."
+                  : `A stalemate over the ${scored} ${scored === 1 ? "round" : "rounds"} that could be scored.`
+                : `${winsA > winsB ? a : b} is the more sky-ruled listener, ${Math.max(winsA, winsB)}–${Math.min(winsA, winsB)}.`}
           </p>
         )}
       </header>
@@ -199,8 +206,9 @@ export function Versus({ a, b }: { a: string; b: string }) {
       {!loading && (
         <p className="text-center text-xs text-ink-3 mb-6 max-w-lg mx-auto leading-relaxed">
           Each round: how strongly that sky bends each listener&rsquo;s habits, as a
-          percentage. A score only counts when our scramble test says the effect is real;{" "}
-          <span className="text-ink-2">coincidences score zero</span>.
+          percentage. A score only counts when our scramble test says it&rsquo;s unlikely to
+          be chance; <span className="text-ink-2">coincidences score zero</span>, and a round
+          one side has too little listening for isn&rsquo;t scored.
         </p>
       )}
 
@@ -214,9 +222,22 @@ export function Versus({ a, b }: { a: string; b: string }) {
           const sa = significant(ra) ? strength(ra) : 0;
           const sb = significant(rb) ? strength(rb) : 0;
           const tie = sa === sb;
-          const rowStory = tie
+          const scoredRound = tested(ra) && tested(rb);
+          // A missing report is a failed load, or one still on its way.
+          const rowStory = !ra || !rb
+            ? loading
+              ? ""
+              : "Not scored: this round didn't load."
+            : !scoredRound
+              ? `Not scored: ${[
+                  !tested(ra) && duelUnscoredReason(a, ra, ph.eventNoun.many),
+                  !tested(rb) && duelUnscoredReason(b, rb, ph.eventNoun.many),
+                ]
+                  .filter(Boolean)
+                  .join(", and ")}.`
+              : tie
             ? sa === 0
-              ? `Neither of you actually responds to ${ph.title.toLowerCase()}s. The sky shrugs.`
+              ? `Neither of you moves with ${ph.eventNoun.many} by more than chance. The sky shrugs.`
               : `Dead heat, you're equally moved.`
             : `${sa > sb ? a : b}'s ${metric.tagNoun} shift ${Math.max(sa, sb)}% when this sky turns${
                 Math.min(sa, sb) === 0 ? `; ${sa > sb ? b : a} doesn't budge.` : `, beating ${Math.min(sa, sb)}%.`
@@ -231,20 +252,23 @@ export function Versus({ a, b }: { a: string; b: string }) {
                   id: a,
                   logoSrc: users.a.avatar,
                   name: a,
-                  score: sa,
-                  isWinner: !tie && sa > sb,
-                  accessory: significant(ra) ? `moved ${strength(ra)}%, real` : "no real effect",
+                  // No number for an untested side: 0 would read as a result.
+                  score: tested(ra) ? sa : undefined,
+                  isWinner: scoredRound && !tie && sa > sb,
+                  accessory: duelSideLabel(ra),
                 }}
                 homeTeam={{
                   id: b,
                   logoSrc: users.b.avatar,
                   name: b,
-                  score: sb,
-                  isWinner: !tie && sb > sa,
-                  accessory: significant(rb) ? `moved ${strength(rb)}%, real` : "no real effect",
+                  score: tested(rb) ? sb : undefined,
+                  isWinner: scoredRound && !tie && sb > sa,
+                  accessory: duelSideLabel(rb),
                 }}
-                isCompleted={Boolean(ra && rb)}
-                isTie={tie}
+                /* Only a scored round is "completed": otherwise the card greys
+                   out both sides as losers and shows a tested side's 0. */
+                isCompleted={scoredRound}
+                isTie={scoredRound && tie}
               />
               <p className="text-ink-3 text-xs mt-1.5 text-center">{rowStory}</p>
             </div>

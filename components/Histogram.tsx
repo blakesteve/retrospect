@@ -17,7 +17,8 @@ export function Histogram({ samples, observed }: { samples: number[]; observed: 
     let lo = Math.min(...values);
     let hi = Math.max(...values);
     const pad = (hi - lo) * 0.08 || 0.05;
-    lo -= pad;
+    // An index can't be below 0; shuffles with none inside the windows sit at 0.
+    lo = Math.max(0, lo - pad);
     hi += pad;
     const BINS = 36;
     const bins = new Array<number>(BINS).fill(0);

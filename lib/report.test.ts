@@ -212,3 +212,92 @@ describe("the report route", () => {
     }
   });
 });
+
+describe("windows 'on you' mean one thing", () => {
+  it("counts every window over your listening, on a normal trial as on a young one", async () => {
+    /* 1 Jan 2025 to 1 Mar 2026. Mercury was retrograde from 15 Mar 2025,
+       18 Jul 2025, 9 Nov 2025 and 26 Feb 2026: four windows over the history.
+       The trial itself skips the first year, so it can only use the last.
+       This used to report 1, while the reveal said "happened 1 time on you". */
+    await getStore().appendScrobbles("fourteen-months", history(utc(2025, 1, 1), utc(2026, 3, 1), 20));
+    const r = report(await buildReport("fourteen-months", { ...defaults, body: "mercury" }));
+    expect(r.trialStatus).toBe("ran");
+    expect(r.windowCount).toBe(4);
+    expect(r.eventsTested).toBe(1);
+
+    // The young path uses the same definition: 1 Jan to 1 Apr 2025 overlaps
+    // the 15 Mar 2025 retrograde only.
+    await getStore().appendScrobbles("three-months", history(utc(2025, 1, 1), utc(2025, 4, 1), 20));
+    const young = report(await buildReport("three-months", { ...defaults, body: "mercury" }));
+    expect(young.trialStatus).toBe("warming-up");
+    expect(young.windowCount).toBe(1);
+  });
+
+  it("counts every play inside those windows for 'songs played when Mercury is retrograde'", async () => {
+    await getStore().appendScrobbles("window-plays", history(utc(2025, 1, 1), utc(2026, 3, 1), 20));
+    const r = report(await buildReport("window-plays", { ...defaults, body: "mercury" }));
+    // 15 Mar to 7 Apr, 18 Jul to 11 Aug, 9 Nov to 29 Nov 2025 and 26 Feb 2026
+    // on: 24 + 25 + 20 + 3 whole days of 20 plays, give or take the edge days.
+    expect(r.windowPlays).toBeGreaterThan(70 * 20);
+    expect(r.windowPlays).toBeLessThan(76 * 20);
+    // The trial tests only the plays after its first year.
+    expect(r.retroN).toBeLessThan(r.windowPlays);
+  });
+});
+
+describe("a conviction needs separate events, not just plays", () => {
+  /** Daytime plays every day, and a burst after midnight during each full moon. */
+  function nightOwlUnderFullMoons(from: number, to: number) {
+    const out = history(from, to, 30);
+    // A little late-night listening every night, so there's a usual rate.
+    for (let day = from; day < to; day += DAY) {
+      for (let i = 0; i < 3; i++) out.push({ uts: day + 7200 + i * 60, artist: "Late", track: `l${i}` });
+    }
+    // Full moon windows (3 days each), from the ephemeris.
+    const moons = [
+      utc(2025, 2, 11), utc(2025, 3, 12), utc(2025, 4, 11), utc(2025, 5, 11),
+      utc(2025, 6, 9), utc(2025, 7, 9), utc(2025, 8, 7),
+    ].filter((m) => m >= from && m < to);
+    for (const m of moons) {
+      for (let day = 1; day <= 2; day++) {
+        for (let i = 0; i < 120; i++) {
+          out.push({ uts: m + day * DAY + 3600 + i * 20, artist: "Night", track: `n${i % 30}` });
+        }
+      }
+    }
+    return out.sort((a, b) => a.uts - b.uts);
+  }
+  const nightOwl = { ...defaults, body: "fullmoon" as const, metric: "nightowl" as const };
+
+  it("withholds a verdict resting on three full moons, however strong", async () => {
+    // 20 Jan to 20 Apr 2025: the full moons of February, March and April.
+    await getStore().appendScrobbles("three-moons", nightOwlUnderFullMoons(utc(2025, 1, 20), utc(2025, 4, 20)));
+    const r = report(await buildReport("three-moons", nightOwl));
+    expect(r.eventsTested).toBe(3);
+    expect(r.retroN).toBeGreaterThanOrEqual(500);
+    expect(r.verdict.status).toBe("too-few-events");
+    expect(r.verdict.significant).toBe(false);
+    expect(r.verdict.detail).toContain("just 3 full moons");
+  });
+
+  it("gives the same pattern over seven full moons a verdict", async () => {
+    // 20 Jan to 20 Aug 2025: seven full moons.
+    await getStore().appendScrobbles("seven-moons", nightOwlUnderFullMoons(utc(2025, 1, 20), utc(2025, 8, 20)));
+    const r = report(await buildReport("seven-moons", nightOwl));
+    expect(r.eventsTested).toBe(7);
+    expect(r.verdict.status).toBe("tested");
+    expect(r.verdict.significant).toBe(true);
+  });
+});
+
+describe("the report's own numbers", () => {
+  it("never reports p = 0 and never puts a p-value in the verdict", async () => {
+    await getStore().appendScrobbles("p-floor", history(utc(2023, 1, 1), utc(2026, 1, 1), 20));
+    for (const metric of ["nostalgia", "intensity"] as const) {
+      const r = report(await buildReport("p-floor", { ...defaults, body: "mercury", metric }));
+      expect(r.p).toBeGreaterThan(0);
+      expect(r.matches).toBeGreaterThanOrEqual(0);
+      expect(r.verdict.detail).not.toMatch(/\bp ?[=<]/);
+    }
+  });
+});

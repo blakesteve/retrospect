@@ -6,6 +6,7 @@ import {
   type PendingHabit,
   type Warmup,
 } from "./readiness";
+import { humanDays } from "./analysis/metrics";
 
 /* What a young history is told instead of an error screen. Plain English, a
    real date, never a promise of a date that has already passed, and never a
@@ -31,6 +32,15 @@ describe("warmupExplanation", () => {
     expect(text).toContain("arrive in July 2027");
     expect(text).toContain("when you first played it more than 1 year earlier");
     expect(text).not.toMatch(JARGON);
+  });
+
+  it("never says '1.0 years'", () => {
+    expect(humanDays(365)).toBe("1 year");
+    expect(humanDays(370)).toBe("1 year");
+    expect(humanDays(400)).toBe("1.1 years");
+    expect(humanDays(548)).toBe("1.5 years");
+    expect(humanDays(730)).toBe("2 years");
+    expect(humanDays(90)).toBe("90 days");
   });
 
   it("says 'years' for a setting between one year and a year and a half", () => {

@@ -7,6 +7,7 @@ import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/
 import { METRICS, type MetricKey } from "@/lib/analysis/metrics";
 import { gripLevel } from "./GripMeter";
 import { sweepNoHitsSentence } from "@/lib/readiness";
+import { readTrial, sweepCategory } from "@/lib/likelihood";
 
 interface Hit {
   body: PhenomenonKey;
@@ -34,9 +35,10 @@ export function SkyScan({
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ i: number; label: string } | null>(null);
   const [hits, setHits] = useState<Hit[] | null>(null);
-  /* How many trials had something to judge, and how many are still warming
-     up. A young history skips most of them, and the summary must not call a
-     skipped trial "clean" or blame a failed one on history length. */
+  /* How many trials were actually tested, and how many are waiting on more
+     history (warming up, or too few plays or events for a verdict). A young
+     history skips most of them, and the summary must not call a skipped
+     trial "clean" or blame a failed one on history length. */
   const [counts, setCounts] = useState({ judged: 0, waiting: 0 });
   const cancelled = useRef(false);
 
@@ -71,21 +73,25 @@ export function SkyScan({
           const res = await fetch(`/api/user/${encodeURIComponent(username)}/report?${params}`);
           if (!res.ok) continue;
           const report: Report = await res.json();
-          if (report.trialStatus === "warming-up") {
-            waitingCount++;
-            continue;
-          }
-          if (!Number.isFinite(report.index)) continue;
+          /* The same tiers the report's own hero uses. An untested trial is
+             never a lead or a conviction: it used to be read off the index
+             and p alone, so a withheld trial with no plays of its kind inside
+             the windows surfaced as "-100% · a lead". */
+          const category = sweepCategory(report);
+          if (category === "waiting") waitingCount++;
+          if (category === "waiting" || category === "untested") continue;
           judgedCount++;
-          const pct = Math.abs(report.index - 1) * 100;
-          const confirmed = report.verdict.significant;
-          const lead = !confirmed && pct >= 10 && report.p < 0.35;
-          if (confirmed || lead) {
+          const confirmed = category === "conviction";
+          if (confirmed || category === "lead") {
             found.push({
               body,
               metric: metricKey,
               index: report.index,
-              detail: report.verdict.detail,
+              // The chip's tooltip reads as the trial's own page does.
+              detail: (() => {
+                const { sub, likelihood } = readTrial(report);
+                return likelihood ? `${sub} ${likelihood.label}` : sub;
+              })(),
               confirmed,
             });
             setHits([...found].sort(byStrength));

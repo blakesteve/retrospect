@@ -19,6 +19,8 @@ export interface Phenomenon {
   subjectName: string;
   /** Grammatical number of the subject ("The eclipses ARE innocent"). */
   subjectPlural?: boolean;
+  /** One event and several, for counting them: "full moon" / "full moons". */
+  eventNoun: { one: string; many: string };
   /** Mid-sentence subject for questions: "Does {qSubject} keep you up late?" */
   qSubject: string;
   /** "when Mercury is retrograde" — verdict phrasing. */
@@ -55,6 +57,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "☿",
     title: "Mercury Retrograde",
     subjectName: "Mercury",
+    eventNoun: { one: "Mercury retrograde", many: "Mercury retrogrades" },
     when: "when Mercury is retrograde",
     tileLabel: "While Mercury was retrograde",
     anthemLabel: "Your retrograde anthem",
@@ -71,6 +74,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "♀",
     title: "Venus Retrograde",
     subjectName: "Venus",
+    eventNoun: { one: "Venus retrograde", many: "Venus retrogrades" },
     when: "when Venus is retrograde",
     tileLabel: "While Venus was retrograde",
     anthemLabel: "Your Venus retrograde anthem",
@@ -87,6 +91,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "♂",
     title: "Mars Retrograde",
     subjectName: "Mars",
+    eventNoun: { one: "Mars retrograde", many: "Mars retrogrades" },
     when: "when Mars is retrograde",
     tileLabel: "While Mars was retrograde",
     anthemLabel: "Your Mars retrograde anthem",
@@ -103,6 +108,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "🌕",
     title: "Full Moon",
     subjectName: "The Moon",
+    eventNoun: { one: "full moon", many: "full moons" },
     when: "under a full moon",
     tileLabel: "Under a full moon",
     anthemLabel: "Your full-moon anthem",
@@ -119,6 +125,7 @@ export const PHENOMENA: Record<PhenomenonKey, Phenomenon> = {
     glyph: "\u{1F318}",
     title: "Eclipses",
     subjectName: "The eclipses",
+    eventNoun: { one: "eclipse", many: "eclipses" },
     subjectPlural: true,
     when: "around eclipses",
     tileLabel: "Around eclipses (\u00b12.5 days)",
