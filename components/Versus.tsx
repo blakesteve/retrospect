@@ -5,6 +5,24 @@ import { MatchupCard, Spinner } from "@blakesteve/roster";
 import type { Report } from "@/lib/report";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 import { METRICS } from "@/lib/analysis/metrics";
+import {
+  apiError,
+  toVisitorErrorCode,
+  visitorError,
+  visitorErrorCodeOf,
+  type VisitorErrorCode,
+} from "@/lib/visitorErrors";
+
+/** Which duelist's sync failed, so the message can name them. */
+class DuelError extends Error {
+  constructor(
+    readonly username: string,
+    readonly code: VisitorErrorCode,
+    detail: string,
+  ) {
+    super(detail);
+  }
+}
 
 /** Neutral fallback avatar: a little gold moon on navy. */
 const FALLBACK_AVATAR =
@@ -39,7 +57,8 @@ export function Versus({ a, b }: { a: string; b: string }) {
     a: emptyUser(),
     b: emptyUser(),
   });
-  const [fatal, setFatal] = useState<string | null>(null);
+  // A code and a name, never raw text: see lib/visitorErrors.ts.
+  const [fatal, setFatal] = useState<{ code: VisitorErrorCode; username: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,10 +78,13 @@ export function Versus({ a, b }: { a: string; b: string }) {
       // Sync until ready.
       for (;;) {
         const res = await fetch(`/api/user/${encodeURIComponent(username)}/status`);
-        if (!res.ok) throw new Error(`${username}: HTTP ${res.status}`);
+        if (!res.ok) {
+          const err = await apiError(res);
+          throw new DuelError(username, err.code, err.message);
+        }
         const s = await res.json();
         if (cancelled) return;
-        if (s.status === "error") throw new Error(`${username}: ${s.error}`);
+        if (s.status === "error") throw new DuelError(username, toVisitorErrorCode(s.code), s.error);
         setUsers((u) => ({
           ...u,
           [slot]: {
@@ -91,6 +113,12 @@ export function Versus({ a, b }: { a: string; b: string }) {
         if (!res.ok) continue;
         const report: Report = await res.json();
         if (cancelled) return;
+        // Too young for this measure: nothing was tested, so drop it exactly
+        // as the old 404 was dropped. The win count then skips the round. The
+        // card still labels the missing side "no real effect", which is the
+        // untested-reads-as-unremarkable problem the confidence work will fix;
+        // this keeps today's behavior rather than adding to it.
+        if (report.trialStatus === "warming-up") continue;
         setUsers((u) => ({
           ...u,
           [slot]: { ...u[slot], reports: { ...u[slot].reports, [key]: report } },
@@ -102,7 +130,13 @@ export function Versus({ a, b }: { a: string; b: string }) {
     }
 
     Promise.all([run("a", a), run("b", b)]).catch((err) => {
-      if (!cancelled) setFatal(err instanceof Error ? err.message : String(err));
+      console.error("[retrospect] duel failed:", err);
+      if (cancelled) return;
+      setFatal(
+        err instanceof DuelError
+          ? { code: err.code, username: err.username }
+          : { code: visitorErrorCodeOf(err), username: "" },
+      );
     });
     return () => {
       cancelled = true;
@@ -110,10 +144,12 @@ export function Versus({ a, b }: { a: string; b: string }) {
   }, [a, b]);
 
   if (fatal) {
+    const message = visitorError(fatal.code, fatal.username);
     return (
-      <div className="text-center py-24">
+      <div className="text-center py-24 max-w-md mx-auto">
         <h1 className="font-display text-3xl text-gold mb-4">The duel is off.</h1>
-        <p className="text-ink-2">{fatal}</p>
+        <p className="text-ink-2">{message.title}</p>
+        <p className="text-ink-3 text-sm mt-2">{message.body}</p>
       </div>
     );
   }

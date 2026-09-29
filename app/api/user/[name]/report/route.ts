@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildReport } from "@/lib/report";
+import { emptyHistoryResponse } from "@/lib/emptyHistory";
 import type { NostalgiaLevel } from "@/lib/analysis/nostalgia";
 import { getPhenomenon, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 import type { MetricKey } from "@/lib/analysis/metrics";
@@ -59,7 +60,7 @@ async function handler(
   const tzRaw = Number(url.searchParams.get("tzm") ?? 0);
   const tzOffsetMinutes = Number.isFinite(tzRaw) && Math.abs(tzRaw) <= 840 ? tzRaw : 0;
 
-  const report = await buildReport(username, {
+  const outcome = await buildReport(username, {
     thresholdDays: threshold,
     level,
     body: bodyParam as PhenomenonKey,
@@ -69,13 +70,20 @@ async function handler(
     toMonth,
     excludeNoise,
   });
-  if (!report) {
-    return NextResponse.json({ error: "No scrobbles synced yet" }, { status: 404 });
+  // A history too young for this measure is a 200: the report carries
+  // `trialStatus: "warming-up"` and everything that doesn't need the warm-up.
+  if (outcome.kind === "report") return NextResponse.json(outcome.report);
+  if (outcome.kind === "empty-era") {
+    return NextResponse.json(
+      { error: "No scrobbles fall inside the requested era.", code: "empty-era" },
+      { status: 404 },
+    );
   }
-  return NextResponse.json(report);
+  return emptyHistoryResponse(username);
 }
 
-/** Surface real error messages instead of opaque empty 500s. */
+/** Surface real error messages instead of opaque empty 500s. The message is
+    for whoever is debugging; `code` is what a visitor is told. */
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ name: string }> }
@@ -85,6 +93,6 @@ export async function GET(
   } catch (err) {
     const routeError = err instanceof Error ? err.message : String(err);
     console.error(`[retrospect] route failure:`, err);
-    return NextResponse.json({ error: routeError }, { status: 500 });
+    return NextResponse.json({ error: routeError, code: "server" }, { status: 500 });
   }
 }

@@ -1,6 +1,75 @@
 # retrospect — Roadmap
 
+**Index**
+
+- **Done:** A young history gets a real report (28 Sept 2026) · Roster 4.12.1
+  (16 Sept) · Roster sweep (5 Sept)
+- **Next, product:** The report tells the truth about its own confidence ·
+  The redesign
+- **Next, quality:** framework error pages a visitor can still reach · the
+  threshold slider is still a native input (see the Roster sweep entry)
+
 ## Done
+
+### A young history gets a real report (28 September 2026)
+
+The first visit of anyone new to Last.fm used to fail outright. Four fixes:
+
+- **Under a year of history gets a report, not an error screen.** Three
+  measures ignore the start of a history (the warm-up), and a history with
+  nothing past it got `null` from `buildReport`, a 404 "No scrobbles synced
+  yet" from the route, and a page asking whether the username was right. It
+  now gets a report marked `trialStatus: "warming-up"`: "Too soon to tell" in
+  place of the verdict, the month it becomes testable, buttons for the two
+  measures with no warm-up, and every part of the page and the reveal that
+  doesn't need one. The report cache is now keyed on the whole history, not
+  its newest play, so a report built mid-sync (a link unfurl can ask for one)
+  isn't served once the older plays arrive.
+  `buildReport` returns a typed outcome, so no scrobbles at all, none in the
+  chosen era, and too young to test are three different answers, and the
+  profile and genre routes stopped saying "No scrobbles synced yet" too.
+- **No visitor sees developer text.** Pages render plain English from a
+  `code` and never an API's error text, on `/u/` and `/vs/` both, so "Is
+  LASTFM_API_KEY set?" is gone. A mistyped username now says so: Last.fm
+  answers it as HTTP 404 with its own error code in the body, and the status
+  check used to throw before reading the code. A failed recompute, such as an
+  era with no listening, now leaves the report up with a notice instead of
+  blanking the page, and a link that opens straight onto an empty era offers
+  to read all of it instead.
+- **Habits that need a year wait for one.** Old favorites, first listens and
+  reunions are withheld until 500 plays have passed their warm-up, the same
+  floor a trial needs, and the profile says when each can start instead of
+  reporting "Only 0%".
+- **An empty account finishes syncing.** Last.fm reports zero pages for it,
+  and the worker only called a sync done with at least one page, so the wait
+  screen spun for as long as the tab was open. Zero pages now counts as empty
+  when nothing has ever been collected and page 1 has come back blank twice
+  in a row. A blank reply never moves the sync's place in the history, so a
+  bad first reply can't pass for an empty account and a blank page partway
+  through is read again instead of skipped for good. An account already stuck
+  starts again from page 1.
+
+One narrow change to the sweep: its summary used to say "All 25 trials came
+back clean" however many trials it had skipped as untestable, which a young
+history now reached on the same page as "Too soon to tell". It now counts only
+the trials it could judge, and only blames history length for the ones still
+warming up. Which trials become hits, and whether a withheld verdict counts as
+judged, is unchanged.
+
+Left alone on purpose, because they belong to the next item: the reveal's
+window count, the sweep treating withheld trials as leads, convictions on a
+handful of events, and `/vs/` labeling a missing round "no real effect". The
+sweep one is newly reachable: a young history used to stop at the error
+screen, and a 300-scrobble three-month history now reaches the sweep and gets
+"Mercury Retrograde × Night Owl, -100%, a lead" from a trial the report itself
+withholds.
+`trialStatus` is where "not enough data" gets told apart from "tested,
+unremarkable" when that work lands.
+
+Client JS, summed across routes, over `main` at 1f8d285 with both built
+locally: 1,616,209 to 1,627,019, up 10,810 bytes (0.67%). A visitor to `/u/`
+downloads 8,226 of those and a visitor to `/vs/` 2,504. The bundle guard's
+headroom goes from 77,791 bytes to 66,981.
 
 ### Roster 4.12.1 (16 September 2026)
 
@@ -146,7 +215,33 @@ the `threshold` refactor.
 
 ### Product
 
-- [ ] **Deep-dive UX investigation.** The app has a genuinely good idea in it
+- [ ] **The report tells the truth about its own confidence.** Next. The
+      numbers shown overstate what the data supports, in four places: the
+      p-value, the sweep promoting withheld trials, convictions on as few as
+      three events, and the reveal undercounting the sky's windows. The first
+      two share one change: the report has to tell "untested" from
+      "unremarkable", and `trialStatus` is the field for it. The sweep's
+      summary also still counts a withheld verdict as judged, so it can call a
+      set of trials "all clean" when some had too few plays to say. One more
+      belongs here: "loudest month" compares against a twelve-month average, so any
+      history under a year reads a large, meaningless number (+329% on a
+      three-month history).
+- [ ] **The redesign.** After that, because designing around live defects
+      bakes them in. The young-history work left these for it rather than
+      redesigning in passing:
+      - A brand-new history under 500 scrobbles gets a thin page: no
+        fingerprints yet, just a line saying when they arrive.
+      - The genre panel shows "Reading the liner notes" for a while on a small
+        history, then disappears without a word.
+      - The anthem can rest on three or four plays.
+      - The share card stays generic for a young history rather than saying
+        "too soon to tell".
+- [x] ~~**Deep-dive UX investigation.**~~ Delivered 27 September 2026 as a
+      private finding with evidence. It shows real listening histories, so it
+      stays out of this repo. Its follow-ups are the young-history work under
+      Done and the two items above.
+
+      The original brief, kept for the record: the app has a genuinely good idea in it
       and the landing page does not spend it well. This is an investigation, not
       a redesign: the deliverable is a written finding with evidence, and the
       redesign is whatever that finding argues for.
@@ -187,6 +282,14 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **Framework error pages a visitor can still reach.** There is no
+      `app/error.tsx`, `global-error.tsx` or `not-found.tsx`, so a render
+      exception would show Next's own "Application error" text. Nothing
+      found triggers one today. A hand-typed URL with broken percent-encoding
+      (`/u/abc%`) gets Next's bare "Internal Server Error", and a hand-edited
+      era that runs backwards gets "something went wrong on our side", because
+      the report route's 400s carry no `code`. None is reachable from the
+      app's own links or forms.
 - [x] ~~Two `react-hooks/set-state-in-effect` errors and an unused import.~~
       Lint is at zero. `Report`'s was a real fix: `threshold` started at a
       hardcoded 365 and was corrected a frame later by an effect, and is now

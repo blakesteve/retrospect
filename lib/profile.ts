@@ -1,6 +1,7 @@
-import type { Scrobble } from "./analysis/nostalgia";
+import type { Scrobble, TagResult } from "./analysis/nostalgia";
 import { tagScrobbles } from "./analysis/nostalgia";
 import { tagDiscovery, tagOldFlame } from "./analysis/metrics";
+import type { PendingHabit, PendingHabitKey } from "./readiness";
 
 /**
  * The sky-independent report: what actually runs this person's listening.
@@ -9,6 +10,24 @@ import { tagDiscovery, tagOldFlame } from "./analysis/metrics";
  */
 
 const DAY = 86400;
+
+/** A profile needs this many scrobbles at all. */
+export const PROFILE_MIN_SCROBBLES = 500;
+
+/**
+ * Three habits only count plays after a warm-up: old favorites and first
+ * listens after the first year, reunions after the first 548 days. Around a
+ * year old that leaves almost nothing (a 365-day history kept its last 74
+ * plays, under seven hours of listening) and an empty list used to come back
+ * as a share of 0, which produced "Only 0% of your plays are old favorites".
+ *
+ * So a habit is reported only once this many plays have passed its warm-up,
+ * the same floor a trial needs inside its windows before it gives a verdict
+ * (MIN_RETRO_N in lib/report.ts). Below it the share is null and the habit is
+ * listed in `pending` with the date it can start.
+ */
+export const HABIT_MIN_COUNTED = 500;
+
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -30,15 +49,20 @@ export interface ListeningProfile {
   topWeekday: { day: string; share: number };
   topMonth: { month: string; delta: number };
   playsPerDay: number;
-  oldFavoriteShare: number;
-  discoveryShare: number;
-  reunionShare: number;
+  /** Share of post-warm-up plays that are old favorites; null while pending. */
+  oldFavoriteShare: number | null;
+  /** Share of post-warm-up plays that are first listens; null while pending. */
+  discoveryShare: number | null;
+  /** Share of post-warm-up plays that are artist reunions; null while pending. */
+  reunionShare: number | null;
+  /** Habits withheld for want of history, and when each can start. */
+  pending: PendingHabit[];
   busiestDay: { date: string; count: number };
   longestStreakDays: number;
 }
 
 export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): ListeningProfile | null {
-  if (scrobbles.length < 500) return null;
+  if (scrobbles.length < PROFILE_MIN_SCROBBLES) return null;
   const sorted = [...scrobbles].sort((a, b) => a.uts - b.uts);
   const shift = tzOffsetMinutes * 60;
   const n = sorted.length;
@@ -69,12 +93,24 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
   const topWd = weekdayCounts.indexOf(Math.max(...weekdayCounts));
   const topMo = monthCounts.indexOf(Math.max(...monthCounts));
 
-  // Baseline habit shares (sky not consulted).
-  const meanTag = (tagged: { nostalgic: boolean }[]) =>
-    tagged.length ? tagged.filter((t) => t.nostalgic).length / tagged.length : 0;
-  const oldFavoriteShare = meanTag(tagScrobbles(sorted, "track", 365).tagged);
-  const discoveryShare = meanTag(tagDiscovery(sorted).tagged);
-  const reunionShare = meanTag(tagOldFlame(sorted, 548).tagged);
+  // Baseline habit shares (sky not consulted), withheld below the floor.
+  const pending: PendingHabit[] = [];
+  const habitShare = (habit: PendingHabitKey, result: TagResult): number | null => {
+    const counted = result.tagged.length;
+    if (counted >= HABIT_MIN_COUNTED) {
+      return result.tagged.filter((t) => t.nostalgic).length / counted;
+    }
+    pending.push({
+      habit,
+      readyFromUts: result.spanStart,
+      countedPlays: counted,
+      minPlays: HABIT_MIN_COUNTED,
+    });
+    return null;
+  };
+  const oldFavoriteShare = habitShare("old-favorites", tagScrobbles(sorted, "track", 365));
+  const discoveryShare = habitShare("first-listens", tagDiscovery(sorted));
+  const reunionShare = habitShare("reunions", tagOldFlame(sorted, 548));
 
   const spanDays = Math.max(1, (sorted[n - 1].uts - sorted[0].uts) / DAY);
   const playsPerDay = n / spanDays;
@@ -95,28 +131,30 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
     if (run > longestStreakDays) longestStreakDays = run;
   }
 
-  // Archetypes: two or three honest badges.
+  // Archetypes: two or three honest badges. A pending habit gets none.
   const archetypes: Archetype[] = [];
-  if (oldFavoriteShare >= 0.55) {
-    archetypes.push({
-      emoji: "🛋",
-      label: "Comfort Creature",
-      why: `${Math.round(oldFavoriteShare * 100)}% of your plays are songs you already knew and loved. You return to what works.`,
-    });
-  } else if (oldFavoriteShare <= 0.35) {
-    archetypes.push({
-      emoji: "🧭",
-      label: "Restless Explorer",
-      why: `Only ${Math.round(oldFavoriteShare * 100)}% of your plays are old favorites. You rarely look back; there's always something next.`,
-    });
-  } else {
-    archetypes.push({
-      emoji: "⚖️",
-      label: "Balanced Diet",
-      why: `${Math.round(oldFavoriteShare * 100)}% comfort listens, ${100 - Math.round(oldFavoriteShare * 100)}% new territory. A genuinely even split is rarer than it sounds.`,
-    });
+  if (oldFavoriteShare !== null) {
+    if (oldFavoriteShare >= 0.55) {
+      archetypes.push({
+        emoji: "🛋",
+        label: "Comfort Creature",
+        why: `${Math.round(oldFavoriteShare * 100)}% of your plays are songs you already knew and loved. You return to what works.`,
+      });
+    } else if (oldFavoriteShare <= 0.35) {
+      archetypes.push({
+        emoji: "🧭",
+        label: "Restless Explorer",
+        why: `Only ${Math.round(oldFavoriteShare * 100)}% of your plays are old favorites. You rarely look back; there's always something next.`,
+      });
+    } else {
+      archetypes.push({
+        emoji: "⚖️",
+        label: "Balanced Diet",
+        why: `${Math.round(oldFavoriteShare * 100)}% comfort listens, ${100 - Math.round(oldFavoriteShare * 100)}% new territory. A genuinely even split is rarer than it sounds.`,
+      });
+    }
   }
-  if (discoveryShare >= 0.1) {
+  if (discoveryShare !== null && discoveryShare >= 0.1) {
     archetypes.push({
       emoji: "⛏",
       label: "Crate Digger",
@@ -149,7 +187,7 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
       why: `A deliberate ${Math.round(playsPerDay)} plays a day. You choose what you hear; quality over volume.`,
     });
   }
-  if (reunionShare >= 0.015) {
+  if (reunionShare !== null && reunionShare >= 0.015) {
     archetypes.push({
       emoji: "🕯",
       label: "Rekindler",
@@ -171,6 +209,7 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
     oldFavoriteShare,
     discoveryShare,
     reunionShare,
+    pending,
     busiestDay,
     longestStreakDays,
   };

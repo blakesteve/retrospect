@@ -19,6 +19,14 @@ import { Apod } from "./Apod";
 import { AlbumArt } from "./AlbumArt";
 import { AstrologyCorner } from "./AstrologyCorner";
 import { StoryIntro } from "./StoryIntro";
+import {
+  apiError,
+  toVisitorErrorCode,
+  visitorError,
+  visitorErrorCodeOf,
+  type VisitorErrorCode,
+} from "@/lib/visitorErrors";
+import { TOO_SOON_HEADLINE, warmupExplanation } from "@/lib/readiness";
 
 interface SyncStatus {
   status: "syncing" | "ready" | "error";
@@ -27,7 +35,10 @@ interface SyncStatus {
   totalScrobbles: number;
   newestUts: number | null;
   oldestUts: number | null;
+  /** For the console only. */
   error: string | null;
+  /** What a visitor is told when status is "error". */
+  code: string | null;
 }
 
 const fmtDate = (uts: number) =>
@@ -121,7 +132,15 @@ export function Report({ username }: { username: string }) {
   );
   const [showStory, setShowStory] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
-  const [fatal, setFatal] = useState<string | null>(null);
+  /* A code, never raw text: see lib/visitorErrors.ts. `fatal` replaces the
+     page and is only for failures before there is a report to show. Once one
+     is on screen a failed recompute leaves it there and sets `notice`
+     instead, so picking an era with no listening can't blank the page. */
+  const [fatal, setFatal] = useState<VisitorErrorCode | null>(null);
+  const [notice, setNotice] = useState<VisitorErrorCode | null>(null);
+  const shown = useRef(false);
+  // Read once: whether a warm-up's end date is still ahead.
+  const [now] = useState(() => Date.now());
   const alive = useRef(true);
 
   useEffect(() => {
@@ -138,18 +157,20 @@ export function Report({ username }: { username: string }) {
       while (!cancelled) {
         try {
           const res = await fetch(`/api/user/${encodeURIComponent(username)}/status`);
-          if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
+          if (!res.ok) throw await apiError(res);
           const s: SyncStatus = await res.json();
           if (cancelled) return;
           setSync(s);
           if (s.status === "ready") return;
           if (s.status === "error") {
-            setFatal(s.error ?? "Sync failed");
+            console.error(`[retrospect] sync failed: ${s.error}`);
+            setFatal(toVisitorErrorCode(s.code));
             return;
           }
         } catch (err) {
           if (cancelled) return;
-          setFatal(err instanceof Error ? err.message : String(err));
+          console.error("[retrospect] status poll failed:", err);
+          setFatal(visitorErrorCodeOf(err));
           return;
         }
         await new Promise((r) => setTimeout(r, 600));
@@ -186,11 +207,18 @@ export function Report({ username }: { username: string }) {
         const res = await fetch(
           `/api/user/${encodeURIComponent(username)}/report?${params}`
         );
-        if (!res.ok) throw new Error((await res.json()).error ?? `HTTP ${res.status}`);
+        if (!res.ok) throw await apiError(res);
         const data: ReportData = await res.json();
-        if (alive.current) setReport(data);
+        if (alive.current) {
+          setReport(data);
+          setNotice(null);
+          shown.current = true;
+        }
       } catch (err) {
-        if (alive.current) setFatal(err instanceof Error ? err.message : String(err));
+        console.error("[retrospect] report failed:", err);
+        if (!alive.current) return;
+        if (shown.current) setNotice(visitorErrorCodeOf(err));
+        else setFatal(visitorErrorCodeOf(err));
       } finally {
         if (alive.current) setRecomputing(false);
       }
@@ -248,17 +276,28 @@ export function Report({ username }: { username: string }) {
   const displayIndex = useCountUp(report?.index ?? NaN);
 
   if (fatal) {
+    const message = visitorError(fatal, username);
     return (
-      <div className="text-center py-24">
-        <h1 className="font-display text-3xl text-gold mb-4">The stars are silent.</h1>
-        <p className="text-ink-2">{fatal}</p>
-        <p className="text-ink-3 text-sm mt-4">
-          (Is the username right? Is the profile public? Is LASTFM_API_KEY set?)
-        </p>
-        <p className="text-ink-3 text-sm mt-2">
-          If it was just Last.fm having a moment, refresh; syncs resume where they
-          left off.
-        </p>
+      <div className="text-center py-24 max-w-md mx-auto">
+        <h1 className="font-display text-3xl text-gold mb-4">{message.title}</h1>
+        <p className="text-ink-2">{message.body}</p>
+        {/* A link or the landing form can open straight onto an empty era,
+            and there are no era controls on this screen to widen it with. */}
+        {fatal === "empty-era" && (
+          <Button
+            className="mt-6"
+            colorScheme="primary"
+            size="sm"
+            onClick={() => {
+              setFromMonth("");
+              setToMonth("");
+              setFatal(null);
+              fetchReport(threshold, level, body, metricChoice, "", "", excludeNoise);
+            }}
+          >
+            Read all of it instead
+          </Button>
+        )}
       </div>
     );
   }
@@ -269,6 +308,11 @@ export function Report({ username }: { username: string }) {
   const meta = PHENOMENA[r.body];
   const metric = METRICS[r.metric];
   const isShare = metric.kind === "share";
+  /* Nothing to test yet: every play sits inside this measure's warm-up. The
+     hero explains, the trial's own numbers are hidden, and everything that
+     doesn't need them still renders. */
+  const warming = r.trialStatus === "warming-up" ? r.warmup : null;
+  const readyNow = (Object.keys(METRICS) as MetricKey[]).filter((k) => !METRICS[k].hasWarmup);
 
   if (showStory) {
     return <StoryIntro report={r} onDone={() => setShowStory(false)} />;
@@ -294,6 +338,15 @@ export function Report({ username }: { username: string }) {
           </div>
         </div>
       )}
+      {notice && (
+        <div role="status" className="mb-8 rounded-lg bg-surface-1 border border-[var(--hairline)] p-4 text-center">
+          <p className="text-ink text-sm">{visitorError(notice, username).title}</p>
+          <p className="text-ink-3 text-xs mt-1">
+            {visitorError(notice, username).body} The report below is still the last one
+            that loaded.
+          </p>
+        </div>
+      )}
       {/* ---- Hero: a question and a plain answer ---- */}
       <header className="text-center mb-8 rise">
         <p className="text-ink-3 tracking-[0.3em] uppercase text-xs mb-3">
@@ -303,7 +356,36 @@ export function Report({ username }: { username: string }) {
         <h1 className="font-display text-3xl sm:text-4xl text-ink mb-6 max-w-xl mx-auto leading-snug">
           {metric.question(meta.qSubject)}
         </h1>
-        {(() => {
+        {warming ? (
+          <>
+            <div className="font-display text-5xl sm:text-6xl text-gold leading-none">
+              {TOO_SOON_HEADLINE}
+            </div>
+            <p className="text-ink-2 mt-5 max-w-lg mx-auto text-lg">
+              {warmupExplanation(r.metric, warming, meta.when, now)}
+            </p>
+            {warming.reason === "young-history" && (
+              <div className="mt-6 flex flex-col items-center gap-2">
+                {/* Not "these work": they can still come back without a
+                    verdict if too little listening lands in the windows. */}
+                <p className="text-ink-3 text-sm">These don&rsquo;t have to wait, so you can try them now:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {readyNow.map((k) => (
+                    <Button
+                      key={k}
+                      size="sm"
+                      colorScheme="primary"
+                      variant="outline"
+                      onClick={() => setMetricChoice(PHENOMENA[body].metric === k ? null : k)}
+                    >
+                      {METRICS[k].name.replace(" Index", "")}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (() => {
           const tier = verdictTier(r);
           const seed = phraseSeed(r);
           const d = Number.isFinite(r.index) ? Math.round((r.index - 1) * 100) : 0;
@@ -368,11 +450,13 @@ export function Report({ username }: { username: string }) {
             </>
           );
         })()}
-        <p className="text-ink-3 text-xs mt-4 tabular opacity-70">
-          for the record: index{" "}
-          {Number.isFinite(displayIndex) ? displayIndex.toFixed(2) : "—"}&times;. The
-          nerd numbers live in the skeptic&rsquo;s panel
-        </p>
+        {!warming && (
+          <p className="text-ink-3 text-xs mt-4 tabular opacity-70">
+            for the record: index{" "}
+            {Number.isFinite(displayIndex) ? displayIndex.toFixed(2) : "—"}&times;. The
+            nerd numbers live in the skeptic&rsquo;s panel
+          </p>
+        )}
       </header>
 
       {/* ---- The lab: pick your phenomenon ---- */}
@@ -504,6 +588,7 @@ export function Report({ username }: { username: string }) {
       </section>
 
       {/* ---- What we actually did ---- */}
+      {/* A young history gets the first two steps; there's nothing to compare yet. */}
       <section className="mb-12 rise" style={{ "--rise-delay": "0.12s" } as React.CSSProperties}>
         <h3 className="font-display text-xl text-gold mb-4">What just happened here?</h3>
         <ol className="grid sm:grid-cols-2 gap-4">
@@ -513,54 +598,61 @@ export function Report({ username }: { username: string }) {
             straight from Last.fm.
           </Step>
           <Step n={2} title="We asked the sky what it was doing.">
-            {PHENOMENA[r.body].explainer} {r.windowCount} windows overlap your history. No
+            {PHENOMENA[r.body].explainer} {r.windowCount}{" "}
+            {r.windowCount === 1 ? "window overlaps" : "windows overlap"} your history. No
             horoscope column involved.
           </Step>
-          <Step n={3} title={metric.defineTitle}>
-            {metric.defineBody(r.thresholdDays)}
-            {metric.slider && " (You can change this below.)"}
-          </Step>
-          <Step n={4} title="We compared, then tried to debunk ourselves.">
-            Your {metric.tagNoun} inside the windows vs. the rest of the time. That ratio
-            is your{" "}
-            <strong className="text-ink">
-              {Number.isFinite(r.index) ? r.index.toFixed(2) : "—"}&times;
-            </strong>{" "}
-            up top.
-            Then we re-ran it {r.iterations.toLocaleString()}{" times "}with a scrambled
-            event calendar to check it isn&rsquo;t dumb luck.
-          </Step>
+          {!warming && (
+            <>
+              <Step n={3} title={metric.defineTitle}>
+                {metric.defineBody(r.thresholdDays)}
+                {metric.slider && " (You can change this below.)"}
+              </Step>
+              <Step n={4} title="We compared, then tried to debunk ourselves.">
+                Your {metric.tagNoun} inside the windows vs. the rest of the time. That ratio
+                is your{" "}
+                <strong className="text-ink">
+                  {Number.isFinite(r.index) ? r.index.toFixed(2) : "—"}&times;
+                </strong>{" "}
+                up top.
+                Then we re-ran it {r.iterations.toLocaleString()}{" times "}with a scrambled
+                event calendar to check it isn&rsquo;t dumb luck.
+              </Step>
+            </>
+          )}
         </ol>
       </section>
 
       {/* ---- The two rates ---- */}
-      <section
-        className="grid sm:grid-cols-2 gap-4 mb-12 rise"
-        style={{ "--rise-delay": "0.2s" } as React.CSSProperties}
-      >
-        <StatTile
-          label={meta.tileLabel}
-          value={isShare ? `${(r.retroRate * 100).toFixed(1)}%` : `${r.retroRate.toFixed(1)}/day`}
-          sub={
-            isShare
-              ? oneInRetro
-                ? `of your listening was ${metric.tagNoun}, about 1 in ${oneInRetro} of ${r.retroN.toLocaleString()} plays`
-                : `of ${r.retroN.toLocaleString()} plays were ${metric.tagNoun}`
-              : `${r.retroN.toLocaleString()} plays across all the windows`
-          }
-        />
-        <StatTile
-          label="The rest of the time"
-          value={isShare ? `${(r.directRate * 100).toFixed(1)}%` : `${r.directRate.toFixed(1)}/day`}
-          sub={
-            isShare
-              ? oneInDirect
-                ? `of your listening was ${metric.tagNoun}, about 1 in ${oneInDirect} of ${r.directN.toLocaleString()} plays`
-                : `of ${r.directN.toLocaleString()} plays were ${metric.tagNoun}`
-              : `${r.directN.toLocaleString()} plays everywhere else`
-          }
-        />
-      </section>
+      {!warming && (
+        <section
+          className="grid sm:grid-cols-2 gap-4 mb-12 rise"
+          style={{ "--rise-delay": "0.2s" } as React.CSSProperties}
+        >
+          <StatTile
+            label={meta.tileLabel}
+            value={isShare ? `${(r.retroRate * 100).toFixed(1)}%` : `${r.retroRate.toFixed(1)}/day`}
+            sub={
+              isShare
+                ? oneInRetro
+                  ? `of your listening was ${metric.tagNoun}, about 1 in ${oneInRetro} of ${r.retroN.toLocaleString()} plays`
+                  : `of ${r.retroN.toLocaleString()} plays were ${metric.tagNoun}`
+                : `${r.retroN.toLocaleString()} plays across all the windows`
+            }
+          />
+          <StatTile
+            label="The rest of the time"
+            value={isShare ? `${(r.directRate * 100).toFixed(1)}%` : `${r.directRate.toFixed(1)}/day`}
+            sub={
+              isShare
+                ? oneInDirect
+                  ? `of your listening was ${metric.tagNoun}, about 1 in ${oneInDirect} of ${r.directN.toLocaleString()} plays`
+                  : `of ${r.directN.toLocaleString()} plays were ${metric.tagNoun}`
+                : `${r.directN.toLocaleString()} plays everywhere else`
+            }
+          />
+        </section>
+      )}
 
       {/* ---- Fun payoff ---- */}
       <section
@@ -654,7 +746,9 @@ export function Report({ username }: { username: string }) {
         <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1">
           <h3 className="text-ink text-sm font-medium">The skeptic&rsquo;s panel</h3>
           <span className="text-xs text-ink-3 tabular">
-            {Number.isFinite(r.p) ? (
+            {warming ? (
+              "nothing to test yet"
+            ) : Number.isFinite(r.p) ? (
               <>
                 {Math.round(r.p * r.iterations).toLocaleString()} of{" "}
                 {r.iterations.toLocaleString()} scrambled skies beat yours
@@ -665,16 +759,27 @@ export function Report({ username }: { username: string }) {
             )}
           </span>
         </div>
-        <p className="text-ink-3 text-xs mb-4 max-w-xl leading-relaxed">
-          Could your number be a coincidence? We scrambled the retrograde calendar{" "}
-          {r.iterations.toLocaleString()} times and re-measured you against each fake sky.
-          The indigo pile is what pure chance produces. The ochre line is the real you:{" "}
-          {pctMore}% {r.index > 1 ? "more" : "fewer"} {metric.tagNoun}.{" "}
-          <strong className="text-ink-2">
-            Inside the pile = coincidence. Out on the edge = the sky has your number.
-          </strong>
-        </p>
-        <Histogram samples={r.nullSamples} observed={r.index} />
+        {warming ? (
+          <p className="text-ink-3 text-xs max-w-xl leading-relaxed">
+            Once there&rsquo;s something to test, this is where Retrospect tries to debunk
+            its own result.
+            {/* The slider IS the warm-up's length for these measures. */}
+            {metric.slider && " A shorter setting below means a shorter wait."}
+          </p>
+        ) : (
+          <>
+            <p className="text-ink-3 text-xs mb-4 max-w-xl leading-relaxed">
+              Could your number be a coincidence? We scrambled the retrograde calendar{" "}
+              {r.iterations.toLocaleString()} times and re-measured you against each fake sky.
+              The indigo pile is what pure chance produces. The ochre line is the real you:{" "}
+              {pctMore}% {r.index > 1 ? "more" : "fewer"} {metric.tagNoun}.{" "}
+              <strong className="text-ink-2">
+                Inside the pile = coincidence. Out on the edge = the sky has your number.
+              </strong>
+            </p>
+            <Histogram samples={r.nullSamples} observed={r.index} />
+          </>
+        )}
 
         <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-[var(--hairline)] pt-4">
           {metric.slider && (

@@ -11,7 +11,9 @@ import { mulberry32 } from "./analysis/rng";
 import { makeInWindow, type ZodiacSign } from "./ephemeris/retrogrades";
 import { getPhenomenon, type PhenomenonKey } from "./ephemeris/phenomena";
 import { getStore } from "./store/jsonStore";
+import { TOO_SOON_HEADLINE, warmupExplanation, type Warmup } from "./readiness";
 
+const DAY = 86400;
 /** Below this many in-window scrobbles we refuse to issue a verdict. */
 const MIN_RETRO_N = 500;
 const PERMUTATIONS = 2000;
@@ -52,6 +54,23 @@ export interface Report {
   body: PhenomenonKey;
   /** The metric this phenomenon was tried on. */
   metric: MetricKey;
+  /**
+   * Whether the trial had anything to test.
+   *
+   * "ran": it did. Its verdict can still be withheld for too few plays inside
+   * the windows, and nothing here yet tells that apart from a tested,
+   * unremarkable result. The sweep needs that distinction, and this field is
+   * where it belongs.
+   *
+   * "warming-up": nothing to test, because every play in the requested span
+   * sits inside this measure's warm-up (see `warmup`). The trial's own
+   * numbers are empty: index, rates and p are NaN (null over JSON), the plays
+   * inside and outside the windows are 0, and there are no null samples, peak
+   * day or sign breakdown. The history-wide parts are filled in as usual.
+   */
+  trialStatus: "ran" | "warming-up";
+  /** Set when trialStatus is "warming-up", null when it ran. */
+  warmup: Warmup | null;
   fromMonth: string | null;
   toMonth: string | null;
   /** Full-history bounds, for the range picker (unaffected by the filter). */
@@ -62,7 +81,8 @@ export interface Report {
   noiseRemoved: number;
   firstScrobbleUts: number;
   lastScrobbleUts: number;
-  /** Event windows overlapping the analyzed span. */
+  /** Event windows overlapping the analyzed span. A warming-up trial analyzes
+      nothing, so there it counts the windows overlapping the requested span. */
   windowCount: number;
   index: number;
   /** share metrics: fraction of plays tagged; rate metric: plays per day. */
@@ -84,19 +104,36 @@ export interface Report {
   bySign: { sign: ZodiacSign; index: number; retroN: number; windows: number }[];
 }
 
-const cache = new Map<string, { newestUts: number; report: Report }>();
+/**
+ * What a report request gets back. "No data at all" and "too young to test"
+ * are different answers: the first is an empty outcome, the second is a
+ * report whose `trialStatus` is "warming-up".
+ */
+export type ReportOutcome =
+  | { kind: "report"; report: Report }
+  /** Nothing stored for this user: not synced yet, or synced and empty. */
+  | { kind: "no-scrobbles" }
+  /** The history exists, but none of it falls inside the requested era. */
+  | { kind: "empty-era" };
+
+/* Keyed on what the history holds, not only its newest play. Backfill reads
+   newest to oldest, so the newest play is fixed from the first page while
+   older ones keep arriving; a report built part-way through (a link unfurl
+   can ask for one) would otherwise be served after the sync finished. For a
+   young history that is "Too soon to tell." on a ten-year history. */
+const cache = new Map<string, { stamp: string; report: Report }>();
 
 export async function buildReport(
   username: string,
   opts: ReportOptions
-): Promise<Report | null> {
+): Promise<ReportOutcome> {
   const { thresholdDays, level, fromMonth, toMonth, excludeNoise } = opts;
   const phen = getPhenomenon(opts.body ?? "mercury")!;
   const metric = METRICS[opts.metric ?? phen.metric];
   const tzOffsetMinutes = opts.tzOffsetMinutes ?? 0;
   const store = getStore();
   let all = await store.getScrobbles(username);
-  if (all.length === 0) return null;
+  if (all.length === 0) return { kind: "no-scrobbles" };
 
   let noiseRemoved = 0;
   if (excludeNoise) {
@@ -111,8 +148,9 @@ export async function buildReport(
 
   // tz always participates: night-owl tagging AND peak-day bucketing use it.
   const cacheKey = `${username.toLowerCase()}|${phen.key}|${metric.key}|${thresholdDays}|${level}|${fromMonth ?? ""}|${toMonth ?? ""}|${excludeNoise ? "nn" : ""}|${tzOffsetMinutes}`;
+  const stamp = `${all.length}|${all[0].uts}|${newestUts}`;
   const hit = cache.get(cacheKey);
-  if (hit && hit.newestUts === newestUts) return hit.report;
+  if (hit && hit.stamp === stamp) return { kind: "report", report: hit.report };
 
   // Range filter in unix seconds. First-listen/last-play state is always
   // judged against the FULL history — a 2013 track is still "old" in a
@@ -127,7 +165,52 @@ export async function buildReport(
   const inRange = (uts: number) => uts >= rangeStart && uts < rangeEnd;
 
   const scoped = all.filter((s) => inRange(s.uts));
-  if (scoped.length === 0) return null;
+  if (scoped.length === 0) return { kind: "empty-era" };
+
+  /* ---- History-wide parts: none of these depend on a metric's warm-up ---- */
+
+  // Yearly volume (scoped).
+  const yearly = new Map<number, number>();
+  for (const s of scoped) {
+    const year = new Date(s.uts * 1000).getUTCFullYear();
+    yearly.set(year, (yearly.get(year) ?? 0) + 1);
+  }
+
+  // Anthem: most-played track inside the phenomenon's windows (scoped).
+  const inWindow = makeInWindow(phen.bounds);
+  const anthemCounts = new Map<string, { artist: string; track: string; plays: number }>();
+  for (const s of scoped) {
+    if (!inWindow(s.uts)) continue;
+    const key = `${s.artist} ${s.track}`.toLowerCase();
+    const entry = anthemCounts.get(key);
+    if (entry) entry.plays++;
+    else anthemCounts.set(key, { artist: s.artist, track: s.track, plays: 1 });
+  }
+  let retroAnthem: Report["retroAnthem"] = null;
+  for (const entry of anthemCounts.values()) {
+    if (!retroAnthem || entry.plays > retroAnthem.plays) retroAnthem = entry;
+  }
+
+  const historyWide = {
+    username,
+    thresholdDays,
+    level,
+    body: phen.key,
+    metric: metric.key,
+    fromMonth: fromMonth ?? null,
+    toMonth: toMonth ?? null,
+    historyStartYear,
+    historyEndYear,
+    scrobbleCount: scoped.length,
+    noiseRemoved,
+    firstScrobbleUts: scoped[0].uts,
+    lastScrobbleUts: scoped[scoped.length - 1].uts,
+    windows: phen.windows,
+    yearlyCounts: [...yearly.entries()]
+      .map(([year, count]) => ({ year, count }))
+      .sort((a, b) => a.year - b.year),
+    retroAnthem,
+  };
 
   /* ---- Metric dispatch: share metrics tag plays; intensity counts them ---- */
   let result: { index: number; retroRate: number; directRate: number; retroN: number; directN: number };
@@ -141,7 +224,49 @@ export async function buildReport(
     taggedInRange = full.tagged.filter((s) => inRange(s.uts));
     spanStart = Math.max(full.spanStart, rangeStart);
     spanEnd = Math.min(full.spanEnd, rangeEnd);
-    if (taggedInRange.length === 0) return null;
+    if (taggedInRange.length === 0) {
+      /* Every play in the requested span sits inside this measure's warm-up,
+         so there is nothing to test. This used to return null, which the route
+         reported as "No scrobbles synced yet" and the page as an error screen
+         asking whether the username was right, for every history under a year
+         old. The history-wide parts above don't need the warm-up, so the
+         report still carries them and the page renders everything that works.
+
+         `full.tagged` holds every post-warm-up play in the whole history, so
+         when it is empty the history itself is too young; when it isn't, the
+         requested era is what ends before the warm-up does. */
+      const warmup: Warmup = {
+        reason: full.tagged.length === 0 ? "young-history" : "era-in-warmup",
+        days: Math.round((full.spanStart - all[0].uts) / DAY),
+        historyStartUts: all[0].uts,
+        readyFromUts: full.spanStart,
+      };
+      const first = scoped[0].uts;
+      const last = scoped[scoped.length - 1].uts;
+      const report: Report = {
+        ...historyWide,
+        trialStatus: "warming-up",
+        warmup,
+        windowCount: phen.bounds.filter(([a, b]) => b >= first && a <= last).length,
+        index: NaN,
+        retroRate: NaN,
+        directRate: NaN,
+        retroN: 0,
+        directN: 0,
+        p: NaN,
+        iterations: 0,
+        nullSamples: [],
+        verdict: {
+          headline: TOO_SOON_HEADLINE,
+          detail: warmupExplanation(metric.key, warmup, phen.when),
+          significant: false,
+        },
+        mostNostalgicDay: null,
+        bySign: [],
+      };
+      cache.set(cacheKey, { stamp, report });
+      return { kind: "report", report };
+    }
     result = computeIndex(taggedInRange, phen.bounds);
     test = permutationTest(
       taggedInRange,
@@ -168,28 +293,6 @@ export async function buildReport(
       PERMUTATIONS,
       mulberry32(hashCode(cacheKey))
     );
-  }
-
-  // Yearly volume (scoped).
-  const yearly = new Map<number, number>();
-  for (const s of scoped) {
-    const year = new Date(s.uts * 1000).getUTCFullYear();
-    yearly.set(year, (yearly.get(year) ?? 0) + 1);
-  }
-
-  // Anthem: most-played track inside the phenomenon's windows (scoped).
-  const inWindow = makeInWindow(phen.bounds);
-  const anthemCounts = new Map<string, { artist: string; track: string; plays: number }>();
-  for (const s of scoped) {
-    if (!inWindow(s.uts)) continue;
-    const key = `${s.artist} ${s.track}`.toLowerCase();
-    const entry = anthemCounts.get(key);
-    if (entry) entry.plays++;
-    else anthemCounts.set(key, { artist: s.artist, track: s.track, plays: 1 });
-  }
-  let retroAnthem: Report["retroAnthem"] = null;
-  for (const entry of anthemCounts.values()) {
-    if (!retroAnthem || entry.plays > retroAnthem.plays) retroAnthem = entry;
   }
 
   // Peak day: most metric-tagged plays in a single day — bucketed in the
@@ -263,19 +366,9 @@ export async function buildReport(
   bySign.sort((a, b) => Math.abs(Math.log(b.index)) - Math.abs(Math.log(a.index)));
 
   const report: Report = {
-    username,
-    thresholdDays,
-    level,
-    body: phen.key,
-    metric: metric.key,
-    fromMonth: fromMonth ?? null,
-    toMonth: toMonth ?? null,
-    historyStartYear,
-    historyEndYear,
-    scrobbleCount: scoped.length,
-    noiseRemoved,
-    firstScrobbleUts: scoped[0].uts,
-    lastScrobbleUts: scoped[scoped.length - 1].uts,
+    ...historyWide,
+    trialStatus: "ran",
+    warmup: null,
     windowCount,
     ...result,
     p: test.p,
@@ -286,16 +379,11 @@ export async function buildReport(
       when: phen.when,
       plural: phen.subjectPlural,
     }),
-    windows: phen.windows,
-    yearlyCounts: [...yearly.entries()]
-      .map(([year, count]) => ({ year, count }))
-      .sort((a, b) => a.year - b.year),
-    retroAnthem,
     mostNostalgicDay,
     bySign,
   };
-  cache.set(cacheKey, { newestUts, report });
-  return report;
+  cache.set(cacheKey, { stamp, report });
+  return { kind: "report", report };
 }
 
 function downsample(xs: number[], max: number): number[] {

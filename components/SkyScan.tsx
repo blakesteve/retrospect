@@ -6,6 +6,7 @@ import type { Report } from "@/lib/report";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
 import { METRICS, type MetricKey } from "@/lib/analysis/metrics";
 import { gripLevel } from "./GripMeter";
+import { sweepNoHitsSentence } from "@/lib/readiness";
 
 interface Hit {
   body: PhenomenonKey;
@@ -33,6 +34,10 @@ export function SkyScan({
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ i: number; label: string } | null>(null);
   const [hits, setHits] = useState<Hit[] | null>(null);
+  /* How many trials had something to judge, and how many are still warming
+     up. A young history skips most of them, and the summary must not call a
+     skipped trial "clean" or blame a failed one on history length. */
+  const [counts, setCounts] = useState({ judged: 0, waiting: 0 });
   const cancelled = useRef(false);
 
   const TOTAL = PHENOMENON_KEYS.length * Object.keys(METRICS).length;
@@ -42,6 +47,8 @@ export function SkyScan({
     setHits(null);
     cancelled.current = false;
     const found: Hit[] = [];
+    let judgedCount = 0;
+    let waitingCount = 0;
     const tzm = String(-new Date().getTimezoneOffset());
     let i = 0;
     for (const body of PHENOMENON_KEYS) {
@@ -64,7 +71,12 @@ export function SkyScan({
           const res = await fetch(`/api/user/${encodeURIComponent(username)}/report?${params}`);
           if (!res.ok) continue;
           const report: Report = await res.json();
+          if (report.trialStatus === "warming-up") {
+            waitingCount++;
+            continue;
+          }
           if (!Number.isFinite(report.index)) continue;
+          judgedCount++;
           const pct = Math.abs(report.index - 1) * 100;
           const confirmed = report.verdict.significant;
           const lead = !confirmed && pct >= 10 && report.p < 0.35;
@@ -84,6 +96,7 @@ export function SkyScan({
       }
     }
     setHits([...found].sort(byStrength));
+    setCounts({ judged: judgedCount, waiting: waitingCount });
     setRunning(false);
     setProgress(null);
   };
@@ -167,11 +180,7 @@ export function SkyScan({
       )}
 
       {hits && hits.length === 0 && !running && (
-        <p className="text-ink-2 text-sm mt-4">
-          All {TOTAL} trials came back clean, not even a lead. The sky has absolutely no
-          hold on you; you may be the most ungovernable listener we&rsquo;ve ever scanned.
-          Honestly? Iconic.
-        </p>
+        <p className="text-ink-2 text-sm mt-4">{sweepNoHitsSentence({ ...counts, total: TOTAL })}</p>
       )}
     </div>
   );

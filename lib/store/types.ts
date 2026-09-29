@@ -1,4 +1,5 @@
 import type { Scrobble } from "@/lib/analysis/nostalgia";
+import type { VisitorErrorCode } from "@/lib/visitorErrors";
 
 export type SyncStatus = "syncing" | "ready" | "error";
 
@@ -13,7 +14,13 @@ export interface SyncState {
   newestUts: number;
   /** Oldest scrobble uts seen so far — lets the UI show how far back we've reached. */
   oldestUts?: number;
+  /** Written for whoever is debugging; never shown to a visitor. */
   error?: string;
+  /** What a visitor is told about `error`. Absent on states saved before it existed. */
+  errorCode?: VisitorErrorCode;
+  /** Blank reads of page 1 in a row, before anything was collected. Two means
+      the account is empty. Absent on states saved before it existed. */
+  emptyReads?: number;
   updatedAt: number; // unix ms
 }
 
