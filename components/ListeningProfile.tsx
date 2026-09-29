@@ -118,7 +118,7 @@ export function ListeningProfile({
         <MiniTile
           label="loudest month"
           value={p.topMonth.month}
-          sub={`${p.topMonth.delta >= 0 ? "+" : ""}${Math.round(p.topMonth.delta * 100)}% vs average`}
+          sub={`${p.topMonth.delta >= 0 ? "+" : ""}${Math.round(p.topMonth.delta * 100)}% vs your usual pace`}
         />
         <MiniTile
           label="pace"

@@ -2,14 +2,98 @@
 
 **Index**
 
-- **Done:** A young history gets a real report (28 Sept 2026) · Roster 4.12.1
+- **Done:** The report tells the truth about its own confidence (28 Sept 2026) ·
+  A young history gets a real report (28 Sept) · The bundle-shape guard
+  (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster 4.12.1
   (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The report tells the truth about its own confidence ·
-  The redesign
+- **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### The report tells the truth about its own confidence (28 September 2026)
+
+The numbers the report showed claimed more certainty than the data
+supported, in five places. The shared change comes first: every verdict now
+has a `status` (`tested`, `too-few-plays`, `too-few-events`, `no-comparison`,
+`warming-up`), so every consumer can tell "not enough to test" from "tested,
+and nothing there". Before, both were `significant: false`.
+
+- **The p-value.** The scramble test dropped every shuffle that found none of
+  the tagged plays inside the windows, so an observed zero could never be
+  matched and printed "p<0.001", on 0 of 10,991 plays in one account. Those
+  shuffles now count, and p is (matches + 1) / (shuffles + 1), never 0. P is
+  out of every verdict sentence. By default a result reads as plain-English
+  likelihood, in four bands from "very unlikely to be chance" to "could easily
+  be chance", with the shuffles as a plain frequency. The last band starts
+  where a lead ends (p 0.35), so a lead never reads "could easily be chance".
+  P-values are a toggle in the skeptic's panel, kept in the browser, and
+  appear beside the plain sentence with what they mean, only for a tested
+  trial, and never rounded across a line the words depend on.
+- **The sweep.** A lead or a conviction must now be a tested trial, so a
+  withheld one can't surface as "-100% · a lead". The sweep counts as judged
+  only the trials it tested, and says how many are waiting on more history.
+- **Convictions on three events.** A verdict now needs 6 separate events as
+  well as 500 plays, because plays inside one window move together. Six is the
+  fewest at which the events alone could clear the 5% bar (see README). Below
+  it, the page says so in plain English. It costs rare skies most: about two
+  years of testable history for Mercury, ten for Venus, thirteen for Mars.
+- **Windows "on you".** One definition, the windows overlapping your listening,
+  on every path; step 2 says separately how many the test used. The reveal's
+  "songs played when Mercury is retrograde" counts the same plays as the
+  anthem. The reveal and the dashboard read a trial through one function, so
+  they can't give it two verdicts a click apart.
+- **Loudest month** compares plays per day in each calendar month against
+  plays per day overall, over the days the history covers. A three-month
+  history no longer reads +329%.
+
+Also:
+- The grip meter reads "Not enough to measure yet" for an untested trial
+  instead of "No measurable grip".
+- The duel labels an untested side "not enough to test" with no score, scores
+  a round only when both sides were tested, says which floor a side missed
+  (too few full moons is not too little listening), and no longer calls a duel
+  with no scored rounds "a perfect stalemate". A tested, unremarkable side
+  reads "within chance" instead of "no real effect".
+- The share card and the sweep's tooltips use the dashboard's own reading, so
+  a lead can't unfurl as "Mercury is innocent", and an untested trial gets the
+  generic card.
+- An untested trial's page no longer prints its ratio ("0.00×") as a result,
+  and one with no ratio at all no longer reads "100% fewer" or "scrambled 0
+  times" in the skeptic's panel.
+- The verdict's withheld copy counts "the plays this measure can test", so it
+  can't say "None of your plays" beside the reveal's "6,658 songs played".
+- A flat result no longer reads "0% blips"; the null-result lines no longer
+  say "well inside what pure chance produces" beside a likelihood of 1 in 17.
+- The skeptic's histogram now draws the shuffles that found none of the
+  tagged plays in the windows, at 0, and its axis no longer goes below 0. On
+  an untested trial the panel no longer tells you how to read the line.
+- "1.0 years" reads "1 year" wherever a length of time is shown.
+- The genre panel's own scramble test had both defects. Its p could be 0,
+  and dropping the shuffles with none of a genre inside the windows made p
+  too small: in a synthetic history, a burst of folk that happened to land in
+  one Venus window read p = 0.20 where the honest figure is 0.74, and the
+  panel's headline is decided by p. It now uses the same rule and formula as
+  the trials, and the stored genre analysis is versioned so returning
+  listeners get it recomputed.
+- A lead used to come with advice to narrow the era until it converted
+  ("leads become convictions in focused slices", "worth chasing in a narrower
+  era"), which is slicing until chance obliges. It now says what a lead is: a
+  swing chance could still have produced, a maybe and not an answer.
+- A too-few-events verdict explains the sky's pace calmly ("Venus goes
+  retrograde about every 19 months, so…") rather than reading as a failure.
+  Under the 6-event floor most visitors get this for Venus and Mars; the
+  redesign gives them more to measure (see Next).
+
+Left alone on purpose, as the redesign's: the 25-trial sweep and the genre
+headline have no multiple-comparisons correction, so across 25 trials a
+"very unlikely to be chance" conviction can still be chance; and the sign
+table's claims.
+
+Client JS over `main` at 99eac00, both built locally: 1,627,019 to 1,636,886,
+up 9,867 bytes (0.61%). `/u/` +5,017, `/vs/` +4,387. Guard headroom 66,981 to
+57,114.
 
 ### A young history gets a real report (28 September 2026)
 
@@ -70,6 +154,58 @@ Client JS, summed across routes, over `main` at 1f8d285 with both built
 locally: 1,616,209 to 1,627,019, up 10,810 bytes (0.67%). A visitor to `/u/`
 downloads 8,226 of those and a visitor to `/vs/` 2,504. The bundle guard's
 headroom goes from 77,791 bytes to 66,981.
+
+### The bundle-shape guard (18 September 2026)
+
+`scripts/check-bundle-shape.mjs`, ported from blakeb-dev and run as
+`postbuild`, so every `npm run build` checks it, Vercel's included (a bare
+`next build` doesn't). It fails the
+build if Roster's barrel appears in a client reference manifest, if client JS
+passes 1,694,000 bytes, or if client CSS passes 175,000. At merge those were
+1,616,209 and 167,298, so about 4.8% and 4.6% of headroom. The CSS ceiling
+matters as much as the JS one: Roster's stylesheet is 142,426 of the app's
+CSS bytes and doesn't shake.
+
+Why it exists: Roster 4.13.0 regressed a sibling app by 18.49% with every gate
+green. Nothing else here can see that. Vitest never imports Roster, eslint
+reads source and `tsc` reads types.
+
+Mutations run against it, each confirmed to change its target: a barrel pin,
+a renamed barrel, padded JS, padded CSS, a missing build and a renamed
+`clientModules` all fail it, and a negative control passes. (PR 14 says eight;
+it lists these seven.) A follow-up
+(`c361dae`) gave the manifest sandbox `process.env`, which it needs to run on
+Vercel.
+
+Limits: all of this app's Roster importers are `"use client"`, so the barrel
+check is a tripwire for a shape the app doesn't have yet. CI runs no build,
+but Vercel's preview build does, so a guard failure shows as a red Vercel
+check on the pull request. Nothing requires that check to pass before a
+merge: `main` has no branch protection.
+
+### Roster 5.0.0 (17 September 2026)
+
+The declared range and the lockfile only; no source changed. 5.0.0 moves the
+`"use client"` boundary onto Roster's component modules. This app was never
+pinned by that boundary, so no change was expected. PR 13 says client JS was
+byte-identical, but its figure was left as a placeholder, so no measurement
+is on record. The next recorded figure, the guard's 1,616,209 the following
+day, is 395 bytes over 4.13.0's 1,615,814, and nothing on record explains
+the difference.
+
+### Roster 4.13.0 (17 September 2026)
+
+`^4.12.1` to `^4.13.0`, with no source changes. 4.13.0 emits one module per
+source file and marks its module-scope calls as side-effect free, so unused
+components shake out. Client JS went from 1,790,737 to 1,615,814 bytes, down
+174,923 (9.77%), CSS unchanged. Of the saving, Roster's own unused components
+are about 54%, unused Headless UI about 30%, and Radix about 10%; Radix left
+the bundle entirely.
+
+Two things it didn't do. CSS doesn't shake, so after this the stylesheet is
+the larger Roster cost. And the saving is contingent: one Roster import in a
+server component would make it a client entry and undo it. The bundle-shape
+guard above is what now catches that.
 
 ### Roster 4.12.1 (16 September 2026)
 
@@ -215,20 +351,25 @@ the `threshold` refactor.
 
 ### Product
 
-- [ ] **The report tells the truth about its own confidence.** Next. The
-      numbers shown overstate what the data supports, in four places: the
-      p-value, the sweep promoting withheld trials, convictions on as few as
-      three events, and the reveal undercounting the sky's windows. The first
-      two share one change: the report has to tell "untested" from
-      "unremarkable", and `trialStatus` is the field for it. The sweep's
-      summary also still counts a withheld verdict as judged, so it can call a
-      set of trials "all clean" when some had too few plays to say. One more
-      belongs here: "loudest month" compares against a twelve-month average, so any
-      history under a year reads a large, meaningless number (+329% on a
-      three-month history).
-- [ ] **The redesign.** After that, because designing around live defects
-      bakes them in. The young-history work left these for it rather than
+- [ ] **The redesign.** Next, now that the live defects are fixed. The
+      young-history and confidence work left these for it rather than
       redesigning in passing:
+      - Whether the 25-trial sweep and the genre headline get a
+        multiple-comparisons correction, or are cut. Each trial is judged
+        alone at 5%, so a sweep with no real effect anywhere still expects
+        about one false conviction.
+      - The sign table's claims: no row gets its own test, and rows rest on
+        one or two events.
+      - Blake's direction (28 Sept 2026, in the private finding): measure
+        the sky every day, not only its rare events. Each planet's sign,
+        dignity and aspects, and the Moon's phase and sign, with retrogrades
+        and eclipses as one lens among several. Venus and Mars have to be
+        first-class: through the signs they change state dozens of times in
+        a few years, against one retrograde. Plus an honest early read for
+        each rare event below the 6-event floor, labeled as too few to call
+        a pattern.
+      - A withheld verdict's explanation runs to seven lines in the hero at
+        phone width.
       - A brand-new history under 500 scrobbles gets a thin page: no
         fingerprints yet, just a line saying when they arrive.
       - The genre panel shows "Reading the liner notes" for a while on a small
@@ -238,8 +379,8 @@ the `threshold` refactor.
         "too soon to tell".
 - [x] ~~**Deep-dive UX investigation.**~~ Delivered 27 September 2026 as a
       private finding with evidence. It shows real listening histories, so it
-      stays out of this repo. Its follow-ups are the young-history work under
-      Done and the two items above.
+      stays out of this repo. Its follow-ups are the young-history and
+      confidence work under Done, and the redesign above.
 
       The original brief, kept for the record: the app has a genuinely good idea in it
       and the landing page does not spend it well. This is an investigation, not

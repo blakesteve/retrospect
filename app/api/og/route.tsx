@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { buildReport } from "@/lib/report";
 import { getPhenomenon } from "@/lib/ephemeris/phenomena";
 import { METRICS } from "@/lib/analysis/metrics";
+import { readTrial } from "@/lib/likelihood";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,17 @@ export async function GET(req: Request) {
         body: phen.key,
         excludeNoise: true,
       });
-      // A warming-up trial has no index, so it keeps the generic card too.
+      /* Only a tested trial gets its number on the card. An untested one
+         (warming up, or too few plays or events) keeps the generic card: its
+         index is a figure the data can't stand behind, and a zero count
+         would unfurl as "0.00×". */
       const report = outcome.kind === "report" ? outcome.report : null;
-      if (report && Number.isFinite(report.index)) {
+      if (report && report.verdict.status === "tested") {
+        // The dashboard's own reading, so a lead can't unfurl as "innocent".
+        const reading = readTrial(report);
         index = report.index.toFixed(2);
-        headline = report.verdict.headline;
-        sub = report.verdict.detail;
+        headline = reading.big;
+        sub = `${reading.likelihood!.label} ${reading.likelihood!.sentence}`;
       }
     } catch {
       // fall through to the generic card

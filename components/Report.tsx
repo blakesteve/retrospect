@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Button, Checkbox, Input, LiquidTabs, Spinner } from "@blakesteve/roster";
 import type { Report as ReportData } from "@/lib/report";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
-import { METRICS, type MetricKey } from "@/lib/analysis/metrics";
+import { METRICS, humanDays, type MetricKey } from "@/lib/analysis/metrics";
 import { GripMeter } from "./GripMeter";
 import { BirthChartPanel } from "./BirthChartPanel";
 import { GenresPanel } from "./GenresPanel";
@@ -27,6 +27,8 @@ import {
   type VisitorErrorCode,
 } from "@/lib/visitorErrors";
 import { TOO_SOON_HEADLINE, warmupExplanation } from "@/lib/readiness";
+import { pValueNote, readTrial } from "@/lib/likelihood";
+import { setShowPValues, useShowPValues } from "./usePValues";
 
 interface SyncStatus {
   status: "syncing" | "ready" | "error";
@@ -43,27 +45,6 @@ interface SyncStatus {
 
 const fmtDate = (uts: number) =>
   new Date(uts * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short" });
-
-/**
- * Verdict tiers: confirmed (survived the scramble test), a LEAD (big effect
- * that chance could still fake — usually rare-event metrics), or null.
- */
-function verdictTier(r: ReportData): "confirmed" | "lead" | "null" | "unclear" {
-  if (r.verdict.headline.includes("withhold") || !Number.isFinite(r.index)) return "unclear";
-  if (r.verdict.significant) return "confirmed";
-  const pct = Math.abs(r.index - 1) * 100;
-  return pct >= 10 && r.p < 0.35 ? "lead" : "null";
-}
-
-/** Deterministic phrase variety: stable per trial, different across trials. */
-function phraseSeed(r: ReportData): number {
-  const s = `${r.username}|${r.body}|${r.metric}`;
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return h >>> 0;
-}
-const pickPhrase = <T,>(seed: number, salt: number, arr: T[]): T =>
-  arr[(seed + salt) % arr.length];
 
 // The day string is already bucketed in the user's timezone server-side —
 // render it verbatim (UTC formatting), never re-shifted by the browser.
@@ -141,6 +122,8 @@ export function Report({ username }: { username: string }) {
   const shown = useRef(false);
   // Read once: whether a warm-up's end date is still ahead.
   const [now] = useState(() => Date.now());
+  // Off unless this visitor asked for them: see usePValues.
+  const showP = useShowPValues();
   const alive = useRef(true);
 
   useEffect(() => {
@@ -386,58 +369,37 @@ export function Report({ username }: { username: string }) {
             )}
           </>
         ) : (() => {
-          const tier = verdictTier(r);
-          const seed = phraseSeed(r);
-          const d = Number.isFinite(r.index) ? Math.round((r.index - 1) * 100) : 0;
-          const dStr = `${d > 0 ? "+" : ""}${d}%`;
-          const beats = Number.isFinite(r.p) ? Math.round(r.p * r.iterations) : 0;
-
-          const big =
-            tier === "unclear"
-              ? "Unclear."
-              : tier === "confirmed"
-                ? r.index > 1
-                  ? pickPhrase(seed, 1, [`Yes, ${dStr}`, `Oh yes, ${dStr}`, `Confirmed: ${dStr}`])
-                  : pickPhrase(seed, 2, [`Backwards, ${dStr}`, `Inverted: ${dStr}`])
-                : tier === "lead"
-                  ? pickPhrase(seed, 3, [`Maybe, ${dStr}`, `Hmm… ${dStr}`, `Possibly, ${dStr}`])
-                  : d === 0
-                    ? pickPhrase(seed, 4, ["No, dead flat.", "No, flatline.", "No, not a hair."])
-                    : pickPhrase(seed, 5, [`No, just ${dStr}`, `Nah, ${dStr}`, `Not really, ${dStr}`]);
-
-          const sub =
-            tier === "confirmed"
-              ? metric.plainTerms(meta.when, r.index > 1, pctMore)
-              : tier === "unclear"
-                ? r.verdict.detail
-                : tier === "lead"
-                  ? pickPhrase(seed, 6, [
-                      `${dStr} is a real-looking lean, but your ${metric.tagNoun} are rare enough that chance faked a swing this size in ${beats.toLocaleString()} of ${r.iterations.toLocaleString()} scrambles. Not convicted. Definitely a suspect.`,
-                      `A ${pctMore}% lean is worth raising an eyebrow at; chance matched it in ${beats.toLocaleString()} of ${r.iterations.toLocaleString()} scrambles, so no conviction yet. Keep the file open.`,
-                      `${dStr} isn't nothing. It also isn't proof: ${beats.toLocaleString()} of ${r.iterations.toLocaleString()} shuffled calendars did the same. Call it a lead.`,
-                    ])
-                  : pickPhrase(seed, 7, [
-                      `That ${pctMore}% drift is well inside what pure chance produces in your data. ${r.verdict.headline}`,
-                      `Shuffle the calendar and swings like ${dStr} show up on their own, no planets required. ${r.verdict.headline}`,
-                      `A library this size throws off ${pctMore}% blips constantly. ${r.verdict.headline}`,
-                    ]);
-
+          const { tier, big, sub, likelihood } = readTrial(r);
           return (
             <>
               <div className="font-display text-6xl sm:text-7xl text-gold leading-none">{big}</div>
               <p className="text-ink-2 mt-5 max-w-lg mx-auto text-lg">{sub}</p>
+              {likelihood && (
+                <p className="text-ink-2 mt-3 max-w-lg mx-auto text-sm">
+                  <strong className="text-ink">{likelihood.label}</strong> {likelihood.sentence}
+                  {showP && (
+                    <span className="block text-ink-3 text-xs mt-1 tabular">
+                      {pValueNote(r.p, r.iterations)}
+                    </span>
+                  )}
+                </p>
+              )}
               <div className="mt-5 flex flex-col items-center gap-2">
                 <GripMeter
                   index={r.index}
                   significant={r.verdict.significant}
                   suggestive={tier === "lead"}
+                  untested={tier === "untested"}
                 />
                 <p className="text-ink-3 text-xs">the sky&rsquo;s grip on this habit</p>
               </div>
               {tier === "lead" && (
                 <p className="text-ink-3 text-sm mt-4 max-w-md mx-auto">
-                  Sharpen the test: zoom into an era where it happened, or adjust the knobs
-                  below; leads become convictions in focused slices.
+                  {/* It used to advise zooming into an era until the lead
+                      converted: slicing until chance obliges. */}
+                  A lead is a swing big enough to notice, on listening uneven enough that
+                  chance could have made it. It isn&rsquo;t an answer yet. More listening over more{" "}
+                  {meta.eventNoun.many} is what firms it up or makes it fade.
                 </p>
               )}
               {tier === "null" && (
@@ -450,11 +412,14 @@ export function Report({ username }: { username: string }) {
             </>
           );
         })()}
-        {!warming && (
+        {/* Only for a tested trial: an untested one's index is a number the
+            data can't stand behind (a zero count reads "0.00×"). */}
+        {!warming && r.verdict.status === "tested" && (
           <p className="text-ink-3 text-xs mt-4 tabular opacity-70">
             for the record: index{" "}
             {Number.isFinite(displayIndex) ? displayIndex.toFixed(2) : "—"}&times;. The
-            nerd numbers live in the skeptic&rsquo;s panel
+            nerd numbers live in the skeptic&rsquo;s panel, where you can also turn on
+            p-values
           </p>
         )}
       </header>
@@ -598,9 +563,27 @@ export function Report({ username }: { username: string }) {
             straight from Last.fm.
           </Step>
           <Step n={2} title="We asked the sky what it was doing.">
-            {PHENOMENA[r.body].explainer} {r.windowCount}{" "}
-            {r.windowCount === 1 ? "window overlaps" : "windows overlap"} your history. No
-            horoscope column involved.
+            {PHENOMENA[r.body].explainer} It happened {r.windowCount}{" "}
+            {r.windowCount === 1 ? "time" : "times"} while you were scrobbling
+            {rangeLabel ? ` in ${rangeLabel}` : ""}.
+            {/* One count for "happened to you", another for what the test
+                used, each saying which it is. */}
+            {!warming && r.eventsTested !== r.windowCount && (
+              <>
+                {" "}
+                {r.eventsTested === 0 ? "The test can’t use any of them yet: it needs ones" : (
+                  <>
+                    The test uses {r.eventsTested} of them, the{" "}
+                    {r.eventsTested === 1 ? "one" : "ones"}
+                  </>
+                )}{" "}
+                {metric.hasWarmup
+                  ? `after the first ${((w) => (w === "1 year" ? "year" : w))(humanDays(metric.slider ? r.thresholdDays : 365))} of your history (which this measure skips), with some of your listening inside`
+                  : "with some of your listening inside"}
+                .
+              </>
+            )}{" "}
+            No horoscope column involved.
           </Step>
           {!warming && (
             <>
@@ -609,14 +592,20 @@ export function Report({ username }: { username: string }) {
                 {metric.slider && " (You can change this below.)"}
               </Step>
               <Step n={4} title="We compared, then tried to debunk ourselves.">
-                Your {metric.tagNoun} inside the windows vs. the rest of the time. That ratio
-                is your{" "}
-                <strong className="text-ink">
-                  {Number.isFinite(r.index) ? r.index.toFixed(2) : "—"}&times;
-                </strong>{" "}
-                up top.
-                Then we re-ran it {r.iterations.toLocaleString()}{" times "}with a scrambled
-                event calendar to check it isn&rsquo;t dumb luck.
+                Your {metric.tagNoun} inside the windows vs. the rest of the time.{" "}
+                {r.verdict.status === "tested" ? (
+                  <>
+                    That ratio came out at{" "}
+                    <strong className="text-ink">{r.index.toFixed(2)}&times;</strong>.
+                  </>
+                ) : Number.isFinite(r.index) ? (
+                  "There’s too little here to lean on that ratio yet."
+                ) : (
+                  "There was no ratio to work out."
+                )}{" "}
+                {r.iterations > 0
+                  ? `Then we re-ran it ${r.iterations.toLocaleString()} times with a scrambled event calendar to check it isn’t dumb luck.`
+                  : "So there was nothing to re-run against a scrambled calendar."}
               </Step>
             </>
           )}
@@ -624,7 +613,9 @@ export function Report({ username }: { username: string }) {
       </section>
 
       {/* ---- The two rates ---- */}
-      {!warming && (
+      {/* Only with a ratio: without one, NaN arrives as null and the tiles
+          read "0.0% of 0 plays". */}
+      {!warming && Number.isFinite(r.index) && (
         <section
           className="grid sm:grid-cols-2 gap-4 mb-12 rise"
           style={{ "--rise-delay": "0.2s" } as React.CSSProperties}
@@ -746,20 +737,19 @@ export function Report({ username }: { username: string }) {
         <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1">
           <h3 className="text-ink text-sm font-medium">The skeptic&rsquo;s panel</h3>
           <span className="text-xs text-ink-3 tabular">
-            {warming ? (
+            {warming || !Number.isFinite(r.index) ? (
               "nothing to test yet"
             ) : Number.isFinite(r.p) ? (
               <>
-                {Math.round(r.p * r.iterations).toLocaleString()} of{" "}
-                {r.iterations.toLocaleString()} scrambled skies beat yours
-                <span className="opacity-60"> (p={r.p < 0.001 ? "<0.001" : r.p.toFixed(3)})</span>
+                {r.matches.toLocaleString()} of {r.iterations.toLocaleString()} scrambled
+                skies matched or beat yours
               </>
             ) : (
               "not enough data"
             )}
           </span>
         </div>
-        {warming ? (
+        {warming || !Number.isFinite(r.index) ? (
           <p className="text-ink-3 text-xs max-w-xl leading-relaxed">
             Once there&rsquo;s something to test, this is where Retrospect tries to debunk
             its own result.
@@ -768,14 +758,33 @@ export function Report({ username }: { username: string }) {
           </p>
         ) : (
           <>
+            {/* Only for a tested trial: "under 0.05 is the usual bar" beside
+                "Not enough to tell" would contradict it. */}
+            {showP && Number.isFinite(r.p) && r.verdict.status === "tested" && (
+              <p className="text-ink-3 text-xs mb-3 max-w-xl leading-relaxed tabular">
+                {pValueNote(r.p, r.iterations)}
+              </p>
+            )}
+            {r.verdict.status !== "tested" && (
+              <p className="text-ink-2 text-xs mb-3 max-w-xl leading-relaxed">
+                There&rsquo;s too little here for a verdict (see the top of the page), so
+                treat this as a look under the hood, not an answer.
+              </p>
+            )}
             <p className="text-ink-3 text-xs mb-4 max-w-xl leading-relaxed">
-              Could your number be a coincidence? We scrambled the retrograde calendar{" "}
+              Could your number be a coincidence? We scrambled this sky&rsquo;s calendar{" "}
               {r.iterations.toLocaleString()} times and re-measured you against each fake sky.
-              The indigo pile is what pure chance produces. The ochre line is the real you:{" "}
-              {pctMore}% {r.index > 1 ? "more" : "fewer"} {metric.tagNoun}.{" "}
-              <strong className="text-ink-2">
-                Inside the pile = coincidence. Out on the edge = the sky has your number.
-              </strong>
+              The indigo pile is what pure chance produces.
+              {/* How to read the line is a verdict in itself: only for a tested trial. */}
+              {r.verdict.status === "tested" && (
+                <>
+                  {" "}The ochre line is the real you: {pctMore}%{" "}
+                  {r.index > 1 ? "more" : "fewer"} {metric.tagNoun}.{" "}
+                  <strong className="text-ink-2">
+                    Inside the pile = coincidence. Out on the edge = the sky has your number.
+                  </strong>
+                </>
+              )}
             </p>
             <Histogram samples={r.nullSamples} observed={r.index} />
           </>
@@ -820,6 +829,11 @@ export function Report({ username }: { username: string }) {
               ))}
             </div>
           )}
+
+          <label className="flex items-center gap-2 text-xs text-ink-2 cursor-pointer">
+            <Checkbox checked={showP} onChange={setShowPValues} />
+            show p-values (for the statistically inclined)
+          </label>
 
           <label className="flex items-center gap-2 text-xs text-ink-2 cursor-pointer">
             <Checkbox checked={excludeNoise} onChange={setExcludeNoise} />

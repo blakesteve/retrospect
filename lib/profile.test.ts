@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { buildProfile } from "./profile";
+import { buildProfile, loudestMonth } from "./profile";
 import { MemoryBlobStore, setBlobStore } from "./store/blob";
 import { getStore } from "./store/jsonStore";
 import { GET as profileRoute } from "@/app/api/user/[name]/profile/route";
@@ -114,6 +114,58 @@ describe("the profile route on a very small history", () => {
     });
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ have: 300, needed: 500 });
+  });
+});
+
+describe("loudest month", () => {
+  it("compares against the months the history has, not a twelfth", () => {
+    // Three steady months used to read "+200%" or more: a third of the plays
+    // in each month, set against a twelfth.
+    const p = buildProfile(history(utc(2026, 1, 1), utc(2026, 4, 1), 20), 0)!;
+    expect(Math.abs(p.topMonth.delta)).toBeLessThan(0.05);
+  });
+
+  it("finds a month you really did listen harder in", () => {
+    // January and February at 10 a day, March at 20: March, at about +49%
+    // over the 13.4 a day the whole stretch averages.
+    const plays = [
+      ...history(utc(2026, 1, 1), utc(2026, 3, 1), 10),
+      ...history(utc(2026, 3, 1), utc(2026, 4, 1), 20),
+    ];
+    const p = buildProfile(plays, 0)!;
+    expect(p.topMonth.month).toBe("March");
+    expect(Math.round(p.topMonth.delta * 100)).toBe(49);
+  });
+
+  it("doesn't let a partial month win on a few heavy days", () => {
+    // 26 to 31 December at 60 a day, then January and February at 20.
+    const counts = new Array<number>(12).fill(0);
+    counts[11] = 6 * 60;
+    counts[0] = 31 * 20;
+    counts[1] = 28 * 20;
+    const top = loudestMonth(counts, utc(2025, 12, 26), utc(2026, 2, 28) + 12 * 3600);
+    expect(top.month).not.toBe("December");
+  });
+
+  it("never crowns a month with no plays, and never reads NaN", () => {
+    // 20 to 31 December, nothing at all in January, then 1 to 10 February.
+    const counts = new Array<number>(12).fill(0);
+    counts[11] = 300;
+    counts[1] = 300;
+    const top = loudestMonth(counts, utc(2025, 12, 20), utc(2026, 2, 10) + 12 * 3600);
+    expect(top.month).not.toBe("January");
+    expect(Number.isFinite(top.delta)).toBe(true);
+  });
+
+  it("never calls the loudest month quieter than usual", () => {
+    // 20 to 31 December at 60 a day, then January at 20. December can't win
+    // on 12 days, and it mustn't drag January to "-36% vs your usual pace".
+    const counts = new Array<number>(12).fill(0);
+    counts[11] = 12 * 60;
+    counts[0] = 31 * 20;
+    const top = loudestMonth(counts, utc(2025, 12, 20), utc(2026, 1, 31) + 12 * 3600);
+    expect(top.month).toBe("January");
+    expect(top.delta).toBeGreaterThanOrEqual(0);
   });
 });
 

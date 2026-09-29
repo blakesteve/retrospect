@@ -150,9 +150,10 @@ describe("computeIndex + permutationTest", () => {
 
 describe("verdict", () => {
   it("maps the three outcome states", () => {
-    expect(verdict(1.23, 0.01, true).headline).toMatch(/grip/);
-    expect(verdict(0.8, 0.01, true).headline).toMatch(/Reverse/);
-    expect(verdict(1.02, 0.6, true).headline).toMatch(/innocent/);
-    expect(verdict(1.4, 0.01, false).significant).toBe(false);
+    const plenty = { retroN: 5000, events: 20 };
+    expect(verdict(1.23, 0.01, plenty).headline).toMatch(/grip/);
+    expect(verdict(0.8, 0.01, plenty).headline).toMatch(/Reverse/);
+    expect(verdict(1.02, 0.6, plenty).headline).toMatch(/innocent/);
+    expect(verdict(1.4, 0.01, { retroN: 100, events: 20 }).significant).toBe(false);
   });
 });

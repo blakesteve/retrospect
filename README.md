@@ -12,9 +12,10 @@ events (Mercury, Venus, and Mars retrogrades, full moons, and eclipses, all
 computed from planetary positions with [astronomy-engine](https://github.com/cosinekitty/astronomy))
 and asks, honestly: does the sky change what you play?
 
-Every claim survives a circular permutation test: your listening is re-measured
-against thousands of scrambled event calendars, and an effect only counts when
-chance can't fake it. Astrology is the question; statistics is the answer.
+Every verdict goes through a circular permutation test: your listening is
+re-measured against thousands of scrambled event calendars, and an effect only
+counts when chance is unlikely to have produced it. Astrology is the question;
+statistics is the answer.
 
 ## What it does
 
@@ -24,8 +25,11 @@ chance can't fake it. Astrology is the question; statistics is the answer.
   (artist reunions), Intensity (listening volume), Night Owl (after-midnight
   plays), Discovery (first listens).
 - **Plain-English verdicts**: "Does a full moon keep you up past midnight?
-  No, just +2%." A grip meter instead of a p-value; the nerd numbers live in
-  the skeptic's panel.
+  No, just +2%." Every result says how likely it is to be chance, in words and
+  as a plain frequency ("could easily be chance: shuffle the sky and a swing
+  this big turns up about 5 times in 10"), with a grip meter. P-values are off
+  by default; a toggle in the skeptic's panel adds them beside the plain
+  sentence, each with what it means.
 - **The 25-trial sweep**: scan every sky × measure combination and surface
   only convictions and leads.
 - **Genres & the sky**: your top artists' tags become genre affinities per
@@ -138,6 +142,23 @@ structure and your listening's autocorrelation, and asking how often chance
 beats you. Rare-event measures get a "lead" tier for effects that are large
 but unconfirmed. Sleep-noise artists (rain sounds, ASMR) can be excluded so
 eight hours of Rolling Thunder doesn't drown your actual taste.
+
+The p-value is (matches + 1) / (shuffles + 1): the real calendar counts as one
+possible outcome of chance, so p is never 0 and never claims more than the
+shuffles can support (with 2,000 of them, the floor is about 0.0005). A shuffle
+that puts none of your tagged plays inside the windows is the most extreme
+thing chance can do, and it counts.
+
+A trial only gets a verdict with enough to go on: 500 plays inside the
+windows, and 6 separate events. Plays inside one retrograde move together (a
+holiday, a bad week), so the events are the real sample size. Six is the
+fewest at which the events alone could clear the 5% bar: if the sky did
+nothing, all of five events agreeing happens 6.25% of the time by chance, and
+all of six 3.1%. Below either floor a trial is untested: the verdict, the
+reveal, the sweep and the duel say so, and the share card shows no verdict,
+rather than any of them reading it as "nothing there". The API gives each verdict a
+`status` saying which: `tested`, `too-few-plays`, `too-few-events`,
+`no-comparison` or `warming-up`.
 
 Three measures ignore the start of a history, because nothing in it can count
 yet: a song can't be an old favorite a week after you first heard it.

@@ -91,7 +91,7 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
   }
 
   const topWd = weekdayCounts.indexOf(Math.max(...weekdayCounts));
-  const topMo = monthCounts.indexOf(Math.max(...monthCounts));
+  const topMonth = loudestMonth(monthCounts, sorted[0].uts + shift, sorted[n - 1].uts + shift);
 
   // Baseline habit shares (sky not consulted), withheld below the floor.
   const pending: PendingHabit[] = [];
@@ -201,10 +201,7 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
     goldenHour,
     nightShare,
     topWeekday: { day: WEEKDAYS[topWd], share: weekdayCounts[topWd] / n },
-    topMonth: {
-      month: MONTHS[topMo],
-      delta: monthCounts[topMo] / n / (1 / 12) - 1,
-    },
+    topMonth,
     playsPerDay,
     oldFavoriteShare,
     discoveryShare,
@@ -213,4 +210,58 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
     busiestDay,
     longestStreakDays,
   };
+}
+
+/** A calendar month needs this many days of history to be the loudest. */
+const MIN_MONTH_DAYS = 14;
+
+/**
+ * The calendar month you listen hardest in, as plays per day, against your
+ * plays per day overall.
+ *
+ * It used to compare each month's share of all plays with a twelfth, as if
+ * every history covered all twelve months equally. A three-month history
+ * put a third of its plays in each of its months and read "+329% vs average".
+ * And a history covering two Januaries but one August favored January for
+ * the calendar alone. Dividing each month's plays by the days of history it
+ * actually covers compares like with like. A month with under two weeks of
+ * history (a partial first or last month) can't win, unless no month has
+ * that much, and isn't part of the usual pace it's compared against.
+ *
+ * Takes local-time seconds, so a day boundary is the listener's midnight.
+ */
+export function loudestMonth(
+  monthCounts: number[],
+  firstLocalUts: number,
+  lastLocalUts: number,
+): { month: string; delta: number } {
+  const days = new Array<number>(12).fill(0);
+  const firstDay = Math.floor(firstLocalUts / DAY);
+  const lastDay = Math.floor(lastLocalUts / DAY);
+  for (let d = firstDay; d <= lastDay; d++) days[new Date(d * DAY * 1000).getUTCMonth()]++;
+  // A month with no plays at all can't be the loudest, however long it is.
+  const eligible = days.some((d, m) => d >= MIN_MONTH_DAYS && monthCounts[m] > 0)
+    ? (m: number) => days[m] >= MIN_MONTH_DAYS && monthCounts[m] > 0
+    : (m: number) => days[m] > 0 && monthCounts[m] > 0;
+  /* The usual pace is over the same months that can win, so a busy partial
+     month that can't win doesn't drag the winner below "usual" either. */
+  let plays = 0;
+  let covered = 0;
+  for (let m = 0; m < 12; m++) {
+    if (!eligible(m)) continue;
+    plays += monthCounts[m];
+    covered += days[m];
+  }
+  const overall = plays / covered;
+  let top = -1;
+  let topRate = -1;
+  for (let m = 0; m < 12; m++) {
+    if (!eligible(m)) continue;
+    const rate = monthCounts[m] / days[m];
+    if (rate > topRate) {
+      top = m;
+      topRate = rate;
+    }
+  }
+  return { month: MONTHS[top], delta: topRate / overall - 1 };
 }

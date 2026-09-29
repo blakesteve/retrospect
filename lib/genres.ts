@@ -1,5 +1,6 @@
 import type { Scrobble } from "./analysis/nostalgia";
 import { mulberry32 } from "./analysis/rng";
+import { permutationP } from "./analysis/confidence";
 import { makeInWindow } from "./ephemeris/retrogrades";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "./ephemeris/phenomena";
 import { isNoiseArtist } from "./report";
@@ -169,7 +170,9 @@ export function analyzeGenres(scrobbles: Scrobble[], tagStore: TagStore): GenreA
         for (let g = 0; g < G; g++) {
           const shareIn = inG[g] / inTot;
           const shareOut = outG[g] / outTot;
-          if (shareOut > 0) sim[g] = shareIn / shareOut;
+          // None of the genre inside is an index of 0, none outside an
+          // infinite one: both are total swings, and both count.
+          sim[g] = shareOut > 0 ? shareIn / shareOut : shareIn > 0 ? Infinity : NaN;
         }
       }
       return { sim, inG };
@@ -181,7 +184,12 @@ export function analyzeGenres(scrobbles: Scrobble[], tagStore: TagStore): GenreA
     for (let r = 0; r < ROTATIONS; r++) {
       const { sim } = count(Math.floor(rng() * spanLen));
       for (let g = 0; g < G; g++) {
-        if (!Number.isFinite(sim[g]) || sim[g] <= 0 || !Number.isFinite(real.sim[g]) || real.sim[g] <= 0) continue;
+        /* The same rule as a trial's scramble test (see permutationTest). A
+           shuffle with none of the genre inside the windows is a total
+           swing, and used to be dropped, which made p too small: a burst
+           of listening that happened to land in a window could read as a
+           headline when most shuffles would have matched it. */
+        if (Number.isNaN(sim[g]) || !Number.isFinite(real.sim[g]) || real.sim[g] <= 0) continue;
         valid[g]++;
         if (Math.abs(Math.log(sim[g])) >= Math.abs(Math.log(real.sim[g]))) beats[g]++;
       }
@@ -191,7 +199,8 @@ export function analyzeGenres(scrobbles: Scrobble[], tagStore: TagStore): GenreA
       .map(([genre], g) => ({
         genre,
         index: real.sim[g],
-        p: valid[g] > 0 ? beats[g] / valid[g] : NaN,
+        // Never 0: see permutationP.
+        p: permutationP(beats[g], valid[g]),
         inPlays: real.inG[g],
       }))
       .filter((a) => Number.isFinite(a.index) && a.inPlays >= 100)

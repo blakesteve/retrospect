@@ -12,10 +12,9 @@ import { makeInWindow, type ZodiacSign } from "./ephemeris/retrogrades";
 import { getPhenomenon, type PhenomenonKey } from "./ephemeris/phenomena";
 import { getStore } from "./store/jsonStore";
 import { TOO_SOON_HEADLINE, warmupExplanation, type Warmup } from "./readiness";
+import { countEvents } from "./analysis/confidence";
 
 const DAY = 86400;
-/** Below this many in-window scrobbles we refuse to issue a verdict. */
-const MIN_RETRO_N = 500;
 const PERMUTATIONS = 2000;
 /** Cap the null-distribution samples sent to the client. */
 const MAX_SAMPLES = 600;
@@ -57,10 +56,9 @@ export interface Report {
   /**
    * Whether the trial had anything to test.
    *
-   * "ran": it did. Its verdict can still be withheld for too few plays inside
-   * the windows, and nothing here yet tells that apart from a tested,
-   * unremarkable result. The sweep needs that distinction, and this field is
-   * where it belongs.
+   * "ran": it did. Its verdict can still be withheld, for too few plays or
+   * too few separate events; `verdict.status` says which, and is what tells
+   * an untested trial from a tested, unremarkable one.
    *
    * "warming-up": nothing to test, because every play in the requested span
    * sits inside this measure's warm-up (see `warmup`). The trial's own
@@ -81,16 +79,28 @@ export interface Report {
   noiseRemoved: number;
   firstScrobbleUts: number;
   lastScrobbleUts: number;
-  /** Event windows overlapping the analyzed span. A warming-up trial analyzes
-      nothing, so there it counts the windows overlapping the requested span. */
+  /** Event windows overlapping your listening in the requested span, from
+      its first play to its last, including windows only partly inside it.
+      The same on every path: "happened N times on you" means this. */
   windowCount: number;
+  /** Plays inside those windows, across the same span: what "N songs played
+      when Mercury is retrograde" counts. The trial itself may test fewer
+      (`retroN`), because a measure's warm-up drops the start of a history. */
+  windowPlays: number;
+  /** The separate events the trial's verdict rests on: windows inside the
+      tested span that hold some of its plays (see countEvents). 0 when
+      warming up. Below MIN_EVENTS there is no verdict. */
+  eventsTested: number;
   index: number;
   /** share metrics: fraction of plays tagged; rate metric: plays per day. */
   retroRate: number;
   directRate: number;
   retroN: number;
   directN: number;
+  /** (matches + 1) / (iterations + 1): never 0. See permutationP. */
   p: number;
+  /** Shuffled calendars that matched or beat the real swing, either way. */
+  matches: number;
   iterations: number;
   nullSamples: number[];
   verdict: Verdict;
@@ -179,8 +189,10 @@ export async function buildReport(
   // Anthem: most-played track inside the phenomenon's windows (scoped).
   const inWindow = makeInWindow(phen.bounds);
   const anthemCounts = new Map<string, { artist: string; track: string; plays: number }>();
+  let windowPlays = 0;
   for (const s of scoped) {
     if (!inWindow(s.uts)) continue;
+    windowPlays++;
     const key = `${s.artist} ${s.track}`.toLowerCase();
     const entry = anthemCounts.get(key);
     if (entry) entry.plays++;
@@ -190,6 +202,15 @@ export async function buildReport(
   for (const entry of anthemCounts.values()) {
     if (!retroAnthem || entry.plays > retroAnthem.plays) retroAnthem = entry;
   }
+
+  /* One definition of "the windows that happened to you", for every path:
+     those overlapping your listening in the requested span. It used to be
+     the tested span on a normal trial and this span on a young one, while the
+     reveal and step 2 both said "your history"; a 12-month history read
+     "happened 0 times on you" beside a 7-play anthem from those windows. */
+  const firstScoped = scoped[0].uts;
+  const lastScoped = scoped[scoped.length - 1].uts;
+  const windowCount = phen.bounds.filter(([a, b]) => b >= firstScoped && a <= lastScoped).length;
 
   const historyWide = {
     username,
@@ -206,6 +227,8 @@ export async function buildReport(
     firstScrobbleUts: scoped[0].uts,
     lastScrobbleUts: scoped[scoped.length - 1].uts,
     windows: phen.windows,
+    windowCount,
+    windowPlays,
     yearlyCounts: [...yearly.entries()]
       .map(([year, count]) => ({ year, count }))
       .sort((a, b) => a.year - b.year),
@@ -214,7 +237,7 @@ export async function buildReport(
 
   /* ---- Metric dispatch: share metrics tag plays; intensity counts them ---- */
   let result: { index: number; retroRate: number; directRate: number; retroN: number; directN: number };
-  let test: { p: number; iterations: number; samples: number[] };
+  let test: { p: number; matches: number; iterations: number; samples: number[] };
   let spanStart: number;
   let spanEnd: number;
   let taggedInRange: { uts: number; nostalgic: boolean }[];
@@ -241,25 +264,25 @@ export async function buildReport(
         historyStartUts: all[0].uts,
         readyFromUts: full.spanStart,
       };
-      const first = scoped[0].uts;
-      const last = scoped[scoped.length - 1].uts;
       const report: Report = {
         ...historyWide,
         trialStatus: "warming-up",
         warmup,
-        windowCount: phen.bounds.filter(([a, b]) => b >= first && a <= last).length,
+        eventsTested: 0,
         index: NaN,
         retroRate: NaN,
         directRate: NaN,
         retroN: 0,
         directN: 0,
         p: NaN,
+        matches: 0,
         iterations: 0,
         nullSamples: [],
         verdict: {
           headline: TOO_SOON_HEADLINE,
           detail: warmupExplanation(metric.key, warmup, phen.when),
           significant: false,
+          status: "warming-up",
         },
         mostNostalgicDay: null,
         bySign: [],
@@ -311,7 +334,13 @@ export async function buildReport(
     }
   }
 
-  const windowCount = phen.bounds.filter(([a, b]) => b >= spanStart && a <= spanEnd).length;
+  const eventsTested = countEvents(
+    phen.bounds,
+    spanStart,
+    spanEnd,
+    taggedInRange.map((s) => s.uts),
+    metric.kind === "rate",
+  );
 
   // Per-sign breakdown: this sign's windows vs. everywhere-outside baseline.
   const signBounds = new Map<ZodiacSign, [number, number][]>();
@@ -369,16 +398,25 @@ export async function buildReport(
     ...historyWide,
     trialStatus: "ran",
     warmup: null,
-    windowCount,
+    eventsTested,
     ...result,
     p: test.p,
+    matches: test.matches,
     iterations: test.iterations,
     nullSamples: downsample(test.samples, MAX_SAMPLES),
-    verdict: metricVerdict(metric, result.index, test.p, result.retroN >= MIN_RETRO_N, {
-      name: phen.subjectName,
-      when: phen.when,
-      plural: phen.subjectPlural,
-    }),
+    verdict: metricVerdict(
+      metric,
+      result.index,
+      test.p,
+      { retroN: result.retroN, events: eventsTested },
+      {
+        name: phen.subjectName,
+        when: phen.when,
+        plural: phen.subjectPlural,
+        eventNoun: phen.eventNoun,
+        cadence: phen.cadence,
+      },
+    ),
     mostNostalgicDay,
     bySign,
   };

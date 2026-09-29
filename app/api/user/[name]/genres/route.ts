@@ -6,6 +6,10 @@ import { getBlobStore } from "@/lib/store/blob";
 import { isNoiseArtist } from "@/lib/report";
 import { emptyHistoryResponse } from "@/lib/emptyHistory";
 
+
+/** Bump when analyzeGenres changes what it returns. */
+const GENRE_ANALYSIS_VERSION = 2;
+
 export const dynamic = "force-dynamic";
 // The genre analysis runs every genre against every phenomenon with 400
 // calendar scrambles each; a 500k-play library needs ~30s cold.
@@ -43,7 +47,10 @@ async function handler(
   }
 
   const newestUts = scrobbles[scrobbles.length - 1].uts;
-  const cacheKey = `${newestUts}|${sync.total}`;
+  /* The version changes whenever the analysis itself does, so a stored
+     result from the old scramble test (whose p could be 0, or too small)
+     isn't served to a listener who hasn't scrobbled since. */
+  const cacheKey = `${GENRE_ANALYSIS_VERSION}|${newestUts}|${sync.total}`;
   const userKey = username.toLowerCase();
   const hit = cache.get(userKey);
   if (hit && hit.key === cacheKey) return NextResponse.json(hit.analysis);

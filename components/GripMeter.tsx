@@ -7,8 +7,12 @@
 export function gripLevel(
   index: number,
   significant: boolean,
-  suggestive = false
+  suggestive = false,
+  untested = false
 ): { level: 0 | 1 | 2 | 3 | 4; label: string; unconfirmed: boolean } {
+  /* Not tested is not "no grip": the meter used to read "No measurable grip"
+     for a trial it never measured, which is the verdict for one it did. */
+  if (untested) return { level: 0, label: "Not enough to measure yet", unconfirmed: false };
   if (!Number.isFinite(index)) return { level: 0, label: "No measurable grip", unconfirmed: false };
   if (!significant) {
     return suggestive
@@ -26,12 +30,14 @@ export function GripMeter({
   index,
   significant,
   suggestive = false,
+  untested = false,
 }: {
   index: number;
   significant: boolean;
   suggestive?: boolean;
+  untested?: boolean;
 }) {
-  const { level, label, unconfirmed } = gripLevel(index, significant, suggestive);
+  const { level, label, unconfirmed } = gripLevel(index, significant, suggestive, untested);
   return (
     <div className="inline-flex items-center gap-3" role="img" aria-label={`Sky grip: ${label}`}>
       <span className="flex gap-1.5">
