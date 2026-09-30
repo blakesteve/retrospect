@@ -2,8 +2,9 @@
 
 **Index**
 
-- **Done:** A way to remove your data, and an empty account that isn't a dead
-  end (30 Sept 2026) · The report tells the truth about its own confidence
+- **Done:** The store audit, and share cards that can't outlive a removal
+  (30 Sept 2026) · A way to remove your data, and an empty account that isn't
+  a dead end (30 Sept) · The report tells the truth about its own confidence
   (28 Sept) · A young history gets a real report (28 Sept) · The bundle-shape
   guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster
   4.12.1 (16 Sept) · Roster sweep (5 Sept)
@@ -12,6 +13,19 @@
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### The store audit, and share cards that can't outlive a removal (30 September 2026)
+
+- **What's in the store that nothing accounts for.** `scripts/audit-store-keys.mjs`
+  lists every key (names only, nothing read or changed, no username printed)
+  and reports any outside the four per-user kinds and the removal markers,
+  by masked shape with counts, sizes and dates. `--local` is its positive
+  control: a checkout with flat files from before the blob layout reports them.
+- **Share cards.** They were believed to cache for a year, because `@vercel/og`
+  sets `max-age=31536000`. They don't: `next/og` replaces that response's
+  headers, and production sends `public, max-age=0, must-revalidate`, which
+  Vercel's CDN doesn't cache either. The route now sets that value itself, and
+  a test reads it off a real render and bounds any future value to a day.
 
 ### A way to remove your data, and an empty account that isn't a dead end (30 September 2026)
 
