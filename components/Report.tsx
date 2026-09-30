@@ -19,6 +19,8 @@ import { Apod } from "./Apod";
 import { AlbumArt } from "./AlbumArt";
 import { AstrologyCorner } from "./AstrologyCorner";
 import { StoryIntro } from "./StoryIntro";
+import { NoScrobbles } from "./NoScrobbles";
+import { RemoveDataLink } from "./RemoveDataLink";
 import {
   apiError,
   toVisitorErrorCode,
@@ -119,6 +121,9 @@ export function Report({ username }: { username: string }) {
      instead, so picking an era with no listening can't blank the page. */
   const [fatal, setFatal] = useState<VisitorErrorCode | null>(null);
   const [notice, setNotice] = useState<VisitorErrorCode | null>(null);
+  /* Bumped to run the whole read again from /status, for an empty account
+     that has found plays since (NoScrobbles' "Check again"). */
+  const [attempt, setAttempt] = useState(0);
   const shown = useRef(false);
   // Read once: whether a warm-up's end date is still ahead.
   const [now] = useState(() => Date.now());
@@ -163,7 +168,7 @@ export function Report({ username }: { username: string }) {
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, attempt]);
 
   const fetchReport = useCallback(
     async (
@@ -257,6 +262,20 @@ export function Report({ username }: { username: string }) {
   }
 
   const displayIndex = useCountUp(report?.index ?? NaN);
+
+  if (fatal === "no-scrobbles") {
+    return (
+      <NoScrobbles
+        username={username}
+        onFound={() => {
+          setFatal(null);
+          setSync(null);
+          setAttempt((n) => n + 1);
+        }}
+        onError={setFatal}
+      />
+    );
+  }
 
   if (fatal) {
     const message = visitorError(fatal, username);
@@ -871,7 +890,8 @@ export function Report({ username }: { username: string }) {
           onClick={() => setShowStory(true)}
         >
           ↺ replay the reveal
-        </Button>
+        </Button>{" "}
+        &middot; <RemoveDataLink username={username} />
       </footer>
     </div>
   );

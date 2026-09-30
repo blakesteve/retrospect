@@ -2,6 +2,7 @@ import Image from "next/image";
 import { SkyCalendar } from "@/components/SkyCalendar";
 import { UsernameForm } from "@/components/UsernameForm";
 import { VersusForm } from "@/components/VersusForm";
+import { RemoveDataLink } from "@/components/RemoveDataLink";
 
 export default function Home() {
   return (
@@ -34,6 +35,9 @@ export default function Home() {
         Reads public scrobble data via the Last.fm API. Ephemeris computed with
         astronomy-engine, not vibes. Not affiliated with Last.fm. For
         entertainment purposes; the planets are not responsible for your taste.
+        <span className="block mt-2">
+          <RemoveDataLink />
+        </span>
       </footer>
     </main>
   );

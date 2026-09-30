@@ -106,11 +106,11 @@ create table results_cache (
 );
 ```
 
-Sync strategy: **backfill backwards** (newest → oldest) so partial results exist immediately — the UI streams "2024 analyzed… 2023 analyzed…" while older pages land. Incremental refresh uses `from=newest_uts`. Histories re-sync at most once per hour per user (guard in `sync_state.updated_at`).
+Sync strategy: **backfill backwards** (newest → oldest) so partial results exist immediately — the UI streams "2024 analyzed… 2023 analyzed…" while older pages land. Incremental refresh uses `from=newest_uts`. Histories re-sync at most once per hour per user (guard in `sync_state.updated_at`), or once a minute for an empty one, since that listener has just been told to go and scrobble.
 
 ### Privacy / ToS
 
-Public profiles only (private ones simply return no data). A footer "remove my data" flow deletes a username's rows. Cache raw scrobbles no longer than needed; show attribution and link back to Last.fm per their API ToS.
+Public profiles only (private ones simply return no data). A footer "remove my data" flow deletes a username's rows (`/remove`: open to anyone, rate limited). Cache raw scrobbles no longer than needed, which is about 90 days after the username was last looked up, swept daily; show attribution and link back to Last.fm per their API ToS.
 
 ## 5. UX
 

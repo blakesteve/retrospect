@@ -1,10 +1,12 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import type { BlobStore } from "./blob";
+import type { BlobListing, BlobStore } from "./blob";
 
 /**
  * Cloudflare R2 via its S3-compatible API. Chosen for a side project's
@@ -59,5 +61,36 @@ export class R2BlobStore implements BlobStore {
     await this.client.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: key })
     );
+  }
+
+  async has(key: string): Promise<boolean> {
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return true;
+    } catch (err) {
+      // A HEAD has no body, so a missing key is only ever a bare 404.
+      if ((err as { name?: string }).name === "NotFound") return false;
+      if ((err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async list(prefix: string): Promise<BlobListing[]> {
+    const out: BlobListing[] = [];
+    let token: string | undefined;
+    do {
+      const res = await this.client.send(
+        new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken: token })
+      );
+      for (const item of res.Contents ?? []) {
+        // R2 always sends LastModified. If it ever didn't, "just now" keeps
+        // the blob, where 0 would hand it to the expiry sweep.
+        if (item.Key) out.push({ key: item.Key, lastModified: item.LastModified?.getTime() ?? Date.now() });
+      }
+      token = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (token);
+    return out;
   }
 }

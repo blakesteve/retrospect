@@ -2,6 +2,8 @@ import { getRecentTracksPage, isTransientError, syncErrorCode } from "./lastfm";
 import type { VisitorErrorCode } from "./visitorErrors";
 import { getStore } from "./store/jsonStore";
 import type { SyncState } from "./store/types";
+import { userKey } from "./store/userKeys";
+import { takeBackIfRemoved } from "./removal";
 import type { Scrobble } from "./analysis/nostalgia";
 
 /**
@@ -32,6 +34,23 @@ export const PAGE_DELAY_MS = Number(process.env.SYNC_PAGE_DELAY_MS?.trim() || 25
 export const BATCH_PAGES = Number(process.env.SYNC_BATCH_PAGES?.trim() || 4);
 export const REFRESH_SECONDS = Number(process.env.SYNC_REFRESH_SECONDS?.trim() || 3600);
 
+/* How long an EMPTY ready history counts as fresh. The hour above is right
+   for a history with plays in it and backwards for one without: the page has
+   just told that person to go and scrobble, so theirs is the state that needs
+   re-reading soonest.
+
+   A minute, because a window much shorter buys little: Last.fm records a play
+   once half the song has played, or four minutes, whichever comes first (and
+   never a song under 30 seconds), so a typical three-to-four-minute song
+   can't show up until a couple of minutes after it starts. A re-check costs
+   one request for page 1, which is what every poll of a failed sync already
+   spends, so a minute also caps what repeated visits to one empty name can
+   cost at one Last.fm call a minute.
+
+   A plain constant rather than a setting, because the page states it in
+   words ("at most once a minute"), and the two must not drift apart. */
+export const EMPTY_REFRESH_SECONDS = 60;
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Per-process lock so overlapping /status polls don't double-sync a user.
@@ -39,30 +58,38 @@ const inFlight = new Set<string>();
 
 export async function runSyncChunk(username: string): Promise<SyncState> {
   const store = getStore();
+  const startedAt = Date.now();
   const existing = await store.getSyncState(username);
 
   if (inFlight.has(username)) return existing ?? notStarted(username);
+  // Nothing collected means nothing stored: an empty history.
+  const empty = existing?.newestUts === 0;
+  const freshFor = (empty ? EMPTY_REFRESH_SECONDS : REFRESH_SECONDS) * 1000;
   const fresh =
-    existing?.status === "ready" &&
-    Date.now() - existing.updatedAt < REFRESH_SECONDS * 1000;
+    existing?.status === "ready" && Date.now() - existing.updatedAt < freshFor;
   if (fresh) return existing!;
 
   inFlight.add(username);
   try {
     if (!existing) {
-      return await backfill(username, notStarted(username));
+      return await backfill(username, notStarted(username), false, startedAt);
     }
-    if (existing.status === "syncing" || existing.status === "error") {
+    /* An empty history goes back through the backfill, not `refresh`: with
+       no newest play to read from, `refresh` would ask for everything and
+       walk every page in one request, with no budget. Someone who scrobbled
+       a lot since the last look would time the request out. The backfill
+       reads page 1 again and checkpoints as it goes. */
+    if (existing.status === "syncing" || existing.status === "error" || empty) {
       // Resume from the checkpoint — including after an error. Pages already
       // pulled are on disk; re-fetched pages dedupe on read.
-      return await backfill(username, {
-        ...existing,
-        status: "syncing",
-        error: undefined,
-        errorCode: undefined,
-      });
+      return await backfill(
+        username,
+        { ...existing, status: "syncing", error: undefined, errorCode: undefined },
+        true,
+        startedAt,
+      );
     }
-    return await refresh(username, existing); // ready but stale
+    return await refresh(username, existing, startedAt); // ready but stale
   } finally {
     inFlight.delete(username);
   }
@@ -80,7 +107,31 @@ function notStarted(username: string): SyncState {
   };
 }
 
-async function backfill(username: string, state: SyncState): Promise<SyncState> {
+/* A removal can land while a chunk runs. Two checks keep the chunk from
+   putting the history back:
+
+   - Before writing: removal deletes the sync state first, so a chunk that
+     started from a stored state and finds it gone writes nothing. Its pages
+     would land under a cursor saying the earlier ones are in, a history
+     missing its newest plays for good. A chunk that started from nothing has
+     nothing to lose this way, so it's not asked.
+   - After writing: the append re-reads and rewrites the whole history, which
+     takes seconds on a big one, and a removal can land inside that. So the
+     chunk asks whether this name was removed since it started, and if so
+     deletes what it wrote (`takeBackIfRemoved` in `removal.ts`). */
+async function removedMidChunk(username: string, resumed: boolean): Promise<boolean> {
+  return resumed && (await getStore().getSyncState(username)) === null;
+}
+
+const takeBack = (username: string, startedAt: number) =>
+  takeBackIfRemoved(username, startedAt, [userKey("sync", username), userKey("scrobbles", username)]);
+
+async function backfill(
+  username: string,
+  state: SyncState,
+  resumed: boolean,
+  startedAt: number,
+): Promise<SyncState> {
   const store = getStore();
   const deadline = Date.now() + BUDGET_MS;
 
@@ -146,6 +197,7 @@ async function backfill(username: string, state: SyncState): Promise<SyncState> 
     // Transient: flush what we have and let the next poll resume.
   }
 
+  if (await removedMidChunk(username, resumed)) return notStarted(username);
   if (collected.length > 0) {
     await store.appendScrobbles(username, collected);
   }
@@ -168,10 +220,11 @@ async function backfill(username: string, state: SyncState): Promise<SyncState> 
   state.errorCode = fatal?.code;
   state.updatedAt = Date.now();
   await store.setSyncState(state);
+  if (await takeBack(username, startedAt)) return notStarted(username);
   return state;
 }
 
-async function refresh(username: string, state: SyncState): Promise<SyncState> {
+async function refresh(username: string, state: SyncState, startedAt: number): Promise<SyncState> {
   const store = getStore();
   const collected: Scrobble[] = [];
   try {
@@ -188,11 +241,13 @@ async function refresh(username: string, state: SyncState): Promise<SyncState> {
     for (const s of collected) {
       if (s.uts > state.newestUts) state.newestUts = s.uts;
     }
+    if (await removedMidChunk(username, true)) return notStarted(username);
     if (collected.length > 0) {
       await store.appendScrobbles(username, collected);
     }
     state.updatedAt = Date.now();
     await store.setSyncState(state);
+    if (await takeBack(username, startedAt)) return notStarted(username);
   } catch {
     // Refresh failures are non-fatal: report on the data we have.
   }

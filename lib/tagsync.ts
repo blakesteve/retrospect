@@ -1,5 +1,7 @@
 import { readTagStore, topArtists, writeTagStore, TOP_ARTISTS } from "./genres";
 import { getStore } from "./store/jsonStore";
+import { userKey } from "./store/userKeys";
+import { takeBackIfRemoved } from "./removal";
 
 /**
  * Resumable tag fetcher, same philosophy as the scrobble sync: each call does
@@ -23,6 +25,7 @@ export interface TagSyncState {
 }
 
 export async function runTagChunk(username: string): Promise<TagSyncState> {
+  const startedAt = Date.now();
   const scrobbles = await getStore().getScrobbles(username);
   if (scrobbles.length === 0) return { done: 0, total: 0, complete: false };
 
@@ -68,7 +71,13 @@ export async function runTagChunk(username: string): Promise<TagSyncState> {
       }
       await sleep(CALL_DELAY_MS);
     }
-    if (dirty) await writeTagStore(username, store);
+    if (dirty) {
+      await writeTagStore(username, store);
+      // A removal that landed during the lookups: take the tags back out.
+      if (await takeBackIfRemoved(username, startedAt, [userKey("tags", username)])) {
+        return { done: 0, total: wanted.length, complete: false };
+      }
+    }
   } finally {
     inFlight.delete(username);
   }

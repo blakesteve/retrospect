@@ -2,6 +2,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import type { Scrobble } from "@/lib/analysis/nostalgia";
 import { getBlobStore } from "./blob";
 import type { ScrobbleStore, SyncState } from "./types";
+import { safeName, userKey } from "./userKeys";
 
 /**
  * Scrobble store over the blob layer. Histories live as one gzipped JSONL
@@ -10,9 +11,8 @@ import type { ScrobbleStore, SyncState } from "./types";
  * why the sync worker batches to one append per invocation. Dedupe and
  * timestamp sanitization happen on read.
  */
-const safe = (u: string) => u.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
-const scrobbleKey = (u: string) => `scrobbles/${safe(u)}.jsonl.gz`;
-const stateKey = (u: string) => `sync/${safe(u)}.json`;
+const scrobbleKey = (u: string) => userKey("scrobbles", u);
+const stateKey = (u: string) => userKey("sync", u);
 
 export class BlobScrobbleStore implements ScrobbleStore {
   /** Per-instance parse cache: polls re-read the same blob many times. */
@@ -43,14 +43,14 @@ export class BlobScrobbleStore implements ScrobbleStore {
     const prior = existing ? gunzipSync(existing).toString("utf8") : "";
     const lines = scrobbles.map((s) => JSON.stringify(s)).join("\n") + "\n";
     await store.put(key, gzipSync(prior + lines));
-    this.memo.delete(safe(username));
+    this.memo.delete(safeName(username));
   }
 
   async getScrobbles(username: string): Promise<Scrobble[]> {
     const raw = await getBlobStore().get(scrobbleKey(username));
     if (!raw) return [];
 
-    const memoKey = safe(username);
+    const memoKey = safeName(username);
     const hit = this.memo.get(memoKey);
     if (hit && hit.bytes === raw.length) return hit.scrobbles;
 

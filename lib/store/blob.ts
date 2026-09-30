@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, stat, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { R2BlobStore } from "./r2";
 
@@ -13,6 +13,17 @@ export interface BlobStore {
   get(key: string): Promise<Buffer | null>;
   put(key: string, data: Buffer): Promise<void>;
   del(key: string): Promise<void>;
+  /** Whether a blob exists, without reading it: a history can be 7MB. */
+  has(key: string): Promise<boolean>;
+  /** Every key starting with `prefix`, with when it was last written (unix
+      ms). Removal's rate limit and the expiry sweep need both, and R2 lists
+      with strong consistency, so a key written a moment ago is always seen. */
+  list(prefix: string): Promise<BlobListing[]>;
+}
+
+export interface BlobListing {
+  key: string;
+  lastModified: number;
 }
 
 /** Local-folder implementation: the default for `npm run dev`. */
@@ -53,20 +64,61 @@ export class FsBlobStore implements BlobStore {
       // already gone is fine
     }
   }
+
+  async has(key: string): Promise<boolean> {
+    try {
+      return (await stat(this.pathFor(key))).isFile();
+    } catch {
+      return false;
+    }
+  }
+
+  async list(prefix: string): Promise<BlobListing[]> {
+    // Walk only the folder the prefix names, then match the rest by name.
+    const folder = prefix.slice(0, prefix.lastIndexOf("/") + 1);
+    const out: BlobListing[] = [];
+    const walk = async (rel: string): Promise<void> => {
+      let entries;
+      try {
+        entries = await readdir(path.join(this.dir, rel), { withFileTypes: true });
+      } catch {
+        return; // no folder, no keys
+      }
+      for (const entry of entries) {
+        const key = rel + entry.name;
+        if (entry.isDirectory()) await walk(`${key}/`);
+        // A `.tmp` is a write in progress, not a blob.
+        else if (key.startsWith(prefix) && !key.endsWith(".tmp")) {
+          out.push({ key, lastModified: (await stat(path.join(this.dir, key))).mtimeMs });
+        }
+      }
+    };
+    await walk(folder);
+    return out;
+  }
 }
 
-/** In-memory implementation for tests. */
+/** In-memory implementation for tests. A blob's write time is `Date.now()`,
+    so tests move it with fake timers. */
 export class MemoryBlobStore implements BlobStore {
-  private blobs = new Map<string, Buffer>();
+  private blobs = new Map<string, { data: Buffer; lastModified: number }>();
 
   async get(key: string): Promise<Buffer | null> {
-    return this.blobs.get(key) ?? null;
+    return this.blobs.get(key)?.data ?? null;
   }
   async put(key: string, data: Buffer): Promise<void> {
-    this.blobs.set(key, Buffer.from(data));
+    this.blobs.set(key, { data: Buffer.from(data), lastModified: Date.now() });
   }
   async del(key: string): Promise<void> {
     this.blobs.delete(key);
+  }
+  async has(key: string): Promise<boolean> {
+    return this.blobs.has(key);
+  }
+  async list(prefix: string): Promise<BlobListing[]> {
+    return [...this.blobs]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, { lastModified }]) => ({ key, lastModified }));
   }
 }
 
