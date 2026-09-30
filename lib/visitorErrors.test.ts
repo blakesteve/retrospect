@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VISITOR_ERROR_CODES, toVisitorErrorCode, visitorError } from "./visitorErrors";
 import { LastfmError, getRecentTracksPage, syncErrorCode } from "./lastfm";
+import { REMOVAL_OUTCOMES, removalMessage, toRemovalOutcome } from "./removalCopy";
 
 /* The error screen used to show the raw API text plus "(Is the username
    right? Is the profile public? Is LASTFM_API_KEY set?)". A missing API key
@@ -44,6 +45,21 @@ describe("visitor error copy", () => {
   });
 });
 
+describe("removal page copy", () => {
+  it.each(REMOVAL_OUTCOMES)("%s says nothing a developer wrote for a developer", (outcome) => {
+    const { title, body } = removalMessage(outcome, "example-listener", "Thursday 3:40 PM");
+    for (const [what, pattern] of DEVELOPER_TEXT) {
+      expect(`${title} ${body}`, `contains ${what}`).not.toMatch(pattern);
+    }
+  });
+
+  it("treats an answer it doesn't know as ours, not theirs", () => {
+    expect(toRemovalOutcome(undefined)).toBe("server");
+    expect(toRemovalOutcome("Invalid username")).toBe("server");
+    expect(toRemovalOutcome("cooldown")).toBe("cooldown");
+  });
+});
+
 describe("syncErrorCode", () => {
   it.each([
     ["Last.fm's no-such-user error", new LastfmError("User not found", 6), "user-not-found"],
@@ -69,7 +85,13 @@ describe("page source", () => {
   const root = path.resolve(__dirname, "..");
   const pageFiles = [
     ...readdirSync(path.join(root, "components")).map((f) => path.join("components", f)),
-    ...["app/page.tsx", "app/layout.tsx", "app/u/[username]/page.tsx", "app/vs/[a]/[b]/page.tsx"],
+    ...[
+      "app/page.tsx",
+      "app/layout.tsx",
+      "app/u/[username]/page.tsx",
+      "app/vs/[a]/[b]/page.tsx",
+      "app/remove/page.tsx",
+    ],
   ].filter((f) => f.endsWith(".tsx"));
 
   it.each(pageFiles)("%s has no developer hint for visitors", (file) => {

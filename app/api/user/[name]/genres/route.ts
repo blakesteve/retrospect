@@ -3,8 +3,10 @@ import { analyzeGenres, readTagStore, type GenreAnalysis } from "@/lib/genres";
 import { runTagChunk } from "@/lib/tagsync";
 import { getStore } from "@/lib/store/jsonStore";
 import { getBlobStore } from "@/lib/store/blob";
+import { userKey } from "@/lib/store/userKeys";
 import { isNoiseArtist } from "@/lib/report";
 import { emptyHistoryResponse } from "@/lib/emptyHistory";
+import { takeBackIfRemoved } from "@/lib/removal";
 
 
 /** Bump when analyzeGenres changes what it returns. */
@@ -30,6 +32,7 @@ async function handler(
 ) {
   const { name } = await params;
   const username = decodeURIComponent(name).trim();
+  const startedAt = Date.now();
 
   const all = await getStore().getScrobbles(username);
   if (all.length === 0) return emptyHistoryResponse(username);
@@ -51,19 +54,19 @@ async function handler(
      result from the old scramble test (whose p could be 0, or too small)
      isn't served to a listener who hasn't scrobbled since. */
   const cacheKey = `${GENRE_ANALYSIS_VERSION}|${newestUts}|${sync.total}`;
-  const userKey = username.toLowerCase();
-  const hit = cache.get(userKey);
+  const memoUser = username.toLowerCase();
+  const hit = cache.get(memoUser);
   if (hit && hit.key === cacheKey) return NextResponse.json(hit.analysis);
 
   // Persistent cache: the analysis is expensive (~30s on a big library), so
   // it must survive serverless cold starts, not just this process.
-  const blobKey = `cache/genres-${userKey.replace(/[^a-z0-9_-]/g, "_")}.json`;
+  const blobKey = userKey("genres", username);
   const persisted = await getBlobStore().get(blobKey);
   if (persisted) {
     try {
       const parsed = JSON.parse(persisted.toString("utf8"));
       if (parsed.key === cacheKey) {
-        cache.set(userKey, { key: cacheKey, analysis: parsed.analysis });
+        cache.set(memoUser, { key: cacheKey, analysis: parsed.analysis });
         return NextResponse.json(parsed.analysis);
       }
     } catch {
@@ -73,8 +76,14 @@ async function handler(
 
   const tagStore = await readTagStore(username);
   const analysis = analyzeGenres(scrobbles, tagStore);
-  cache.set(userKey, { key: cacheKey, analysis });
   await getBlobStore().put(blobKey, Buffer.from(JSON.stringify({ key: cacheKey, analysis })));
+  /* The analysis can take half a minute, long enough for this listener to
+     remove their data from another tab. If they did, take the write back
+     rather than store their genres again after "removed". */
+  if (await takeBackIfRemoved(username, startedAt, [blobKey])) {
+    return emptyHistoryResponse(username);
+  }
+  cache.set(memoUser, { key: cacheKey, analysis });
   return NextResponse.json(analysis);
 }
 

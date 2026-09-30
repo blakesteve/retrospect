@@ -1,8 +1,11 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryBlobStore, setBlobStore } from "./store/blob";
 import { getStore } from "./store/jsonStore";
 import { LastfmError, getRecentTracksPage, type RecentTracksPage } from "./lastfm";
-import { runSyncChunk } from "./sync";
+import { removeUserData, requestRemoval } from "./removal";
+import { EMPTY_REFRESH_SECONDS, runSyncChunk } from "./sync";
 
 /* An account with no scrobbles never finished syncing: Last.fm reports
    `totalPages: 0` for it, and the worker only called a sync done when there
@@ -166,5 +169,184 @@ describe("what a failed sync tells a visitor", () => {
     const state = await runSyncChunk("no-key");
     expect(state.status).toBe("error");
     expect(state.errorCode).toBe("server");
+  });
+});
+
+/* An empty history used to count as fresh for the same hour as a full one, so
+   someone told "Nothing to read yet" who went and scrobbled was told it again
+   for up to an hour. The durations are literals on purpose: a test that read
+   the constants would pass whatever they were set to. */
+describe("how long a finished history counts as fresh", () => {
+  const MINUTE = 60_000;
+  const readyState = (username: string, ageMs: number, newestUts: number) =>
+    getStore().setSyncState({
+      username,
+      status: "ready",
+      pagesDone: newestUts ? 1 : 0,
+      totalPages: newestUts ? 1 : 0,
+      totalScrobbles: newestUts ? 1 : 0,
+      newestUts,
+      emptyReads: newestUts ? 0 : 2,
+      updatedAt: Date.now() - ageMs,
+    });
+
+  it("asks Last.fm about an empty history again after a minute, and not before", async () => {
+    fetchPage.mockResolvedValue(page({ totalPages: 0 }));
+    await readyState("empty-59s", 59_000, 0);
+    await runSyncChunk("empty-59s");
+    expect(fetchPage).not.toHaveBeenCalled();
+
+    await readyState("empty-61s", 61_000, 0);
+    const state = await runSyncChunk("empty-61s");
+    // Still empty is still finished, after one look.
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+    expect(state.status).toBe("ready");
+  });
+
+  it("reads the first plays of a history that was empty a minute ago", async () => {
+    await readyState("first-plays", 61_000, 0);
+    const uts = Date.UTC(2026, 8, 30, 15) / 1000;
+    fetchPage.mockResolvedValue(
+      page({
+        totalPages: 1,
+        totalScrobbles: 3,
+        scrobbles: [
+          { uts: uts + 400, artist: "A", track: "t3" },
+          { uts: uts + 200, artist: "A", track: "t2" },
+          { uts, artist: "A", track: "t1" },
+        ],
+      }),
+    );
+    const state = await runSyncChunk("first-plays");
+    expect(state.status).toBe("ready");
+    expect(await getStore().getScrobbles("first-plays")).toHaveLength(3);
+    // Read as a fresh history, so the page knows where it starts.
+    expect(state.newestUts).toBe(uts + 400);
+    expect(state.oldestUts).toBe(uts);
+  });
+
+  it("keeps a history with plays fresh for an hour, so a warm one isn't re-read on every visit", async () => {
+    const uts = Date.UTC(2026, 8, 1) / 1000;
+    fetchPage.mockResolvedValue(page({ totalPages: 1, totalScrobbles: 1 }));
+    await readyState("warm-59m", 59 * MINUTE, uts);
+    await runSyncChunk("warm-59m");
+    expect(fetchPage).not.toHaveBeenCalled();
+
+    await readyState("warm-61m", 61 * MINUTE, uts);
+    await runSyncChunk("warm-61m");
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("matches what the empty screen tells people", () => {
+    // NoScrobbles says "once a minute" in words. Change the window, change them.
+    const source = readFileSync(path.resolve(__dirname, "../components/NoScrobbles.tsx"), "utf8");
+    const mentions = source.match(/asks Last\.fm [^."`]*/g) ?? [];
+    expect(mentions.length).toBeGreaterThan(0);
+    expect(new Set(mentions)).toEqual(new Set(["asks Last.fm again at most once a minute"]));
+    expect(EMPTY_REFRESH_SECONDS).toBe(60);
+  });
+});
+
+/* A removal that lands while a sync chunk is fetching pages deletes the sync
+   state first. The chunk must then write nothing: its pages under a cursor
+   that says the earlier ones are in would be a history missing its newest
+   plays, reported as complete. */
+describe("a sync chunk that outlives a removal", () => {
+  const uts = Date.UTC(2025, 0, 1) / 1000;
+
+  it("writes nothing when its history was removed mid-read", async () => {
+    await getStore().setSyncState({
+      username: "removed-mid-backfill",
+      status: "syncing",
+      pagesDone: 4,
+      totalPages: 10,
+      totalScrobbles: 10,
+      newestUts: uts + 100,
+      updatedAt: Date.now() - 120_000,
+    });
+    fetchPage.mockImplementation(async (user, n) => {
+      if (n === 5) await removeUserData(user); // the removal, mid-fetch
+      return page({ page: n, totalPages: 10, totalScrobbles: 10, scrobbles: [{ uts: uts - n, artist: "A", track: `t${n}` }] });
+    });
+    await runSyncChunk("removed-mid-backfill");
+    expect(await getStore().getSyncState("removed-mid-backfill")).toBeNull();
+    expect(await getStore().getScrobbles("removed-mid-backfill")).toEqual([]);
+  });
+
+  it("takes its write back when the removal lands during the append itself", async () => {
+    fetchPage.mockResolvedValue(
+      page({ totalPages: 1, totalScrobbles: 2, scrobbles: [{ uts: uts + 60, artist: "A", track: "new" }] }),
+    );
+    /* The append reads the whole history, then writes it back with the new
+       plays: seconds, on a big one. The removal lands between the two. */
+    const blobs = new MemoryBlobStore();
+    setBlobStore(blobs);
+    await getStore().setSyncState({
+      username: "removed-mid-append",
+      status: "ready",
+      pagesDone: 1,
+      totalPages: 1,
+      totalScrobbles: 1,
+      newestUts: uts,
+      updatedAt: Date.now() - 2 * 3_600_000,
+    });
+    await getStore().appendScrobbles("removed-mid-append", [{ uts, artist: "A", track: "old" }]);
+    const get = blobs.get.bind(blobs);
+    let removed = false;
+    blobs.get = async (key: string) => {
+      const data = await get(key);
+      if (key.startsWith("scrobbles/") && !removed) {
+        removed = true;
+        expect((await requestRemoval("removed-mid-append")).kind).toBe("removed");
+      }
+      return data;
+    };
+    await runSyncChunk("removed-mid-append");
+    expect(await getStore().getSyncState("removed-mid-append")).toBeNull();
+    expect(await getStore().getScrobbles("removed-mid-append")).toEqual([]);
+  });
+
+  it("leaves a history read after the removal alone", async () => {
+    // Removed, then looked up again a minute later: the new read must stay.
+    await getStore().setSyncState({
+      username: "removed-then-back",
+      status: "ready",
+      pagesDone: 1,
+      totalPages: 1,
+      totalScrobbles: 1,
+      newestUts: uts,
+      updatedAt: Date.now() - 2 * 3_600_000,
+    });
+    expect((await requestRemoval("removed-then-back")).kind).toBe("removed");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 60_000);
+    try {
+      fetchPage.mockResolvedValue(
+        page({ totalPages: 1, totalScrobbles: 1, scrobbles: [{ uts, artist: "A", track: "back" }] }),
+      );
+      expect((await runSyncChunk("removed-then-back")).status).toBe("ready");
+      expect(await getStore().getScrobbles("removed-then-back")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("writes nothing when a warm history's refresh outlives its removal", async () => {
+    await getStore().setSyncState({
+      username: "removed-mid-refresh",
+      status: "ready",
+      pagesDone: 1,
+      totalPages: 1,
+      totalScrobbles: 1,
+      newestUts: uts,
+      updatedAt: Date.now() - 2 * 3_600_000,
+    });
+    fetchPage.mockImplementation(async (user) => {
+      await removeUserData(user);
+      return page({ totalPages: 1, totalScrobbles: 2, scrobbles: [{ uts: uts + 60, artist: "A", track: "new" }] });
+    });
+    await runSyncChunk("removed-mid-refresh");
+    expect(await getStore().getSyncState("removed-mid-refresh")).toBeNull();
+    expect(await getStore().getScrobbles("removed-mid-refresh")).toEqual([]);
   });
 });

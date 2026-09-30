@@ -124,12 +124,51 @@ Vercel Hobby pauses rather than charges when limits are hit.
 | `R2_BUCKET` | prod | R2 bucket name |
 | `NASA_API_KEY` | no | APOD card (DEMO_KEY fallback works) |
 | `NEXT_PUBLIC_BASE_URL` | prod | Absolute URL for share cards |
+| `CRON_SECRET` | prod | Lets Vercel Cron run the daily expiry sweep; without it nothing expires |
+
+`CRON_SECRET` is any random string of 16 characters or more. Vercel sends it
+with its own cron requests, and `/api/cron/expire` refuses every request
+without it, so a crawler can't trigger the sweep. Unset, the route refuses
+everyone and logs why each day, and stored history never expires.
 
 Without the R2 variables, storage falls back to the local filesystem
 (`.data/`), which is exactly right for development and self-hosting on a
 normal server. Upgrading from an older checkout? Run
 `node scripts/migrate-store.mjs` once to convert flat `.data` files to the
 blob layout.
+
+## What's stored, and removing it
+
+Everything stored for a listener sits under four keys, all named in
+`lib/store/userKeys.ts`: the scrobbles, the sync state, the genre tags for
+their top artists (per listener, not shared) and the worked-out genre results.
+The footer's "remove my data" opens `/remove`, which deletes all four with a
+POST. No GET a visitor can reach deletes anything; the expiry sweep's GET
+refuses anyone without `CRON_SECRET`. Anyone can remove any name, without
+signing in: nothing is lost, since Last.fm keeps the history. Two limits keep
+that from being abused, both in `lib/retention.ts`: one removal per name per
+day, and at most 20 removals a day across every name.
+
+Stored history also expires on its own, about 90 days after its name was last
+looked up (`KEEP_DAYS`, the same file), once `CRON_SECRET` is set. Vercel Cron
+calls `/api/cron/expire` once a day (`vercel.json`), and the sweep reads "last
+looked up" from the store's own write times, so a visit costs nothing extra.
+
+A removal can land while something is still writing for that name: a sync
+chunk appending a history, or a genre request fetching tags or analyzing.
+Each of those checks after its write whether the name was removed since it
+started, and takes its write back if so.
+
+Anything new that stores something per listener gets its key in `userKeys.ts`
+first, and takes its writes back after a removal the same way.
+`userKeys.test.ts` fails if a module reaches the blob store without being on
+the test's own allowlist, if an allowed module builds a key by hand, and if a
+removal leaves any key with the name in it.
+
+A brand-new Last.fm account with no scrobbles gets a page that says how to
+start scrobbling and a "Check again" button. An empty history counts as fresh
+for a minute, not the hour a history with plays in it gets, so someone who
+plays a few songs and checks again a minute or more later sees them.
 
 ## How the math works
 

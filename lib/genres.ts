@@ -5,6 +5,7 @@ import { makeInWindow } from "./ephemeris/retrogrades";
 import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "./ephemeris/phenomena";
 import { isNoiseArtist } from "./report";
 import { getBlobStore } from "./store/blob";
+import { userKey } from "./store/userKeys";
 
 /* ------------------------------------------------------------------ */
 /* Tag store: artist → Last.fm top tags, cached on disk                */
@@ -15,8 +16,7 @@ export interface TagStore {
   artists: Record<string, string[]>;
 }
 
-const safe = (u: string) => u.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
-const tagKey = (u: string) => `tags/${safe(u)}.json`;
+const tagKey = (u: string) => userKey("tags", u);
 
 export async function readTagStore(username: string): Promise<TagStore> {
   const raw = await getBlobStore().get(tagKey(username));

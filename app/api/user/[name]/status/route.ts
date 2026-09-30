@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runSyncChunk } from "@/lib/sync";
+import { isValidUsername } from "@/lib/username";
 
 export const dynamic = "force-dynamic";
 // Each poll runs one budgeted sync chunk (~8s of page pulls plus a blob flush).
@@ -18,7 +19,7 @@ async function handler(
 ) {
   const { name } = await params;
   const username = decodeURIComponent(name).trim();
-  if (!/^[a-zA-Z0-9_ .-]{1,50}$/.test(username)) {
+  if (!isValidUsername(username)) {
     return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
   }
 

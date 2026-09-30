@@ -2,15 +2,44 @@
 
 **Index**
 
-- **Done:** The report tells the truth about its own confidence (28 Sept 2026) ·
-  A young history gets a real report (28 Sept) · The bundle-shape guard
-  (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster 4.12.1
-  (16 Sept) · Roster sweep (5 Sept)
+- **Done:** A way to remove your data, and an empty account that isn't a dead
+  end (30 Sept 2026) · The report tells the truth about its own confidence
+  (28 Sept) · A young history gets a real report (28 Sept) · The bundle-shape
+  guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster
+  4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### A way to remove your data, and an empty account that isn't a dead end (30 September 2026)
+
+DESIGN.md promised a footer "remove my data" and history kept "no longer than
+needed". Neither existed: nothing deleted, and nothing expired.
+
+- **Remove my data.** A footer link on the landing and the report opens
+  `/remove`: what's kept, for how long and what removing does, in plain words,
+  then a field for the username. Typing it is the confirmation. The delete is
+  a POST that repeats the name; no GET a visitor can reach deletes anything.
+  Open to anyone with no sign-in (decided 27 Sept), because Last.fm keeps the
+  history and the worst case is one re-read. Limited to one removal per name
+  per day and 20 a day in all, counted with markers in the store so a burst
+  can't slip past the limit. A removal while a sync is mid-read is refused
+  until the read finishes, and anything still writing for the name when a
+  removal lands (a sync chunk, a genre request) takes its write back.
+- **Every per-listener key in one list.** `lib/store/userKeys.ts` names the
+  four (scrobbles, sync state, genre tags, genre results), and removal and
+  expiry read it. A test fails if any module reaches the store without being
+  listed, or if a removal leaves any key with the name in it.
+- **History expires.** About 90 days after a name was last looked up, one
+  constant in `lib/retention.ts`, swept daily by Vercel Cron. "Last looked up"
+  comes from the store's own write times, so a visit costs nothing extra.
+  Needs `CRON_SECRET` set in Vercel, or nothing expires.
+- **The empty account has a next step.** "Nothing to read yet." now says how
+  to start scrobbling, links Last.fm's own guide, and has "Check again". An
+  empty history is re-read after a minute instead of an hour, so plays show
+  up when the person checks again a minute or more later.
 
 ### The report tells the truth about its own confidence (28 September 2026)
 
