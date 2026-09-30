@@ -159,6 +159,15 @@ chunk appending a history, or a genre request fetching tags or analyzing.
 Each of those checks after its write whether the name was removed since it
 started, and takes its write back if so.
 
+`scripts/audit-store-keys.mjs` lists the store, names only, and reports any
+key outside those four kinds and the removal markers: those are the keys
+removal and expiry never touch. It reads no object and prints no username;
+`--local` runs it against `.data`.
+
+Share cards (`/api/og`) are sent with `public, max-age=0, must-revalidate`, so
+no cache that honors the header keeps one after a removal. Chat apps keep their
+own copy of an image they've unfurled, which no header controls.
+
 Anything new that stores something per listener gets its key in `userKeys.ts`
 first, and takes its writes back after a removal the same way.
 `userKeys.test.ts` fails if a module reaches the blob store without being on

@@ -87,6 +87,21 @@ export async function GET(req: Request) {
         </div>
       </div>
     ),
-    { width: 1200, height: 630 }
+    {
+      width: 1200,
+      height: 630,
+      headers: {
+        /* No caching: every use asks again, so a card never outlives the
+           history behind it. A removed listener's next unfurl renders the
+           generic card, and an expired one's does too. This is the value
+           `next/og` already sends in production, written here so the promise
+           doesn't rest on a framework default. It isn't the year-long header
+           `@vercel/og` sets: `next/og` wraps that response and replaces its
+           headers. Vercel's CDN doesn't cache it either (no `s-maxage`).
+           Chat apps keep their own copies of an unfurled image, which no
+           header here controls. `og.test.ts` pins the value. */
+        "cache-control": "public, max-age=0, must-revalidate",
+      },
+    }
   );
 }
