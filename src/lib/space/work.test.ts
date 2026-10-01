@@ -405,8 +405,8 @@ describe("the daily sources and the backfill", () => {
     await writeCompact(
       synthCompact("2026-10-12T12:00:00Z", {
         kp: [
-          ["2010-04-06T00:00:00Z", 5.67], // before SDO
-          ["2012-03-09T12:00:00Z", 7], // SDO has no folder that day
+          ["2015-12-31T12:00:00Z", 7], // before SDO's browse archive: never asked
+          ["2017-03-09T12:00:00Z", 7], // SDO has no folder that day
           ["2024-05-10T21:00:00Z", 9],
           ["2024-05-11T03:00:00Z", 8.67],
         ],
@@ -415,9 +415,10 @@ describe("the daily sources and the backfill", () => {
     );
     fake.sdo["2024-05-10"] = ["20240510_190000_1024_0171.jpg", "20240510_200000_1024_0171.jpg"];
     fake.sdo["2024-05-14"] = ["20240514_165000_1024_0171.jpg"];
-    fake.status = (u) => (u.includes("/browse/2012/03/09/") ? 404 : null);
+    fake.status = (u) => (u.includes("/browse/2017/03/09/") ? 404 : null);
     const s = await runSpaceWork({ budgetMs: 60_000, only: ["sdo"] });
     expect(s.fetches).toBe(4);
+    expect(asked.some((u) => u.includes("/browse/2015/"))).toBe(false);
     expect(s.failed).toEqual([]);
     expect((await readMonth("sdo", "2024-05"))!.records).toEqual([
       {
@@ -433,8 +434,8 @@ describe("the daily sources and the backfill", () => {
         url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/14/20240514_165000_1024_0171.jpg",
       },
     ]);
-    expect((await readMonth("sdo", "2012-03"))!.records).toEqual([{ date: "2012-03-09", time: "2012-03-09T10:30:00.000Z", url: null }]);
-    expect(await readMonth("sdo", "2010-04")).toBeNull();
+    expect((await readMonth("sdo", "2017-03"))!.records).toEqual([{ date: "2017-03-09", time: "2017-03-09T10:30:00.000Z", url: null }]);
+    expect(await readMonth("sdo", "2015-12")).toBeNull();
 
     const reads = vi.spyOn(blobs, "get");
     expect((await runSpaceWork({ budgetMs: 60_000, only: ["sdo"] })).fetches).toBe(0);

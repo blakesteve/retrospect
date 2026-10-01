@@ -23,14 +23,16 @@ const SDO = "https://sdo.gsfc.nasa.gov/assets/img/browse";
 const APOD = "https://science.nasa.gov/wp-json/wp/v2/apod-basic";
 
 /** Each source's documented first date (spec 7.3): before it, a night is
-    "unknown", never "none". DONKI's are its first records (checked 1 Oct). */
+    "unknown", never "none". DONKI's are its first records, and SDO's is the
+    first day its browse-image archive serves: every day before 2016 is a
+    404, though SDO itself flew from 2010 (both checked 1 Oct 2026). */
 export const FIRST_DATES: Record<SpaceSource, string> = {
   "donki-gst": "2010-04-05",
   "donki-flr": "2010-04-03",
   "jpl-cad": "1900-01-01",
   "jpl-fireball": "1988-04-15",
   epic: "2015-06-13",
-  sdo: "2010-05-13",
+  sdo: "2016-01-01",
   apod: "1995-06-16",
 };
 

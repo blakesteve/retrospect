@@ -41,7 +41,7 @@ describe("where each source starts", () => {
       "jpl-cad": "1900-01-01",
       "jpl-fireball": "1988-04-15",
       epic: "2015-06-13",
-      sdo: "2010-05-13",
+      sdo: "2016-01-01",
       apod: "1995-06-16",
     });
     expect(BACKFILL_FROM).toEqual({
@@ -50,7 +50,7 @@ describe("where each source starts", () => {
       "jpl-cad": "2002-01",
       "jpl-fireball": "2002-01",
       epic: "2015-06",
-      sdo: "2010-05",
+      sdo: "2016-01",
       apod: "2002-01",
     });
   });

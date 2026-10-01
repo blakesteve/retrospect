@@ -71,10 +71,12 @@ for (;;) {
     await new Promise((resolve) => setTimeout(resolve, 70_000));
     continue;
   }
-  // A pass that fetched nothing and isn't done is failing: stop after three.
-  stuck = s.fetches === 0 ? stuck + 1 : 0;
+  /* A pass that wrote nothing and isn't done is stuck on something that keeps
+     failing: stop after three. Counting fetches instead let one permanent
+     failure loop for good, since every pass still asks for EPIC's dates. */
+  stuck = s.wrote.length === 0 ? stuck + 1 : 0;
   if (stuck >= 3) {
-    console.error("Three passes in a row made no progress; stopping.");
+    console.error("Three passes in a row wrote nothing; stopping. The failures above are what's stuck.");
     process.exitCode = 1;
     break;
   }
