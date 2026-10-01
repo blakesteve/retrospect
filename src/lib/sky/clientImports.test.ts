@@ -5,12 +5,12 @@ import { describe, expect, it } from "vitest";
 /* The generated sky is about a megabyte, and spec 7.2 says it's server only:
    each view gets its slice from an endpoint. This walks the real import graph
    from every client module ("use client" files, and everything they import)
-   and fails if any reaches lib/sky/windows.ts or lib/sky/data/. The built
+   and fails if any reaches src/lib/sky/windows.ts or src/lib/sky/data/. The built
    chunks get the same check after `next build`
    (`scripts/check-sky-server-only.mjs`). */
 
-const root = path.resolve(__dirname, "../..");
-const SOURCE_DIRS = ["app", "components", "lib"];
+const root = path.resolve(__dirname, "../../..");
+const SOURCE_DIRS = ["src/app", "src/components", "src/lib"];
 
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {
@@ -22,7 +22,7 @@ const walk = (dir: string): string[] =>
 /** Where an import specifier points, or null for a package. */
 function resolve(from: string, spec: string): string | null {
   let base: string;
-  if (spec.startsWith("@/")) base = path.join(root, spec.slice(2));
+  if (spec.startsWith("@/")) base = path.join(root, "src", spec.slice(2));
   else if (spec.startsWith(".")) base = path.resolve(path.dirname(from), spec);
   else return null;
   // TypeScript lets an import say "./x.js" and mean "./x.ts".
@@ -68,25 +68,25 @@ const startsUseClient = (src: string) =>
 const isClient = (f: string) => startsUseClient(readFileSync(f, "utf8"));
 const clientRoots = sources.filter(isClient);
 const rel = (f: string) => path.relative(root, f);
-const isSkyData = (f: string) => f === "lib/sky/windows.ts" || f.startsWith("lib/sky/data/");
+const isSkyData = (f: string) => f === "src/lib/sky/windows.ts" || f.startsWith("src/lib/sky/data/");
 
 describe("client modules and the generated sky", () => {
   it("found the client modules to start from", () => {
     // Positive control: the walk has something to walk.
-    expect(clientRoots.map(rel)).toContain("components/SkyCalendar.tsx");
+    expect(clientRoots.map(rel)).toContain("src/components/SkyCalendar.tsx");
   });
 
   it("follows JSON imports: today's calendar reaches today's small ephemeris files", () => {
     // Positive control: a graph walk that skipped JSON would pass the real
     // check below on nothing. This path is known to exist until phase 3.
-    const fromCalendar = reachable([path.join(root, "components/SkyCalendar.tsx")]);
-    expect([...fromCalendar].map(rel)).toContain("lib/ephemeris/mercury-retrogrades.json");
+    const fromCalendar = reachable([path.join(root, "src/components/SkyCalendar.tsx")]);
+    expect([...fromCalendar].map(rel)).toContain("src/lib/ephemeris/mercury-retrogrades.json");
   });
 
   it("sees the loader's own imports of the data, and would call them leaks", () => {
     // Positive control for the check below: from the loader, the filter must fire.
-    const fromLoader = [...reachable([path.join(root, "lib/sky/windows.ts")])].map(rel);
-    expect(fromLoader).toContain("lib/sky/data/signs.json");
+    const fromLoader = [...reachable([path.join(root, "src/lib/sky/windows.ts")])].map(rel);
+    expect(fromLoader).toContain("src/lib/sky/data/signs.json");
     expect(fromLoader.filter(isSkyData).length).toBe(6); // the loader and its five files
   });
 
@@ -102,7 +102,7 @@ describe("client modules and the generated sky", () => {
   });
 
   it("keeps the shared sky module free of data, so the Sky view can import it", () => {
-    const fromModule = [...reachable([path.join(root, "lib/sky/sky.ts")])].map(rel);
+    const fromModule = [...reachable([path.join(root, "src/lib/sky/sky.ts")])].map(rel);
     expect(fromModule.filter((f) => f.endsWith(".json"))).toEqual([]);
   });
 });

@@ -60,7 +60,7 @@ export function Versus({ a, b }: { a: string; b: string }) {
     a: emptyUser(),
     b: emptyUser(),
   });
-  // A code and a name, never raw text: see lib/visitorErrors.ts.
+  // A code and a name, never raw text: see src/lib/visitorErrors.ts.
   const [fatal, setFatal] = useState<{ code: VisitorErrorCode; username: string } | null>(null);
 
   useEffect(() => {

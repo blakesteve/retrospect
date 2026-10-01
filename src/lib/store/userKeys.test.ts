@@ -163,15 +163,15 @@ describe("a genre request that outlives a removal", () => {
    until somebody decides whether it stores anything per listener, and if it
    does, puts its key in `userKeys.ts`. */
 describe("modules that touch the blob store", () => {
-  const root = path.resolve(__dirname, "../..");
+  const root = path.resolve(__dirname, "../../..");
   const ALLOWED: Record<string, string> = {
-    "lib/store/blob.ts": "defines the store",
-    "lib/store/r2.ts": "one of its backends",
-    "lib/store/jsonStore.ts": "scrobbles and sync state, keyed through userKeys.ts",
-    "lib/genres.ts": "the tag store, keyed through userKeys.ts",
-    "app/api/user/[name]/genres/route.ts": "the genre cache, keyed through userKeys.ts",
-    "lib/removal.ts": "deletes userKeys.ts's keys; its own markers hold a hash, not a name",
-    "lib/expiry.ts": "lists userKeys.ts's prefixes",
+    "src/lib/store/blob.ts": "defines the store",
+    "src/lib/store/r2.ts": "one of its backends",
+    "src/lib/store/jsonStore.ts": "scrobbles and sync state, keyed through userKeys.ts",
+    "src/lib/genres.ts": "the tag store, keyed through userKeys.ts",
+    "src/app/api/user/[name]/genres/route.ts": "the genre cache, keyed through userKeys.ts",
+    "src/lib/removal.ts": "deletes userKeys.ts's keys; its own markers hold a hash, not a name",
+    "src/lib/expiry.ts": "lists userKeys.ts's prefixes",
   };
   const TOUCHES_STORE = /\b(getBlobStore|FsBlobStore|R2BlobStore)\b|@aws-sdk\/client-s3/;
   /* A key built by hand: any string that opens with a folder, whether it's
@@ -180,7 +180,7 @@ describe("modules that touch the blob store", () => {
      per user: the removal markers, which hold a hash, not a name. */
   const HAND_BUILT_KEY = /["'`][a-z][a-z-]*\/(?!\/)/g;
   const NOT_PER_USER = new Set(['"limits/']);
-  const BACKENDS = new Set(["lib/store/blob.ts", "lib/store/r2.ts"]);
+  const BACKENDS = new Set(["src/lib/store/blob.ts", "src/lib/store/r2.ts"]);
   /** Code only: comments name files in backticks, and imports are paths. */
   const codeOf = (file: string) =>
     readFileSync(file, "utf8")
@@ -195,12 +195,12 @@ describe("modules that touch the blob store", () => {
       if (statSync(full).isDirectory()) return walk(full);
       return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [full] : [];
     });
-  const sources = ["app", "lib", "components"].flatMap((dir) => walk(path.join(root, dir)));
+  const sources = ["src/app", "src/lib", "src/components"].flatMap((dir) => walk(path.join(root, dir)));
 
   it("is every module that does, and none of them builds a key by hand", () => {
     const rel = (file: string) => path.relative(root, file);
     // A positive control: if the walk broke, the checks below would pass on nothing.
-    expect(sources.map(rel)).toContain("lib/store/jsonStore.ts");
+    expect(sources.map(rel)).toContain("src/lib/store/jsonStore.ts");
 
     const touching = sources.filter((file) => TOUCHES_STORE.test(readFileSync(file, "utf8")));
     expect(touching.map(rel).filter((file) => !(file in ALLOWED))).toEqual([]);

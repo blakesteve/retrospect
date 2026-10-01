@@ -66,7 +66,7 @@ describe("words the sky never uses", () => {
   /* "Peregrine" means no dignity of any kind, triplicity and term included,
      which isn't what "a neutral sign" means (spec 7.2, 9.3). Checked in code
      only: comments may name the word to forbid it. */
-  const root = path.resolve(__dirname, "../..");
+  const root = path.resolve(__dirname, "../../..");
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap((entry) => {
       const full = path.join(dir, entry);
@@ -79,7 +79,7 @@ describe("words the sky never uses", () => {
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
   it("has no 'peregrine' or 'wandering' in any string the app can show", () => {
-    const files = ["app", "components", "lib"].flatMap((d) => walk(path.join(root, d)));
+    const files = ["src/app", "src/components", "src/lib"].flatMap((d) => walk(path.join(root, d)));
     expect(files.length).toBeGreaterThan(50); // the walk found the source
     const hits = files.filter((f) => /peregrine|wandering/i.test(code(f))).map((f) => path.relative(root, f));
     expect(hits).toEqual([]);

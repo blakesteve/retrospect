@@ -1,7 +1,7 @@
 /**
- * Fails the build if the generated sky (lib/sky/data/, about a megabyte)
+ * Fails the build if the generated sky (src/lib/sky/data/, about a megabyte)
  * reached any client chunk. Spec 7.2: server only, each view gets its slice
- * from an endpoint. `lib/sky/clientImports.test.ts` checks the import graph;
+ * from an endpoint. `src/lib/sky/clientImports.test.ts` checks the import graph;
  * this checks what the build actually emitted.
  *
  * Markers are timestamps read from the data files at run time, so they move
@@ -10,7 +10,7 @@
  * so a new-data marker can't be matched by an old file's string.
  *
  * Positive control: a timestamp from today's small client ephemeris
- * (lib/ephemeris/mercury-retrogrades.json), which the old UI imports on
+ * (src/lib/ephemeris/mercury-retrogrades.json), which the old UI imports on
  * purpose until phase 3 deletes it, MUST be found in the client chunks. A
  * scan that finds nothing there is looking in the wrong place, and its
  * clean result means nothing.
@@ -40,15 +40,15 @@ if (!dist) {
 /* One marker from every data file, so a client import of any one of them,
    alone, is caught. */
 const read = (p) => JSON.parse(readFileSync(join(root, p), "utf8"));
-const signs = read("lib/sky/data/signs.json").windows;
+const signs = read("src/lib/sky/data/signs.json").windows;
 const markers = [
   signs[Math.floor(signs.length / 2)].start,
-  read("lib/sky/data/retrogrades.json").windows.filter((w) => w.body === "Saturn").at(-1).start,
-  read("lib/sky/data/moons.json").events.filter((e) => e.phase === "new").at(-1).peak,
-  read("lib/sky/data/eclipses.json").events.at(-1).start,
-  read("lib/sky/data/harmony.json").windows.at(-1).start,
+  read("src/lib/sky/data/retrogrades.json").windows.filter((w) => w.body === "Saturn").at(-1).start,
+  read("src/lib/sky/data/moons.json").events.filter((e) => e.phase === "new").at(-1).peak,
+  read("src/lib/sky/data/eclipses.json").events.at(-1).start,
+  read("src/lib/sky/data/harmony.json").windows.at(-1).start,
 ];
-const control = read("lib/ephemeris/mercury-retrogrades.json").windows.at(-1).start;
+const control = read("src/lib/ephemeris/mercury-retrogrades.json").windows.at(-1).start;
 
 const walk = (dir) =>
   readdirSync(dir).flatMap((e) => {

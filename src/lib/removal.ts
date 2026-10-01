@@ -180,7 +180,7 @@ export async function requestRemoval(username: string): Promise<RemovalOutcome> 
 
   /* A sync mid-read writes its pages at the end of each chunk. Removing under
      it would leave those pages, and a reading cursor that skips the ones just
-     deleted. `lib/sync.ts` also checks from its side; this keeps the two from
+     deleted. `src/lib/sync.ts` also checks from its side; this keeps the two from
      meeting in the first place while someone is watching the page read. */
   const state = await getStore().getSyncState(username);
   if (state?.status === "syncing" && Date.now() - state.updatedAt < SYNC_ACTIVE_MS) {

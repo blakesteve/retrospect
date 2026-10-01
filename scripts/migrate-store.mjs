@@ -10,7 +10,7 @@ import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 
 /* `||`, not `??`, and trimmed: this has to resolve `DATA_DIR` the same way
-   `lib/store/blob.ts` does, or a blank value sends the migration somewhere the
+   `src/lib/store/blob.ts` does, or a blank value sends the migration somewhere the
    app will not read from. */
 const dir = process.env.DATA_DIR?.trim() || '.data';
 if (!existsSync(dir)) {

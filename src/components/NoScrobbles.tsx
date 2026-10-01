@@ -13,7 +13,7 @@ import {
 /** Last.fm's own page on starting to scrobble, with Spotify and the apps. */
 const HOW_TO_SCROBBLE = "https://www.last.fm/about/trackmymusic";
 
-/* The re-check window in words. `EMPTY_REFRESH_SECONDS` in `lib/sync.ts` is
+/* The re-check window in words. `EMPTY_REFRESH_SECONDS` in `src/lib/sync.ts` is
    60, and `sync.test.ts` checks every "asks Last.fm" here says a minute.
    "At most", because nothing polls: Last.fm is asked only when someone checks,
    and not again inside the minute. */
@@ -25,7 +25,7 @@ const HOW_OFTEN = "Retrospect asks Last.fm again at most once a minute.";
  * way to look again without retyping the name.
  *
  * "Check again" asks `/status`, which re-reads an empty history once it's a
- * minute old (`EMPTY_REFRESH_SECONDS` in `lib/sync.ts`; `HOW_OFTEN` says so
+ * minute old (`EMPTY_REFRESH_SECONDS` in `src/lib/sync.ts`; `HOW_OFTEN` says so
  * in words and has to change with it). Still empty: stay here and say
  * so. Anything else, plays found or a read under way, hands back to the page's
  * normal flow through `onFound`.

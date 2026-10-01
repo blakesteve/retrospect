@@ -6,7 +6,7 @@
  * under a key that isn't here would survive both: "remove my data" would say
  * it's gone and leave it behind, and nothing would ever expire it. Anything new
  * that stores something per listener (the redesign's stored answers, for one)
- * gets its entry here first, and calls `takeBackIfRemoved` (`lib/removal.ts`)
+ * gets its entry here first, and calls `takeBackIfRemoved` (`src/lib/removal.ts`)
  * after writing. `userKeys.test.ts` fails if a module reaches the store without
  * being on its allowlist, or builds a key by hand instead of calling `userKey`.
  *
@@ -45,7 +45,7 @@ export function userKey(kind: UserKeyKind, username: string): string {
 
 /** Every key for one username. The sync state comes first on purpose: it is
     the reading cursor, so once it's gone a sync already running for this
-    name can see the removal and stop writing (`lib/sync.ts`). */
+    name can see the removal and stop writing (`src/lib/sync.ts`). */
 export function allUserKeys(username: string): string[] {
   // Derived, not listed again: a kind added above can't be missed here.
   const kinds = Object.keys(USER_KEY_KINDS) as UserKeyKind[];

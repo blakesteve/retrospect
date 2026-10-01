@@ -1,4 +1,4 @@
-{"generatedBy":"astronomy-engine via lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"events":[
+{"generatedBy":"astronomy-engine via src/lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"events":[
 {"kind":"penumbral lunar","peak":"2001-12-30T10:29:24Z","start":"2001-12-27T22:29:24Z","end":"2002-01-01T22:29:24Z","sign":"Cancer"},
 {"kind":"penumbral lunar","peak":"2002-05-26T12:03:13Z","start":"2002-05-24T00:03:13Z","end":"2002-05-29T00:03:13Z","sign":"Sagittarius"},
 {"kind":"annular solar","peak":"2002-06-10T23:44:15Z","start":"2002-06-08T11:44:15Z","end":"2002-06-13T11:44:15Z","sign":"Gemini"},

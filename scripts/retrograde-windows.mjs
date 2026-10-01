@@ -3,7 +3,7 @@
 // detect sign changes in apparent motion, then bisect to ~1-minute station times.
 //
 // Usage: node scripts/retrograde-windows.mjs [startYear] [endYear] [body]
-// Output: data/<body>-retrogrades.json
+// Output: src/data/<body>-retrogrades.json
 
 import { GeoVector, Ecliptic, Body, MakeTime } from 'astronomy-engine';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -90,8 +90,8 @@ const result = windows.filter(
   (w) => new Date(w.end).getTime() >= scanStart && new Date(w.start).getTime() < rangeEnd
 );
 
-mkdirSync('data', { recursive: true });
-const outPath = `data/${bodyName.toLowerCase()}-retrogrades.json`;
+mkdirSync('src/data', { recursive: true });
+const outPath = `src/data/${bodyName.toLowerCase()}-retrogrades.json`;
 writeFileSync(
   outPath,
   JSON.stringify({ body: bodyName, generatedBy: 'astronomy-engine', startYear, endYear, windows: result }, null, 2)
