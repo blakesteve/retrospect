@@ -4,8 +4,9 @@ import { MIN_EVENTS, MIN_RETRO_N, permutationP, type VerdictStatus } from "@/lib
 import { mulberry32 } from "@/lib/analysis/rng";
 import { isNoiseArtist } from "@/lib/noise";
 import { degreeInSign, longitude, signOf, type SkyBody } from "@/lib/sky/sky";
-import { zoneClock } from "@/lib/zone";
-import { conditionFor, type Condition, type ConditionWindow } from "./conditions";
+import { zoneClock, type ZoneClock } from "@/lib/zone";
+import type { NasaLog } from "@/lib/space/compact";
+import { conditionFor, nightsCondition, type Condition, type ConditionWindow } from "./conditions";
 import { QUESTIONS, type Measure, type Question, type QuestionId } from "./questions";
 import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
 
@@ -553,16 +554,60 @@ export function typicalSwingOf(swings: number[]): number | null {
 }
 
 /**
- * All 12 for a listener's stored history in one zone. Questions 7 and 8 are
- * "not checked" until NASA's log is there (spec 6.6; it arrives in step 4).
- * A question that throws is "not checked" too, and the record is marked
- * incomplete so the next request tries again; the other 11 stand.
+ * The nights NASA logged for question 7 or 8, in the listener's zone, among
+ * the nights `first` to `last`: every night a storm's Kp reading overlaps
+ * (`readingSpan`), or the night of each X-class flare's peak (7.3).
+ */
+export function nasaNights(id: "storms" | "flares", log: NasaLog, clock: ZoneClock, first: number, last: number): number[] {
+  const nights: number[] = [];
+  const keep = (n: number) => {
+    if (n >= first && n <= last) nights.push(n);
+  };
+  if (id === "storms") {
+    for (const [start, end] of log.kp) {
+      for (let n = clock.nightOf(start); n <= clock.nightOf(Math.max(start, end - 1)); n++) keep(n);
+    }
+  } else {
+    for (const [peak] of log.xflares) keep(clock.nightOf(peak));
+  }
+  return nights;
+}
+
+/**
+ * The whole nights inside NASA's coverage for question 7 or 8: from the log's
+ * start to `coveredUntil` (3 days before its refresh, since DONKI logs
+ * late), within the measure's own span. A night only partly covered is left
+ * out, since part of it isn't logged yet. Null when no whole night is.
+ */
+export function nasaSpan(
+  id: "storms" | "flares",
+  log: NasaLog,
+  clock: ZoneClock,
+  span: { spanStart: number; spanEnd: number },
+): { first: number; last: number; spanStart: number; spanEnd: number } | null {
+  const from = Math.max(span.spanStart, id === "storms" ? log.stormsFrom : log.flaresFrom);
+  const to = Math.min(span.spanEnd, log.coveredUntil);
+  let first = clock.nightOf(from);
+  if (clock.nightStart(first) < from) first++;
+  let last = clock.nightOf(to);
+  if (clock.nightStart(last + 1) - 1 > to) last--;
+  if (last < first) return null;
+  return { first, last, spanStart: clock.nightStart(first), spanEnd: clock.nightStart(last + 1) - 1 };
+}
+
+/**
+ * All 12 for a listener's stored history in one zone. Questions 7 and 8 need
+ * NASA's log (`nasa`); without it they're "not checked" (spec 6.6), and they
+ * test only nights inside its coverage, ending 3 days before its last
+ * refresh. A question that throws is "not checked" too, and the record is
+ * marked incomplete so the next request tries again; the other 11 stand.
  */
 export function computeAnswers(
   username: string,
   stored: Scrobble[],
   zone: string,
   now = Date.now(),
+  nasa: NasaLog | null = null,
 ): AnswerRecord {
   const plays = stored.filter((s) => !isNoiseArtist(s.artist));
   const kept = plays.length > 0 ? plays : stored;
@@ -570,7 +615,7 @@ export function computeAnswers(
     version: ANSWERS_VERSION,
     zone,
     stamp: historyStamp(stored),
-    nasaStamp: null,
+    nasaStamp: nasa?.stamp ?? null,
     computedAt: now,
     plays: kept.length,
     historyStart: kept[0]?.uts ?? 0,
@@ -586,9 +631,24 @@ export function computeAnswers(
   }
   const measures = tagMeasures(kept, zone);
   const history = { first: record.historyStart, last: record.historyEnd };
+  const clock = zoneClock(zone, history.first, history.last);
   record.questions = QUESTIONS.map((q) => {
-    if (q.nasa) return blank(q, { notChecked: "nasa" });
+    if (q.nasa && !nasa) return blank(q, { notChecked: "nasa" });
     try {
+      if (q.nasa) {
+        const id = q.id as "storms" | "flares";
+        const measure = measures[q.measure];
+        // Inside NASA's coverage only: before its log starts a night is
+        // unknown, and its last 3 days aren't logged yet (6.1, 7.3). The
+        // nights come from that span alone, so no early read shows one
+        // outside it.
+        const covered = nasaSpan(id, nasa!, clock, measure);
+        const span = covered
+          ? { ...measure, spanStart: covered.spanStart, spanEnd: covered.spanEnd }
+          : { ...measure, spanEnd: measure.spanStart };
+        const nights = covered ? nasaNights(id, nasa!, clock, covered.first, covered.last) : [];
+        return runQuestion(q, nightsCondition(nights, clock), span, history, drawsFor(username, q.id));
+      }
       return runQuestion(q, conditionFor(q.id)!, measures[q.measure], history, drawsFor(username, q.id));
     } catch (err) {
       console.error(`[retrospect] question ${q.id} failed:`, err);

@@ -1,4 +1,5 @@
 import type { Scrobble } from "@/lib/analysis/nostalgia";
+import type { NasaLog } from "@/lib/space/compact";
 import { takeBackIfRemoved } from "@/lib/removal";
 import { getBlobStore } from "@/lib/store/blob";
 import { userKey } from "@/lib/store/userKeys";
@@ -87,8 +88,9 @@ export async function computeAndStore(
   zone: string,
   stored: Scrobble[],
   startedAt: number,
+  nasa: NasaLog | null = null,
 ): Promise<AnswerRecord> {
-  const record = computeAnswers(username, stored, zone);
+  const record = computeAnswers(username, stored, zone, Date.now(), nasa);
   await oneAtATime(username, async () => {
     const others = (await readAll(username)).filter((r) => r.zone !== zone);
     const records = [record, ...others].slice(0, MAX_ZONES);
@@ -98,9 +100,9 @@ export async function computeAndStore(
   return record;
 }
 
-/* One computation per listener, zone and history at a time in this process:
-   a second request for the same history waits for the first instead of
-   starting over. One that has seen newer plays starts its own. */
+/* One computation per listener, zone, history and NASA log at a time in this
+   process: a second request for the same inputs waits for the first instead of
+   starting over. One that has seen newer plays, or a newer log, starts its own. */
 const running = new Map<string, Promise<AnswerRecord>>();
 
 export function computeOnce(
@@ -108,11 +110,12 @@ export function computeOnce(
   zone: string,
   stored: Scrobble[],
   startedAt: number,
+  nasa: NasaLog | null = null,
 ): Promise<AnswerRecord> {
-  const key = `${username.toLowerCase()}|${zone}|${historyStamp(stored)}`;
+  const key = `${username.toLowerCase()}|${zone}|${historyStamp(stored)}|${nasa?.stamp ?? ""}`;
   let job = running.get(key);
   if (!job) {
-    job = computeAndStore(username, zone, stored, startedAt).finally(() => running.delete(key));
+    job = computeAndStore(username, zone, stored, startedAt, nasa).finally(() => running.delete(key));
     running.set(key, job);
   }
   return job;

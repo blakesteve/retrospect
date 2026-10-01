@@ -1,8 +1,9 @@
 /**
  * Lists every key in the store and reports any that the app doesn't account
- * for: not one of the per-user kinds in `src/lib/store/userKeys.ts`, and not
- * a removal marker. Removal and expiry only ever see keys that list covers, so
- * anything outside it is kept forever.
+ * for: not one of the per-user kinds in `src/lib/store/userKeys.ts`, not
+ * under one of its shared prefixes (NASA's data, the same for everyone), and
+ * not a removal marker. Removal and expiry only ever see keys that list
+ * covers, so anything outside it is kept forever.
  *
  * READ-ONLY, and only the listing: it calls ListObjectsV2 and nothing else. No
  * object is read, and nothing is written or deleted. It never prints a
@@ -25,7 +26,7 @@
 import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
-import { USER_KEY_KINDS, usernameFromKey } from "../src/lib/store/userKeys.ts";
+import { SHARED_PREFIXES, USER_KEY_KINDS, usernameFromKey } from "../src/lib/store/userKeys.ts";
 
 /* The one prefix that isn't per user. Kept in step with MARKER_PREFIX in
    `src/lib/removal.ts` by hand: importing that module drags in the whole app. */
@@ -96,6 +97,7 @@ const { where, objects } = process.argv.includes("--local") ? listLocal() : awai
 
 const kinds = Object.fromEntries(Object.keys(USER_KEY_KINDS).map((k) => [k, { count: 0, bytes: 0 }]));
 const names = new Set();
+const shared = Object.fromEntries(SHARED_PREFIXES.map((p) => [p, { count: 0, bytes: 0 }]));
 let markers = 0;
 const unregistered = new Map();
 
@@ -108,6 +110,10 @@ for (const { key, size, modified } of objects) {
     )[0];
     kinds[kind].count++;
     kinds[kind].bytes += size;
+  } else if (SHARED_PREFIXES.some((p) => key.startsWith(p))) {
+    const group = shared[SHARED_PREFIXES.find((p) => key.startsWith(p))];
+    group.count++;
+    group.bytes += size;
   } else if (key.startsWith(MARKER_PREFIX)) {
     markers++;
   } else {
@@ -127,11 +133,15 @@ console.log(`\nPer-user keys, for ${names.size} names:`);
 for (const [kind, { count, bytes }] of Object.entries(kinds)) {
   console.log(`  ${kind.padEnd(10)} ${keys(count)}  ${mb(bytes)}`);
 }
+console.log(`Shared, the same for everyone:`);
+for (const [prefix, { count, bytes }] of Object.entries(shared)) {
+  console.log(`  ${prefix.padEnd(10)} ${keys(count)}  ${mb(bytes)}`);
+}
 console.log(`Removal markers: ${markers}`);
 
 const unregisteredCount = [...unregistered.values()].reduce((sum, g) => sum + g.count, 0);
 if (unregisteredCount === 0) {
-  console.log("\nNot registered: none. Every key is a per-user kind or a removal marker.");
+  console.log("\nNot registered: none. Every key is a per-user kind, shared, or a removal marker.");
 } else {
   console.log(`\nNot registered: ${unregisteredCount} keys in ${unregistered.size} shapes`);
   for (const [shape, g] of [...unregistered].sort((a, b) => b[1].count - a[1].count)) {

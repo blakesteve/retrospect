@@ -16,6 +16,12 @@
  * listener plays most, so it is listening data and goes with the rest.
  */
 
+/** Prefixes whose blobs are the same for everyone, never per listener:
+    NASA's data (spec 7.3). Nothing under them may carry a username, and
+    removal and expiry never touch them. `usernameFromKey` can't read a name
+    out of one, which `userKeys.test.ts` checks. */
+export const SHARED_PREFIXES = ["space/"] as const;
+
 /** Lowercased, and anything outside `a-z 0-9 _ -` becomes `_`. Idempotent. */
 export const safeName = (username: string): string =>
   username.toLowerCase().replace(/[^a-z0-9_-]/g, "_");

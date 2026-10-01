@@ -1,0 +1,61 @@
+{
+  "about": "Photos from NASA's Image Library for events in Retrospect's nights (spec 7.3). A night photo shows on the night of its event only: the night that holds eventAt in the listener's zone. A fact photo never shows on a night; it's for Surprise facts. Every caption says when the photo was taken. Each id, image and caption checked against images-api.nasa.gov and the picture itself on 1 Oct 2026.",
+  "asOf": "2026-10-01",
+  "photos": [
+    {
+      "nasaId": "iss070e003409",
+      "kind": "eclipse",
+      "eventAt": "2023-10-14T17:59:26Z",
+      "showOn": "night",
+      "taken": { "from": "2023-10-14", "to": "2023-10-14" },
+      "image": "https://images-assets.nasa.gov/image/iss070e003409/iss070e003409~large.jpg",
+      "page": "https://images.nasa.gov/details/iss070e003409",
+      "caption": "The Moon partly covering the Sun during the annular eclipse, photographed from the International Space Station on Oct 14, 2023.",
+      "credit": "NASA/Jasmin Moghbeli"
+    },
+    {
+      "nasaId": "GRC-2024-C-02616",
+      "kind": "eclipse",
+      "eventAt": "2024-04-08T18:17:19Z",
+      "showOn": "night",
+      "taken": { "from": "2024-04-08", "to": "2024-04-08" },
+      "image": "https://images-assets.nasa.gov/image/GRC-2024-C-02616/GRC-2024-C-02616~large.jpg",
+      "page": "https://images.nasa.gov/details/GRC-2024-C-02616",
+      "caption": "The diamond ring of the total solar eclipse, seen from NASA's Glenn Research Center in Cleveland on Apr 8, 2024.",
+      "credit": "NASA/GRC/Jordan Salkin"
+    },
+    {
+      "nasaId": "PIA26383",
+      "kind": "asteroid",
+      "eventAt": "2024-06-29T13:49:00Z",
+      "showOn": "night",
+      "taken": { "from": "2024-06-30", "to": "2024-06-30" },
+      "image": "https://images-assets.nasa.gov/image/PIA26383/PIA26383~large.jpg",
+      "page": "https://images.nasa.gov/details/PIA26383",
+      "caption": "Radar images of asteroid 2024 MK from NASA's Goldstone antennas, made about 16 hours after its closest pass, on Jun 30, 2024 (UTC).",
+      "credit": "NASA/JPL-Caltech"
+    },
+    {
+      "nasaId": "MAF_20250314_LunarEclipse_composite",
+      "kind": "eclipse",
+      "eventAt": "2025-03-14T06:58:42Z",
+      "showOn": "night",
+      "taken": { "from": "2025-03-14", "to": "2025-03-14" },
+      "image": "https://images-assets.nasa.gov/image/MAF_20250314_LunarEclipse_composite/MAF_20250314_LunarEclipse_composite~large.jpg",
+      "page": "https://images.nasa.gov/details/MAF_20250314_LunarEclipse_composite",
+      "caption": "The total lunar eclipse from first bite to totality, seven shots over NASA's Michoud Assembly Facility in New Orleans on Mar 14, 2025.",
+      "credit": "NASA/Eric Bordelon"
+    },
+    {
+      "nasaId": "PIA26304",
+      "kind": "storm",
+      "eventAt": null,
+      "showOn": "fact",
+      "taken": { "from": "2024-05-14", "to": "2024-05-20" },
+      "image": "https://images-assets.nasa.gov/image/PIA26304/PIA26304~medium.jpg",
+      "page": "https://images.nasa.gov/details/PIA26304",
+      "caption": "Auroras across the night side of Mars, seen by NASA's MAVEN orbiter between May 14 and 20, 2024, as a solar storm reached Mars.",
+      "credit": "NASA/University of Colorado/LASP"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeAnswers } from "./engine";
 import { conditionFor } from "./conditions";
-import { nullTrial, summarize } from "./nullTrials";
+import { NASA_FIXTURE, nullHistory, nullTrial, summarize } from "./nullTrials";
 import { synthHistory } from "./synthHistory";
 import { answerWords } from "./words";
 
@@ -27,6 +27,17 @@ describe("histories with no sky effect", () => {
   it("test enough questions for the correction to matter", () => {
     const tested = Object.values(summary.perQuestion).reduce((n, q) => n + q.tested, 0);
     expect(tested / summary.histories).toBeGreaterThan(5);
+  });
+
+  it("reach NASA's two questions, against its real log", () => {
+    // These young, light histories are too early for a verdict on 7 and 8
+    // (under 500 plays on storm nights); the full run tests them.
+    const { history } = nullHistory(0, true);
+    const record = computeAnswers("null-0", history, "America/Chicago", Date.now(), NASA_FIXTURE);
+    for (const q of record.questions.filter((x) => x.id === "storms" || x.id === "flares")) {
+      expect(q.notChecked, q.id).toBeNull();
+      expect(q.events, q.id).toBeGreaterThan(50);
+    }
   });
 });
 

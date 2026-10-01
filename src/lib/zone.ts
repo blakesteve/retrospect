@@ -144,6 +144,9 @@ export interface ZoneClock {
   /** The night this instant belongs to, as days from 1970-01-01 to the date
       the night starts on. Name it with `nightName`. */
   nightOf(uts: number): number;
+  /** The first second of a night: 4 a.m. on its date, local time, or the
+      first second after it when daylight saving skips 4 a.m. */
+  nightStart(night: number): number;
 }
 
 const yearOf = (uts: number) => new Date(uts * 1000).getUTCFullYear();
@@ -220,6 +223,21 @@ export function zoneClock(zone: string, fromUts: number, toUts: number = fromUts
     offsetAt,
     localSeconds: (uts) => uts + offsetAt(uts),
     nightOf: (uts) => Math.floor((uts + offsetAt(uts) - NIGHT_START_HOUR * HOUR) / DAY),
+    nightStart: (night) => {
+      /* Every offset is within 15 hours of UTC, so the start is within a day
+         of 4 a.m. UTC on the night's date. A night never runs backward in
+         any zone from 2002 through 2035 (checked over every zone, step 2), so
+         the first second that belongs to it can be searched for. */
+      const nightOf = (t: number) => Math.floor((t + offsetAt(t) - NIGHT_START_HOUR * HOUR) / DAY);
+      let lo = night * DAY + NIGHT_START_HOUR * HOUR - 15 * HOUR;
+      let hi = lo + 30 * HOUR;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (nightOf(mid) >= night) hi = mid;
+        else lo = mid + 1;
+      }
+      return lo;
+    },
   };
 }
 

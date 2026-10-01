@@ -6,6 +6,9 @@ import { synthHistory } from "./synthHistory";
 import { ANSWERS_VERSION } from "./engine";
 import { MAX_ZONES, RETRY_INCOMPLETE_MS, computeOnce, isCurrent, readAnswers } from "./store";
 import { computeAnswers } from "./engine";
+import { writeCompact } from "@/lib/space/compact";
+import { synthCompact } from "@/lib/space/synthLog";
+import { runSpaceWork } from "@/lib/space/work";
 
 /* `after()` needs a live request; here it runs the job straight away and
    keeps the promise, so a test can wait for the background recompute. */
@@ -14,6 +17,13 @@ vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
   return { ...actual, after: (job: () => Promise<unknown>) => void background.push(job()) };
 });
+
+/* NASA's log is refreshed after the response; here that's a stand-in, so
+   no test reaches NASA. */
+vi.mock("@/lib/space/work", () => ({
+  runSpaceWork: vi.fn(async () => ({ skipped: false, ms: 0, fetches: 0, wrote: [], failed: [], done: true })),
+}));
+const refresh = vi.mocked(runSpaceWork);
 
 const { GET } = await import("@/app/api/user/[name]/answers/route");
 
@@ -38,7 +48,17 @@ async function seed(name: string, status: "ready" | "syncing" = "ready", history
   });
 }
 
-beforeEach(() => setBlobStore(new MemoryBlobStore()));
+beforeEach(() => {
+  setBlobStore(new MemoryBlobStore());
+  refresh.mockClear();
+});
+/** A whole log refreshed `hoursAgo`, with a storm on two of the history's nights (and `more`). */
+const nasaLog = (hoursAgo = 0, more: [string, number][] = []) =>
+  writeCompact(
+    synthCompact(new Date(Date.now() - hoursAgo * 3_600_000).toISOString(), {
+      kp: [["2024-05-11T00:00:00Z", 9], ["2017-09-08T03:00:00Z", 8.33], ...more],
+    }),
+  );
 afterEach(async () => {
   await Promise.all(background.splice(0));
   setBlobStore(null);
@@ -60,6 +80,7 @@ describe("the answers route", () => {
 
   it("serves a current record without recomputing", async () => {
     await seed("current");
+    await nasaLog();
     const first = await ask("current");
     const again = await ask("current");
     expect(again.body.status).toBe("ready");
@@ -80,6 +101,56 @@ describe("the answers route", () => {
       `${plays.length + 1}|${plays[0].uts}|${more[0].uts}`,
     );
     expect((await ask("grows")).body.status).toBe("ready");
+  });
+
+  it("refreshes NASA's log after the response while it's missing or over 3 hours old", async () => {
+    await seed("sky");
+    await ask("sky");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    // DONKI only, in a visitor's request, and at most once per 5 minutes.
+    expect(refresh).toHaveBeenLastCalledWith({ budgetMs: 20_000, only: ["donki-gst", "donki-flr"], minGapMs: 300_000 });
+    await nasaLog(2.9);
+    await ask("sky");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await nasaLog(3.1);
+    await ask("sky");
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("answers questions 7 and 8 from NASA's log, and counts a record behind when what NASA logged changes", async () => {
+    await seed("storms");
+    await nasaLog(2);
+    const first = (await ask("storms")).body;
+    expect(first.nasaStamp).not.toBeNull();
+    expect(first.questions[6]).toMatchObject({ id: "storms", notChecked: null });
+    expect(first.questions[7]).toMatchObject({ id: "flares", notChecked: null });
+    expect(first.questions[6].phrases.wordLine).not.toMatch(/Not checked/);
+    // Refreshed an hour later with nothing new: still current, no recompute.
+    await nasaLog(1);
+    expect((await ask("storms")).body.status).toBe("ready");
+    expect(background).toHaveLength(0);
+    // A storm NASA logged since: behind.
+    await nasaLog(0, [["2020-08-01T12:00:00Z", 6]]);
+    expect((await ask("storms")).body.status).toBe("updating");
+  });
+
+  it("keeps its NASA answers when the log won't read, rather than recomputing without them", async () => {
+    const blobs = new MemoryBlobStore();
+    setBlobStore(blobs);
+    await seed("unread");
+    await nasaLog(1);
+    expect((await ask("unread")).body.questions[6].notChecked).toBeNull();
+    const get = blobs.get.bind(blobs);
+    vi.spyOn(blobs, "get").mockImplementation(async (key) => {
+      if (key === "space/donki-compact.json") throw new Error("R2 timed out");
+      return get(key);
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const again = (await ask("unread")).body;
+    expect(again.status).toBe("ready");
+    expect(again.questions[6].notChecked).toBeNull();
+    expect(background.length).toBeLessThanOrEqual(1); // NASA's refresh, never a recompute
+    vi.restoreAllMocks();
   });
 
   it("computes nothing while the history is still being read", async () => {

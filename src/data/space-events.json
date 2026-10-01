@@ -1,0 +1,94 @@
+{
+  "about": "The only superlatives Retrospect says about a night (spec 7.3): each with its source, the source's own words for every claim it makes, and the date the source said it. Everything else is phrased from NASA's log. An event belongs to the night that holds `at` in the listener's zone; stories carry no clock times, since the page writes `at` in the listener's zone. Each source opened and checked on 1 Oct 2026.",
+  "asOf": "2026-10-01",
+  "events": [
+    {
+      "id": "eclipse-2023-10-14",
+      "kind": "eclipse",
+      "at": "2023-10-14T17:59:26Z",
+      "title": "An annular eclipse across the US",
+      "story": "The Moon's shadow ran from the coast of Oregon to the Texas Gulf Coast.",
+      "source": "https://science.nasa.gov/eclipses/future-eclipses/eclipse-2023/",
+      "sourceSays": [
+        "traveling from the coast of Oregon to the Texas Gulf Coast"
+      ],
+      "asOf": "2023-10-14"
+    },
+    {
+      "id": "eclipse-2024-04-08",
+      "kind": "eclipse",
+      "at": "2024-04-08T18:17:19Z",
+      "title": "A total solar eclipse across North America",
+      "story": "Totality crossed Mexico, then the US from Texas to Maine, then Canada.",
+      "source": "https://science.nasa.gov/eclipses/future-eclipses/eclipse-2024/where-when/",
+      "sourceSays": [
+        "The path of the eclipse continued from Mexico, entering the United States in Texas",
+        "Vermont, New Hampshire, and Maine",
+        "The eclipse entered Canada in Southern Ontario"
+      ],
+      "asOf": "2024-04-08"
+    },
+    {
+      "id": "storm-2024-05-10",
+      "kind": "storm",
+      "at": "2024-05-10T22:54:00Z",
+      "title": "The strongest geomagnetic storm in about 20 years",
+      "story": "G5, the top of NOAA's scale. NOAA called it the strongest since the Halloween storms of 2003.",
+      "source": "https://www.spaceweather.gov/news/evolution-and-impact-active-region-13664-0",
+      "sourceSays": [
+        "the strongest since the Halloween Solar Storms of 2003"
+      ],
+      "asOf": "2024-07-17"
+    },
+    {
+      "id": "asteroid-2024-06-29",
+      "kind": "asteroid",
+      "at": "2024-06-29T13:49:00Z",
+      "title": "A 150-meter asteroid, closer than the Moon",
+      "story": "Asteroid 2024 MK passed 295,000 km from Earth, first reported only 13 days before.",
+      "source": "https://www.nasa.gov/solar-system/asteroids/near-earth-asteroid/nasas-planetary-radar-tracks-two-large-asteroid-close-approaches",
+      "sourceSays": [
+        "about 500 feet (150 meters) wide",
+        "pass our planet from a distance of only 184,000 miles (295,000 kilometers)",
+        "first reported on June 16"
+      ],
+      "asOf": "2024-07-03"
+    },
+    {
+      "id": "flare-2017-09-06",
+      "kind": "flare",
+      "at": "2017-09-06T12:02:00Z",
+      "title": "The strongest flare of its solar cycle, at the time",
+      "story": "An X9.3 flare. NASA called it the largest so far in that solar cycle.",
+      "source": "https://www.nasa.gov/solar-system/sun-erupts-with-significant-flare/",
+      "sourceSays": [
+        "The X9.3 flare was the largest flare so far in the current solar cycle"
+      ],
+      "asOf": "2017-09-11"
+    },
+    {
+      "id": "flare-2024-10-03",
+      "kind": "flare",
+      "at": "2024-10-03T12:18:00Z",
+      "title": "The strongest flare of this solar cycle, at the time",
+      "story": "An X9.0 flare. NOAA called it the most powerful so far in Solar Cycle 25.",
+      "source": "https://www.nesdis.noaa.gov/news/sun-releases-strong-x90-solar-flare",
+      "sourceSays": [
+        "it is the most powerful so far in Solar Cycle 25"
+      ],
+      "asOf": "2024-10-04"
+    },
+    {
+      "id": "eclipse-2025-03-14",
+      "kind": "eclipse",
+      "at": "2025-03-14T06:58:42Z",
+      "title": "A blood moon",
+      "story": "A total lunar eclipse, the Moon over the Western Hemisphere.",
+      "source": "https://www.nasa.gov/blogs/watch-the-skies/2025/03/07/dont-sleep-on-this-total-lunar-eclipse-will-bring-blood-moon-march-13-14/",
+      "sourceSays": [
+        "visible across the Western Hemisphere"
+      ],
+      "asOf": "2025-03-07"
+    }
+  ]
+}

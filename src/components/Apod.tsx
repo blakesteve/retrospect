@@ -1,31 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Link } from "@blakesteve/roster";
 
 interface ApodData {
   date: string;
-  requestedDate: string;
   title: string;
-  imageUrl: string;
-  explanation: string | null;
-  copyright: string | null;
+  credit: string;
+  link: string;
 }
 
 /**
- * NASA's Astronomy Picture of the Day for a given date (or the nearest day
- * with a working picture — the server walks ±2 days past dead video
- * thumbnails). Renders nothing if NASA has nothing usable.
+ * NASA's Astronomy Picture of the Day for a given date, as words and a link,
+ * never the picture: NASA's APOD source no longer says which pictures are
+ * public domain, so Retrospect links to every one (architect, 1 Oct 2026).
+ * Renders nothing when NASA has no entry for the day.
  */
 export function Apod({ date, caption }: { date: string; caption: string }) {
   const [apod, setApod] = useState<ApodData | null>(null);
-  const [broken, setBroken] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/apod?date=${date}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data?.imageUrl) setApod(data);
+        if (!cancelled && data?.title && data?.link) setApod(data);
       })
       .catch(() => {});
     return () => {
@@ -33,27 +32,16 @@ export function Apod({ date, caption }: { date: string; caption: string }) {
     };
   }, [date]);
 
-  if (!apod || broken) return null;
-  const nearest = apod.date !== apod.requestedDate;
-
+  if (!apod) return null;
   return (
-    <figure className="mt-4">
-      {/* eslint-disable-next-line @next/next/no-img-element -- remote NASA host, unoptimized on purpose */}
-      <img
-        src={apod.imageUrl}
-        alt={apod.title}
-        className="w-full rounded-md border border-[var(--hairline)]"
-        loading="lazy"
-        onError={() => setBroken(true)}
-      />
-      <figcaption className="text-ink-3 text-xs mt-2 leading-relaxed">
-        {caption} NASA&rsquo;s picture of {nearest ? "that week" : "that day"}:{" "}
+    <p className="text-ink-3 text-xs mt-4 leading-relaxed">
+      {caption} NASA&rsquo;s picture of that day was{" "}
+      <Link href={apod.link} underline="always" className="font-normal">
         &ldquo;{apod.title}&rdquo;
-        {apod.copyright ? `, © ${apod.copyright}` : ""}.
-        {apod.explanation && (
-          <span className="block mt-1 italic">{apod.explanation}</span>
-        )}
-      </figcaption>
-    </figure>
+        {/* Roster opens it in a new tab behind an icon screen readers skip. */}
+        <span className="sr-only"> (opens in a new tab)</span>
+      </Link>
+      {apod.credit ? `, by ${apod.credit}` : ""}. The picture belongs to its creator, so we link to it.
+    </p>
   );
 }

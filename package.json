@@ -14,7 +14,8 @@
     "ephemeris": "node scripts/retrograde-windows.mjs 2002 2035 Mercury && node scripts/retrograde-windows.mjs 2002 2035 Venus && node scripts/retrograde-windows.mjs 2002 2035 Mars && node scripts/full-moons.mjs 2002 2035 && node scripts/eclipses.mjs 2002 2035 && cp src/data/*.json src/lib/ephemeris/",
     "sky": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sky-data.mjs 2002 2035",
     "check:bundle": "node scripts/check-bundle-shape.mjs",
-    "null-test": "node scripts/null-test.mjs"
+    "null-test": "node scripts/null-test.mjs",
+    "space": "node scripts/space.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
