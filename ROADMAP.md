@@ -24,8 +24,9 @@
   calendar shows the next Mars retrograde and the next eclipse again. A test
   fails once any sky data covers less than a year ahead. Costs 27,769 bytes of
   first-load JS on `/`, `/u/` and `/vs/` until the redesign drops these files,
-  and the bundle-shape guard's client JS rises 55,538 bytes to 1,671,074 of
-  its 1,694,000 ceiling (it counts every copy of a chunk).
+  and the bundle-shape guard's client JS rises 55,538 bytes to 1,671,074 (it
+  counts every copy of a chunk). The guard's ceiling goes from 1,694,000 to
+  1,751,000, restoring its 4.8% slack.
 - **The redesign's sky data, server only.** Sign windows for seven bodies,
   retrogrades for five, full and new moons, eclipses and the Venus and Mars
   harmony windows, 2002-2035, from one data-free math module. Checked
