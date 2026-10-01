@@ -1,5 +1,5 @@
 {
-  "about": "The only superlatives Retrospect says about a night (spec 7.3): each with its source, the source's own words for every claim it makes, and the date the source said it. Everything else is phrased from NASA's log. An event belongs to the night that holds `at` in the listener's zone; stories carry no clock times, since the page writes `at` in the listener's zone. Each source opened and checked on 1 Oct 2026.",
+  "about": "The only superlatives Retrospect says about a night (spec 7.3): each with its source, the source's own words for every claim it makes, and the date the source said it. A title that rests on NASA's log too says so, with the stretch it was checked over (`checkedAgainst`), and `curated.test.ts` checks it against the committed log. Everything else is phrased from NASA's log. An event belongs to the night that holds `at` in the listener's zone; stories carry no clock times, since the page writes `at` in the listener's zone. Each source opened and checked on 1 Oct 2026.",
   "asOf": "2026-10-01",
   "events": [
     {
@@ -58,25 +58,27 @@
       "id": "flare-2017-09-06",
       "kind": "flare",
       "at": "2017-09-06T12:02:00Z",
-      "title": "The strongest flare of its solar cycle, at the time",
-      "story": "An X9.3 flare. NASA called it the largest so far in that solar cycle.",
+      "title": "The largest flare in NASA's log, as of September 2026",
+      "story": "An X9.3 flare. NASA called it the largest so far in its solar cycle, and nothing NASA has logged since 2010 is bigger.",
       "source": "https://www.nasa.gov/solar-system/sun-erupts-with-significant-flare/",
       "sourceSays": [
         "The X9.3 flare was the largest flare so far in the current solar cycle"
       ],
-      "asOf": "2017-09-11"
+      "asOf": "2026-09-30",
+      "checkedAgainst": "NASA's DONKI flare log, April 2010 to September 2026"
     },
     {
       "id": "flare-2024-10-03",
       "kind": "flare",
       "at": "2024-10-03T12:18:00Z",
-      "title": "The strongest flare of this solar cycle, at the time",
-      "story": "An X9.0 flare. NOAA called it the most powerful so far in Solar Cycle 25.",
+      "title": "The largest flare of this solar cycle in NASA's log, as of September 2026",
+      "story": "An X9.0 flare. NOAA called it the most powerful so far in Solar Cycle 25, and none bigger has come since.",
       "source": "https://www.nesdis.noaa.gov/news/sun-releases-strong-x90-solar-flare",
       "sourceSays": [
         "it is the most powerful so far in Solar Cycle 25"
       ],
-      "asOf": "2024-10-04"
+      "asOf": "2026-09-30",
+      "checkedAgainst": "NASA's DONKI flare log, October 2024 to September 2026"
     },
     {
       "id": "eclipse-2025-03-14",
