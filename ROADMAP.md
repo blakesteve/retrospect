@@ -2,7 +2,8 @@
 
 **Index**
 
-- **Done:** The answers engine, and stored answers (1 Oct 2026) · Real time
+- **Done:** NASA's data, and questions 7 and 8 (1 Oct 2026) · The answers
+  engine, and stored answers (1 Oct 2026) · Real time
   zones, and nights (30 Sept) · The sky through 2035, and the redesign's sky
   data (30 Sept) · The store audit, and share cards that can't outlive a
   removal (30 Sept) · A way to remove your data, and an empty account that
@@ -15,6 +16,35 @@
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### NASA's data, and questions 7 and 8 (1 October 2026)
+
+- **Stored once, for everyone.** DONKI's storms and flares, JPL's close
+  approaches and fireballs, EPIC's Earth, SDO's Sun on storm and flare days,
+  and APOD's titles, a file per source per month under `space/`. It's a
+  shared prefix: no names in it, and removal and expiry leave it alone.
+- **It fills itself.** The daily cron runs a 35-second pass, DONKI first, and
+  the answers route runs a DONKI-only pass after its response when the log is
+  missing or stale. No backfill by hand, and no NASA key: DONKI moved to CCMC
+  on 30 Sept and needs none.
+- **Questions 7 and 8 answer.** They test whole storm and X-flare nights in
+  the listener's zone, only inside NASA's log: April 2010 to the start of the
+  day 3 days before its last refresh. A Kp reading never covers time before
+  its storm began: early storms (2010 to mid-2013) time their first reading
+  at the moment they began, and reading it the modern way put 1 to 6 nights
+  per zone before storms began. Stored answers recompute when what NASA
+  logged changes or coverage reaches a new day, not on every refresh. The
+  null test now runs all 12 against the real log.
+- **Nothing logged late is lost.** A month is read again until it's been
+  read a week after it ended, and the log counts as whole only up to that
+  read. One failing day, month or row no longer stops a source's backfill.
+- **APOD without the picture.** Its new source can't say what's public
+  domain, so the page shows the day's title, credit and a link. That also
+  fixes production's APOD line, which had shown NASA's logo under the wrong
+  caption since the old API broke.
+- **Curated photos and superlatives.** `src/data/space-photos.json` and
+  `space-events.json`, each entry checked against its source; round 2's "the
+  same storm lit up Mars" and "as far south as Florida" didn't survive that.
 
 ### The answers engine, and stored answers (1 October 2026)
 
@@ -34,9 +64,9 @@
   per-listener key, so removal and expiry cover it, and a removal that lands
   mid-compute takes the write back. The endpoint returns every sentence the
   page shows.
-- **Not yet:** solar storms and flares read "Not checked yet" until NASA's
-  data arrives (step 4), and pairings come with the songs (step 5). No page
-  calls the endpoint yet.
+- **Not yet, then:** solar storms and flares read "Not checked yet" until
+  NASA's data arrived (step 4, done since), and pairings come with the songs
+  (step 5). No page calls the endpoint yet.
 - **Smaller histories.** The chunk that finishes a backfill drops the
   duplicate lines a backfill keeps: a local copy of the largest history went
   from 11.0 MB to 8.6 MB. Histories already read keep theirs until a backfill

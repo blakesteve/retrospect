@@ -2,6 +2,8 @@ import { NextResponse, after } from "next/server";
 import { answersPayload, computingPayload } from "@/lib/answers/payload";
 import { computeOnce, isCurrent, readAnswers } from "@/lib/answers/store";
 import { emptyHistoryResponse } from "@/lib/emptyHistory";
+import { readNasaLog } from "@/lib/space/compact";
+import { runSpaceWork } from "@/lib/space/work";
 import { getStore } from "@/lib/store/jsonStore";
 import { isValidUsername } from "@/lib/username";
 import { requestZone } from "@/lib/zone";
@@ -10,6 +12,9 @@ export const dynamic = "force-dynamic";
 // All 12 in one pass: about 1.6 s for 500,000 plays locally, a few times
 // that on production (step 0 measured 1.9 to 2.4 times local).
 export const maxDuration = 60;
+
+const NASA_STALE_MS = 3 * 60 * 60 * 1000;
+const NASA_GAP_MS = 5 * 60 * 1000;
 
 /**
  * GET /api/user/:name/answers?tz=America/Chicago: the 12 questions' answers
@@ -35,26 +40,45 @@ async function handler(req: Request, { params }: { params: Promise<{ name: strin
   // this has the answers written below taken back.
   const startedAt = Date.now();
 
-  const [state, stored, existing] = await Promise.all([
+  let nasaUnreadable = false;
+  const [state, stored, existing, nasa] = await Promise.all([
     getStore().getSyncState(username),
     getStore().getScrobbles(username),
     readAnswers(username, zone),
+    readNasaLog().catch((err) => {
+      console.error("[retrospect] NASA's log wouldn't read:", err);
+      nasaUnreadable = true;
+      return null;
+    }),
   ]);
   if (stored.length === 0) return emptyHistoryResponse(username);
+
+  /* Keep NASA's log current without making anyone wait: after the response,
+     refresh DONKI when it's over 3 hours old, or carry on filling it while
+     it's incomplete (7.3). One pass at a time, and one per 5 minutes, per
+     process. */
+  if (!nasa || Date.now() - nasa.refreshedAt * 1000 > NASA_STALE_MS) {
+    after(() =>
+      runSpaceWork({ budgetMs: 20_000, only: ["donki-gst", "donki-flr"], minGapMs: NASA_GAP_MS }).then(() => undefined),
+    );
+  }
 
   if (state?.status === "syncing") {
     return existing
       ? NextResponse.json({ ...answersPayload(existing, "updating"), ...zoneFields })
       : NextResponse.json({ ...computingPayload(), ...zoneFields });
   }
-  if (existing && isCurrent(existing, stored)) {
+  // A log that won't read isn't news: a stored record keeps the NASA answers
+  // it has rather than being recomputed without them.
+  const nasaStamp = nasa?.stamp ?? (nasaUnreadable && existing ? existing.nasaStamp : null);
+  if (existing && isCurrent(existing, stored, nasaStamp)) {
     return NextResponse.json({ ...answersPayload(existing, "ready"), ...zoneFields });
   }
   if (existing) {
-    after(() => computeOnce(username, zone, stored, startedAt).then(() => undefined));
+    after(() => computeOnce(username, zone, stored, startedAt, nasa).then(() => undefined));
     return NextResponse.json({ ...answersPayload(existing, "updating"), ...zoneFields });
   }
-  const record = await computeOnce(username, zone, stored, startedAt);
+  const record = await computeOnce(username, zone, stored, startedAt, nasa);
   return NextResponse.json({ ...answersPayload(record, "ready"), ...zoneFields });
 }
 

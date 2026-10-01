@@ -41,9 +41,9 @@ statistics is the answer.
 - **Birth charts, in-browser**: sun, moon, and rising sign (ascendant validated
   against sunrise) computed client-side; birth data never touches a server.
 - **Head-to-head**: two usernames, whose sky is stronger.
-- Wrapped-style reveal, share cards, NASA's Astronomy Picture of the Day for
-  your most nostalgic date, and a planetary loading screen where colliding
-  planets explode.
+- Wrapped-style reveal, share cards, a link to NASA's Astronomy Picture of the
+  Day for your most nostalgic date, and a planetary loading screen where
+  colliding planets explode.
 
 ## Run it locally
 
@@ -64,6 +64,7 @@ npm run typecheck
 npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
 npm run sky          # regenerate the redesign's sky data, 2002 through 2035
 npm run null-test    # the answers' null-data test at full size, about a minute
+npm run space        # fill or refresh NASA's data in the local store (--all for everything)
 ```
 
 All three of the first ones run in CI on every pull request, which is new — the
@@ -124,14 +125,17 @@ Vercel Hobby pauses rather than charges when limits are hit.
 | `R2_ACCESS_KEY_ID` | prod | R2 API token key |
 | `R2_SECRET_ACCESS_KEY` | prod | R2 API token secret |
 | `R2_BUCKET` | prod | R2 bucket name |
-| `NASA_API_KEY` | no | APOD card (DEMO_KEY fallback works) |
 | `NEXT_PUBLIC_BASE_URL` | prod | Absolute URL for share cards |
-| `CRON_SECRET` | prod | Lets Vercel Cron run the daily expiry sweep; without it nothing expires |
+| `CRON_SECRET` | prod | Lets Vercel Cron run the daily expiry sweep and NASA refresh; without it nothing expires |
+
+No NASA key: none of the sources Retrospect reads needs one since 30 Sept
+2026, when DONKI moved to CCMC. `NASA_API_KEY` is unused.
 
 `CRON_SECRET` is any random string of 16 characters or more. Vercel sends it
-with its own cron requests, and `/api/cron/expire` refuses every request
-without it, so a crawler can't trigger the sweep. Unset, the route refuses
-everyone and logs why each day, and stored history never expires.
+with its own cron requests, and both cron routes refuse every request without
+it, so a crawler can't trigger them. Unset, they refuse everyone and log why
+each day: stored history never expires, and NASA's data fills only from the
+answers route.
 
 Without the R2 variables, storage falls back to the local filesystem
 (`.data/`), which is exactly right for development and self-hosting on a
@@ -162,10 +166,14 @@ answers being computed.
 Each of those checks after its write whether the name was removed since it
 started, and takes its write back if so.
 
-`scripts/audit-store-keys.mjs` lists the store, names only, and reports any
-key outside those five kinds and the removal markers: those are the keys
-removal and expiry never touch. It reads no object and prints no username;
-`--local` runs it against `.data`.
+NASA's data is the one thing stored that isn't per listener: it sits under
+`space/`, the same for everyone (`SHARED_PREFIXES` in `userKeys.ts`), and
+holds no names. Removal and expiry leave it alone.
+
+`scripts/audit-store-keys.mjs` lists the store, names only, counts the shared
+keys apart, and reports any key outside the five kinds, the shared prefix and
+the removal markers: those are the keys removal and expiry never touch. It
+reads no object and prints no username; `--local` runs it against `.data`.
 
 Share cards (`/api/og`) are sent with `public, max-age=0, must-revalidate`, so
 no cache that honors the header keeps one after a removal. Chat apps keep their
@@ -251,8 +259,63 @@ Answers are stored per listener and time zone, with the history they were
 computed from. A record that's behind (the history grew, the analysis changed)
 is served at once and recomputed in the background. The endpoint returns every
 sentence the page shows, built when it's served, so copy can change without a
-recompute. Questions 7 and 8 (solar storms and flares) read "Not checked yet"
-until NASA's data is stored.
+recompute. Questions 7 and 8 (solar storms and flares) test only whole nights
+inside NASA's log: from its first records in April 2010 to the start of the
+day 3 days before its last refresh, since DONKI logs late. They read "Not
+checked yet" until the log is whole. A record counts as behind when what NASA
+logged changes or its coverage reaches a new day, so the log's 3-hourly
+refreshes don't recompute everyone's answers.
+
+## NASA's data
+
+`src/lib/space/` stores NASA's data once for everyone, a file per source per
+month (`space/{source}/{YYYY-MM}.json`), each with the source's documented
+first date and its last refresh:
+
+| Source | What's kept | For |
+|---|---|---|
+| DONKI storms and flares ([CCMC](https://ccmc.gsfc.nasa.gov/tools/DONKI/)) | each storm's Kp readings; each flare's class and peak | storm and X-flare nights, questions 7 and 8 |
+| JPL close approaches and fireballs | approaches within 0.05 AU; fireballs with their energy | a night's asteroid and fireballs |
+| EPIC | each day's photos of Earth from DSCOVR, with where each faces | Earth that day |
+| SDO | the Sun's AIA 171 image nearest each storm or X-flare day's event, from 2016, where its browse archive starts | the Sun on those nights |
+| APOD | each day's title, credit and page, never the picture | the APOD link |
+
+Storm and flare times are kept in UTC, plus a compact list of every Kp reading
+and X flare that the answers engine reads in one call; nights are worked out
+per listener. A Kp reading covers the 3 hours before its time, as DONKI times
+them since 2014, but never time before its storm began: up to mid-2013 a
+storm's first reading is the moment it began, often off the 3-hour grid.
+
+Nobody runs a backfill by hand. The daily cron (`/api/cron/space`) runs a
+35-second pass, most needed first: DONKI, then the day's refreshes, then the
+rest of the backfill. The answers route also runs a DONKI-only pass after its
+response when the log is missing or over 3 hours old, at most once per 5
+minutes per instance; the cron waits for one running on its instance rather
+than skip the day. CCMC limits DONKI to about 100 calls at once, refilled at
+about 1.4 a second, so a pass stops with a few left and the next carries on:
+the whole storm and flare log is 398 calls, about four passes.
+`npm run space -- --all` runs passes until nothing's left, against whichever
+store the environment names.
+
+A month can still change until it's been read a week after it ended, since
+every source logs late; until then it's read again (DONKI when 3 hours old,
+the rest daily), and the log is whole only up to its oldest such read. A
+day's refresh counts as due after 20 hours, since Vercel fires a daily cron
+anywhere in its hour. A unit that fails is skipped and asked for again next
+pass; a rate limit, a timeout or three failures in a row end that source's
+turn. A row that won't read is left out and logged. SDO and EPIC keep an
+index of the days they've finished, so a pass doesn't read every month to
+find what's left, and EPIC reads its last 3 days again daily, since it posts
+late.
+
+APOD's new source can't say which pictures are public domain, so Retrospect
+never shows one: `/api/apod` returns the day's title, credit and a link.
+
+Two curated lists sit in `src/data/`: `space-photos.json` (NASA Image Library
+photos of events, each shown only on its own event's night, captions saying
+when they were taken) and `space-events.json` (the only superlatives the app
+says, each with its source, the source's words, and when it said them).
+`curated.test.ts` holds them to those rules.
 
 A backfill keeps a play twice when Last.fm's pages shift under it, and reads
 drop the repeat. The chunk that finishes a backfill now rewrites the history
@@ -304,8 +367,12 @@ with no scrobbles at all.
 ## Credits
 
 Listening data from the [Last.fm API](https://www.last.fm/api); astronomy from
-[astronomy-engine](https://github.com/cosinekitty/astronomy); space photos from
-[NASA APOD](https://api.nasa.gov); UI atoms from
+[astronomy-engine](https://github.com/cosinekitty/astronomy); space weather from
+NASA's [DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/); asteroids and fireballs
+from [JPL](https://ssd-api.jpl.nasa.gov); Earth from
+[EPIC](https://epic.gsfc.nasa.gov); the Sun from [SDO](https://sdo.gsfc.nasa.gov);
+photos from the [NASA Image Library](https://images.nasa.gov), credited each
+time; UI atoms from
 [@blakesteve/roster](https://www.npmjs.com/package/@blakesteve/roster).
 Not affiliated with Last.fm. For entertainment purposes; the planets are not
 responsible for your taste.

@@ -441,7 +441,9 @@ const PRONOUN: Partial<Record<SkyBody, { she: string; her: string }>> = {
  * merged event, newest first, at most three.
  */
 function eventsNote(q: Question, merged: MergedEvent[], zone: string): string | null {
-  if (merged.length === 0) return null;
+  // Storm and flare nights merge by being consecutive, which the event noun
+  // ("stretches of storm nights") already says.
+  if (merged.length === 0 || q.nasa) return null;
   const c = conditionFor(q.id);
   const sentences = [...merged]
     .reverse()

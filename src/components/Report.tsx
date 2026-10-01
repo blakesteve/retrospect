@@ -704,7 +704,7 @@ export function Report({ username }: { username: string }) {
             </p>
             <Apod
               date={r.mostNostalgicDay.date}
-              caption="And while you were deep in the archives, the universe looked like this."
+              caption="And while you were deep in the archives,"
             />
           </div>
         )}

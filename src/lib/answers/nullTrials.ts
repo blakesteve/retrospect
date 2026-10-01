@@ -1,5 +1,7 @@
 import { mulberry32 } from "@/lib/analysis/rng";
+import { nasaLogFrom, type DonkiCompact } from "@/lib/space/compact";
 import { computeAnswers } from "./engine";
+import donki from "./testdata/donki-compact.json";
 import { QUESTIONS, type QuestionId } from "./questions";
 import { synthHistory } from "./synthHistory";
 import { answerWords } from "./words";
@@ -14,7 +16,14 @@ import { answerWords } from "./words";
  * is there, so the bounds carry a margin (architect, 30 Sept): at most 13% of
  * 1,000 histories (10% plus about three standard deviations), run by
  * `npm run null-test`, and at most 19% of the 100 quick ones in the suite.
+ *
+ * Questions 7 and 8 run against NASA's real storm and flare log, as DONKI
+ * had it on 1 Oct 2026 (`testdata/donki-compact.json`, from `npm run space`),
+ * so all 12 are in the count.
  */
+
+export const NASA_FIXTURE = nasaLogFrom(donki as unknown as DonkiCompact)!;
+if (!NASA_FIXTURE) throw new Error("testdata/donki-compact.json isn't a whole log");
 
 export interface NullTrial {
   k: number;
@@ -43,7 +52,7 @@ export function nullHistory(k: number, quick: boolean) {
 
 export function nullTrial(k: number, quick = false): NullTrial {
   const { startYear, plays, history } = nullHistory(k, quick);
-  const record = computeAnswers(`null-${k}`, history, "America/Chicago");
+  const record = computeAnswers(`null-${k}`, history, "America/Chicago", Date.now(), NASA_FIXTURE);
   const ps = record.questions.map((q) => (q.status === "tested" ? q.p : null));
   const { m, words } = answerWords(ps);
   const ids = (pick: (i: number) => boolean) => QUESTIONS.flatMap((q, i) => (pick(i) ? [q.id] : []));

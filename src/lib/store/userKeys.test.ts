@@ -2,13 +2,21 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryBlobStore, setBlobStore } from "./blob";
-import { USER_KEY_KINDS, allUserKeys, safeName, userKey, usernameFromKey } from "./userKeys";
+import { SHARED_PREFIXES, USER_KEY_KINDS, allUserKeys, safeName, userKey, usernameFromKey } from "./userKeys";
 import { getRecentTracksPage, type RecentTracksPage } from "@/lib/lastfm";
 import { runSyncChunk } from "@/lib/sync";
 import { runTagChunk } from "@/lib/tagsync";
 import { removeUserData, requestRemoval } from "@/lib/removal";
 import { GET as genresRoute } from "@/app/api/user/[name]/genres/route";
-import { GET as answersRoute } from "@/app/api/user/[name]/answers/route";
+
+/* `after()` needs a live request; here its jobs run at once and are kept, so
+   what they write is checked too (the answers route refreshes NASA's log). */
+const background: Promise<unknown>[] = [];
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: (job: () => Promise<unknown>) => void background.push(job()) };
+});
+const { GET: answersRoute } = await import("@/app/api/user/[name]/answers/route");
 
 /* "Remove my data" deletes the keys in `userKeys.ts` and nothing else, and
    the expiry sweep only finds names through them. So a per-user blob stored
@@ -55,6 +63,17 @@ describe("the list of per-user keys", () => {
     ]);
   });
 
+  it("keeps the shared prefixes apart from every per-user one", () => {
+    expect(SHARED_PREFIXES).toEqual(["space/"]);
+    for (const shared of SHARED_PREFIXES) {
+      for (const { prefix } of Object.values(USER_KEY_KINDS)) {
+        expect(shared.startsWith(prefix) || prefix.startsWith(shared), `${shared} and ${prefix}`).toBe(false);
+      }
+      // Even a shared key shaped like a name never reads back as one.
+      expect(usernameFromKey(`${shared}some_listener.json`)).toBeNull();
+    }
+  });
+
   it("reads every key back to the name it belongs to", () => {
     for (const kind of Object.keys(USER_KEY_KINDS) as (keyof typeof USER_KEY_KINDS)[]) {
       expect(usernameFromKey(userKey(kind, "Some.Listener"))).toBe("some_listener");
@@ -81,11 +100,16 @@ describe("everything the app writes for a listener", () => {
     vi.stubEnv("LASTFM_API_KEY", "test-key");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ toptags: { tag: [{ name: "indie rock" }] } })),
+      vi.fn(async (url: string) =>
+        // NASA's storm and flare log, quiet; Last.fm's tags for the rest.
+        String(url).includes("ccmc.gsfc.nasa.gov")
+          ? Response.json([])
+          : Response.json({ toptags: { tag: [{ name: "indie rock" }] } }),
+      ),
     );
 
     // Every writer there is today: the sync, the tag fetch, the genre route,
-    // and the answers route.
+    // and the answers route, with what it does after its response.
     expect((await runSyncChunk(name)).status).toBe("ready");
     expect((await runTagChunk(name)).complete).toBe(true);
     const res = await genresRoute(new Request("http://x/api/user/Key.Tester/genres"), {
@@ -96,18 +120,27 @@ describe("everything the app writes for a listener", () => {
       params: Promise.resolve({ name }),
     });
     expect(answered.status).toBe(200);
+    await Promise.all(background.splice(0));
 
-    // Nothing written for this listener outside the list...
-    for (const key of store.written) {
+    // Anything shared is under a shared prefix, and carries no name...
+    const isShared = (key: string) => SHARED_PREFIXES.some((prefix) => key.startsWith(prefix));
+    const shared = [...store.written].filter(isShared);
+    expect(shared.length).toBeGreaterThan(0); // the answers route did refresh NASA's log
+    for (const key of shared) expect(key).not.toContain(safeName(name));
+    // ...nothing written for this listener is outside the list...
+    const perUser = [...store.written].filter((key) => !isShared(key));
+    for (const key of perUser) {
       expect(usernameFromKey(key), `${key} isn't in userKeys.ts`).toBe(safeName(name));
     }
     // ...and every kind on the list was really written, so this exercise
     // keeps up with the list. A kind added there needs a writer run here.
-    expect([...store.written].sort()).toEqual([...allUserKeys(name)].sort());
+    expect(perUser.sort()).toEqual([...allUserKeys(name)].sort());
 
     await removeUserData(name);
     const left = (await store.list("")).map(({ key }) => key);
     expect(left.filter((key) => key.includes(safeName(name)))).toEqual([]);
+    // A removal leaves what everyone shares.
+    expect(left.filter(isShared).sort()).toEqual(shared.sort());
   });
 });
 
@@ -180,12 +213,17 @@ describe("modules that touch the blob store", () => {
     "src/lib/removal.ts": "deletes userKeys.ts's keys; its own markers hold a hash, not a name",
     "src/lib/expiry.ts": "lists userKeys.ts's prefixes",
     "src/lib/answers/store.ts": "stored answers, keyed through userKeys.ts",
+    "src/lib/space/store.ts": "NASA's data, the same for everyone, under SHARED_PREFIXES",
+    "src/lib/space/compact.ts": "NASA's storm and flare log, under SHARED_PREFIXES",
+    "src/lib/space/work.ts": "fills NASA's data, under SHARED_PREFIXES",
   };
   const TOUCHES_STORE = /\b(getBlobStore|FsBlobStore|R2BlobStore)\b|@aws-sdk\/client-s3/;
   /* A key built by hand: any string that opens with a folder, whether it's
      interpolated or concatenated. The two backends are exempt (they know no
-     keys, only comments about them), and so is the one prefix that isn't
-     per user: the removal markers, which hold a hash, not a name. */
+     keys, only comments about them), and so is the one prefix written out
+     that isn't per user: the removal markers, which hold a hash, not a name.
+     NASA's keys are built from SPACE_PREFIX, so a "space/" written out here
+     fails too. */
   const HAND_BUILT_KEY = /["'`][a-z][a-z-]*\/(?!\/)/g;
   const NOT_PER_USER = new Set(['"limits/']);
   const BACKENDS = new Set(["src/lib/store/blob.ts", "src/lib/store/r2.ts"]);

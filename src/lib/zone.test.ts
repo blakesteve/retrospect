@@ -223,6 +223,16 @@ describe("nights run 4 a.m. to 4 a.m. and are named by the date they start", () 
     expect(night("Australia/Sydney", "2026-04-04T18:00:00Z")).toBe("2026-04-05");
   });
 
+  it("finds when a night starts, across daylight saving", () => {
+    const start = (zone: string, date: string) =>
+      new Date(zoneClock(zone, at(`${date}T12:00:00Z`)).nightStart(at(`${date}T00:00:00Z`) / 86_400) * 1000).toISOString();
+    expect(start("America/Chicago", "2026-03-07")).toBe("2026-03-07T10:00:00.000Z"); // 4 a.m. CST
+    expect(start("America/Chicago", "2026-03-08")).toBe("2026-03-08T09:00:00.000Z"); // 4 a.m. CDT: the night before was 23 hours
+    expect(start("America/Chicago", "2026-11-01")).toBe("2026-11-01T10:00:00.000Z"); // 4 a.m. CST: the night before was 25 hours
+    expect(start("Australia/Sydney", "2026-10-04")).toBe("2026-10-03T17:00:00.000Z"); // 4 a.m. AEDT
+    expect(start("Asia/Kolkata", "2026-06-01")).toBe("2026-05-31T22:30:00.000Z"); // 4 a.m. IST
+  });
+
   it("reads a night's weekday and month from the date it starts on", () => {
     const n = (date: string) => at(`${date}T00:00:00Z`) / 86400;
     expect(nightName(n("2026-05-08"))).toBe("2026-05-08");
