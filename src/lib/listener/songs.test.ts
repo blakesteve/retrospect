@@ -77,6 +77,29 @@ describe("the songs shown (spec 7.5)", () => {
     expect(three.listed.map((x) => x.track)).toEqual(["l1", "l2", "l3"]);
   });
 
+  it("counts a first play as news only more than 90 days after the history starts", () => {
+    // The history starts at midnight UTC on Jan 1, 2020; 90 days later is
+    // midnight on Mar 31 (2020 is a leap year: 31 + 29 + 30).
+    const start = Date.parse("2020-01-01T00:00:00Z") / 1000;
+    const fivePlays = (track: string, firstIso: string): Scrobble[] =>
+      Array.from({ length: 5 }, (_, i) => ({ uts: Date.parse(firstIso) / 1000 + i * DAY, artist: "B", track }));
+    const s = selectSongs(
+      songsOf(
+        history(
+          [{ uts: start, artist: "B", track: "first scrobble" }],
+          fivePlays("day 61", "2020-03-02T00:00:00Z"), // early at 90 days, news at 60
+          fivePlays("day 90 exactly", "2020-03-31T00:00:00Z"), // early: not more than 90 days
+          fivePlays("one second past", "2020-03-31T00:00:01Z"), // news
+          fivePlays("later a", "2020-06-01T00:00:00Z"),
+          fivePlays("later b", "2020-06-02T00:00:00Z"),
+        ),
+      ),
+      start,
+    );
+    expect(s.settleRuleDropped).toBe(false);
+    expect(s.listed.map((x) => x.track)).toEqual(["one second past", "later a", "later b"]);
+  });
+
   it("has nothing to show until a song has 2 plays", () => {
     const s = select(history(plays("A", "one", 1, 0), plays("A", "two", 1, 3)));
     expect(s.state).toBe("too-few-plays");
