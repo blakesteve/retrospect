@@ -80,7 +80,7 @@ function listLocal() {
 }
 
 const KNOWN_WORDS = new Set([
-  "scrobbles", "sync", "tags", "cache", "genres", "limits", "removals",
+  "scrobbles", "sync", "tags", "cache", "genres", "limits", "removals", "answers", "listener", "space",
   "jsonl", "json", "gz", "tmp",
 ]);
 /** A key's shape with every name-like part masked, so no username prints. */

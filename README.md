@@ -32,9 +32,9 @@ statistics is the answer.
   sentence, each with what it means.
 - **The 25-trial sweep**: scan every sky × measure combination and surface
   only convictions and leads.
-- **Genres & the sky**: your top artists' tags become genre affinities per
-  phenomenon ("your emo rises 30% under full moons"), plus rising genres and
-  a personal forecast for upcoming events.
+- **Genres, as facts**: your top artists' Last.fm tags become your genres,
+  each with its share of your listening, its top artists, whether it's
+  rising and its biggest night. Nothing links a genre to the sky.
 - **Listener fingerprints**: archetypes, golden hour, streaks, and rhythms
   computed from your data, interesting even when the sky is innocent. Habits
   that need more history wait until there's enough, and say when they'll start.
@@ -145,11 +145,13 @@ blob layout.
 
 ## What's stored, and removing it
 
-Everything stored for a listener sits under five keys, all named in
+Everything stored for a listener sits under six keys, all named in
 `src/lib/store/userKeys.ts`: the scrobbles, the sync state, the genre tags for
-their top artists (per listener, not shared), the worked-out genre results, and
-the answers to the 12 questions (a record per time zone, in one blob). The
-footer's "remove my data" opens `/remove`, which deletes all five with a POST. No GET a visitor can reach deletes anything; the expiry sweep's GET
+their top artists (per listener, not shared), the answers to the 12 questions
+(a record per time zone, in one blob), their nights, songs and genre facts
+(the same, gzipped), and the old genre-versus-sky results, which nothing
+writes any more but which removal and expiry still clear. The footer's
+"remove my data" opens `/remove`, which deletes all six with a POST. No GET a visitor can reach deletes anything; the expiry sweep's GET
 refuses anyone without `CRON_SECRET`. Anyone can remove any name, without
 signing in: nothing is lost, since Last.fm keeps the history. Two limits keep
 that from being abused, both in `src/lib/retention.ts`: one removal per name per
@@ -161,7 +163,7 @@ calls `/api/cron/expire` once a day (`vercel.json`), and the sweep reads "last
 looked up" from the store's own write times, so a visit costs nothing extra.
 
 A removal can land while something is still writing for that name: a sync
-chunk appending a history, a genre request fetching tags or analyzing, or the
+chunk appending a history, a genre request fetching tags, a listener record, or the
 answers being computed.
 Each of those checks after its write whether the name was removed since it
 started, and takes its write back if so.
@@ -322,6 +324,43 @@ drop the repeat. The chunk that finishes a backfill now rewrites the history
 without them, in the write it makes anyway: a local copy of the largest
 history went from 11.0 MB to 8.6 MB. A history that's already been read keeps
 its repeats until a backfill runs for it again.
+
+## Nights, songs and genres
+
+The redesign's other endpoints (`src/lib/listener/`) all take `tz` and read
+one stored record per listener and zone, kept fresh like the answers: served
+at once, recomputed after the response when the history, NASA's log, the
+tags or the version moved. A first record for a 500,000-play history takes
+about 0.3 seconds locally, before JPL's monthly files are read.
+
+| Endpoint | What it returns |
+|---|---|
+| `/api/user/{name}/nights?from=YYYY-MM&to=YYYY-MM` | Every night of up to a year: plays against a usual night of that weekday, after-midnight plays, songs first heard (with pairings), the Moon at 9 p.m., the questions whose condition held, the filters it lights, its wild title, its genre mix, and NASA's facts with its photos. Plus each filter's count over the whole history. |
+| `/api/user/{name}/songs` | Your 12 most-played songs with 5 plays or more first played after your first 90 days, plus your first scrobble; "See all" lists 50. Each with its genre, first play, highlight chip and pairing sentence. |
+| `/api/user/{name}/highlights` | The reveal: how long, the count-ups, the wildest nights with their titles and lines, and the song with the strangest sky. |
+| `/api/user/{name}/genres` | Up to 12 genres with 50 plays or more: share, top artists, "rising" and biggest night. "building" while the tags are fetched. |
+| `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
+| `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days. |
+
+A night runs 4 a.m. to 4 a.m. local. A question's condition holds on every
+night its window touches, but the full- and new-moon filters light only the
+night of the exact instant, and an eclipse the night of greatest eclipse.
+Wild nights rank total solar, annular and total lunar eclipses, then G5 and
+G4 storms, flares of X5 or more and asteroids of about 50 m closer than the
+Moon; a curated title (`src/data/space-events.json`) heads a night when one
+matches, and the log's words otherwise. Pairings are facts with a time and a
+date ("You first played Apple at 7:18 a.m. CDT on Oct 3, 2024, the minute an
+X9.0 flare peaked."), never a cause, and the answers carry each question's
+pairings.
+
+A song first played in your first 90 days, your first scrobble included,
+gets no chip and no pairing: its first play isn't news.
+
+Genres are Last.fm's tags as facts about your listening. The genre-versus-sky
+test, its headline and its forecast were claims with no correction, and are
+gone with the panel that showed them; the tag pipeline stays. Any of these
+routes moves the tag fetch on after its response, and `/genres` says
+"building" until it's done, "failed" if it can't be.
 
 ## How the math works
 

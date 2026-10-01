@@ -35,8 +35,10 @@ export interface SpaceEvent {
   source: string;
   /** The source's own words, one quote for each claim in the title and story. */
   sourceSays: string[];
-  /** When the source said it. */
+  /** When the source said it, or when the log was checked, if later. */
   asOf: string;
+  /** The stretch of NASA's log a title also rests on ("so far, as of"). */
+  checkedAgainst?: string;
 }
 
 export const SPACE_PHOTOS = photos.photos as SpacePhoto[];

@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryBlobStore, setBlobStore } from "./blob";
-import { SHARED_PREFIXES, USER_KEY_KINDS, allUserKeys, safeName, userKey, usernameFromKey } from "./userKeys";
+import { LEGACY_KINDS, SHARED_PREFIXES, USER_KEY_KINDS, allUserKeys, safeName, userKey, usernameFromKey } from "./userKeys";
 import { getRecentTracksPage, type RecentTracksPage } from "@/lib/lastfm";
 import { runSyncChunk } from "@/lib/sync";
 import { runTagChunk } from "@/lib/tagsync";
@@ -52,7 +52,7 @@ afterEach(() => {
 });
 
 describe("the list of per-user keys", () => {
-  it("is exactly these five, sync state first", () => {
+  it("is exactly these six, sync state first", () => {
     // Literals, so a key renamed or added shows up here as a decision.
     expect(allUserKeys("Some.Listener")).toEqual([
       "sync/some_listener.json",
@@ -60,6 +60,7 @@ describe("the list of per-user keys", () => {
       "tags/some_listener.json",
       "cache/genres-some_listener.json",
       "answers/some_listener.json",
+      "listener/some_listener.json.gz",
     ]);
   });
 
@@ -108,8 +109,9 @@ describe("everything the app writes for a listener", () => {
       ),
     );
 
-    // Every writer there is today: the sync, the tag fetch, the genre route,
-    // and the answers route, with what it does after its response.
+    // Every writer there is today: the sync, the tag fetch, the genre route
+    // (which stores the listener record), and the answers route, with what
+    // it does after its response.
     expect((await runSyncChunk(name)).status).toBe("ready");
     expect((await runTagChunk(name)).complete).toBe(true);
     const res = await genresRoute(new Request("http://x/api/user/Key.Tester/genres"), {
@@ -134,7 +136,10 @@ describe("everything the app writes for a listener", () => {
     }
     // ...and every kind on the list was really written, so this exercise
     // keeps up with the list. A kind added there needs a writer run here.
-    expect(perUser.sort()).toEqual([...allUserKeys(name)].sort());
+    // A legacy kind has no writer; a blob of it stored before still goes.
+    const legacy = LEGACY_KINDS.map((kind) => userKey(kind, name));
+    expect(perUser.sort()).toEqual(allUserKeys(name).filter((key) => !legacy.includes(key)).sort());
+    for (const key of legacy) await store.put(key, Buffer.from("{}"));
 
     await removeUserData(name);
     const left = (await store.list("")).map(({ key }) => key);
@@ -183,16 +188,17 @@ describe("a genre request that outlives a removal", () => {
     expect(await left()).toEqual([]);
   });
 
-  it("takes the genre results back when the removal lands during the analysis", async () => {
+  it("takes the genre facts back when the removal lands while they're computed", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ toptags: { tag: [{ name: "indie rock" }] } })));
     expect((await runTagChunk(name)).complete).toBe(true);
     const put = store.put.bind(store);
     store.put = async (key: string, data: Buffer) => {
-      if (key.startsWith("cache/genres-")) expect((await requestRemoval(name)).kind).toBe("removed");
+      if (key.startsWith("listener/")) expect((await requestRemoval(name)).kind).toBe("removed");
       return put(key, data);
     };
-    const res = await callGenres();
-    expect(res.status).not.toBe(200);
+    // As with the answers: the request that asked gets its reply, and the
+    // write is taken back, so nothing of this listener is left stored.
+    await callGenres();
     expect(await left()).toEqual([]);
   });
 });
@@ -213,6 +219,7 @@ describe("modules that touch the blob store", () => {
     "src/lib/removal.ts": "deletes userKeys.ts's keys; its own markers hold a hash, not a name",
     "src/lib/expiry.ts": "lists userKeys.ts's prefixes",
     "src/lib/answers/store.ts": "stored answers, keyed through userKeys.ts",
+    "src/lib/listener/record.ts": "the listener record, keyed through userKeys.ts",
     "src/lib/space/store.ts": "NASA's data, the same for everyone, under SHARED_PREFIXES",
     "src/lib/space/compact.ts": "NASA's storm and flare log, under SHARED_PREFIXES",
     "src/lib/space/work.ts": "fills NASA's data, under SHARED_PREFIXES",

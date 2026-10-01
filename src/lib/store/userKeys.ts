@@ -38,14 +38,23 @@ export const USER_KEY_KINDS = {
   sync: { prefix: "sync/", suffix: ".json" },
   /** Last.fm's genre tags for this listener's top artists. */
   tags: { prefix: "tags/", suffix: ".json" },
-  /** The worked-out genre results, kept so they survive a cold start. */
+  /** The genre-versus-sky results the old genres route cached. Nothing
+      writes it since step 5 (`LEGACY_KINDS`); it stays so removal and expiry
+      still clear the ones stored before. */
   genres: { prefix: "cache/genres-", suffix: ".json" },
   /** The answers to the 12 questions, a record per time zone (spec 6.6),
       in one blob so removal and expiry find them like everything else. */
   answers: { prefix: "answers/", suffix: ".json" },
+  /** Their nights, songs, highlights and genre facts, a record per time
+      zone (spec 7.4 to 7.6), gzipped in one blob. */
+  listener: { prefix: "listener/", suffix: ".json.gz" },
 } as const satisfies Record<string, KeyShape>;
 
 export type UserKeyKind = keyof typeof USER_KEY_KINDS;
+
+/** Kinds nothing writes any more, kept on the list for the blobs already
+    stored: removal deletes them, expiry finds them, the audit counts them. */
+export const LEGACY_KINDS: readonly UserKeyKind[] = ["genres"];
 
 export function userKey(kind: UserKeyKind, username: string): string {
   const { prefix, suffix } = USER_KEY_KINDS[kind];

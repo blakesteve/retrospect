@@ -3,7 +3,7 @@ import type { NasaLog } from "@/lib/space/compact";
 import { takeBackIfRemoved } from "@/lib/removal";
 import { getBlobStore } from "@/lib/store/blob";
 import { userKey } from "@/lib/store/userKeys";
-import { ANSWERS_VERSION, computeAnswers, historyStamp, type AnswerRecord } from "./engine";
+import { ANSWERS_VERSION, RECORD_FORMAT, computeAnswers, historyStamp, type AnswerRecord } from "./engine";
 
 /**
  * Stored answers (spec 6.6): one record per listener and zone, holding the
@@ -57,6 +57,7 @@ export function isCurrent(
 ): boolean {
   return (
     record.version === ANSWERS_VERSION &&
+    record.format === RECORD_FORMAT &&
     record.stamp === historyStamp(stored) &&
     record.nasaStamp === nasaStamp &&
     (!record.incomplete || now - record.computedAt < RETRY_INCOMPLETE_MS)
@@ -71,9 +72,12 @@ function oneAtATime<T>(username: string, job: () => Promise<T>): Promise<T> {
   const key = username.toLowerCase();
   const next = (writing.get(key) ?? Promise.resolve()).then(job, job);
   writing.set(key, next);
-  void next.finally(() => {
+  // then(cleanup, cleanup), not finally: a finally's own promise would reject
+  // unhandled when a write fails, beside the caller's handled one.
+  const cleanup = () => {
     if (writing.get(key) === next) writing.delete(key);
-  });
+  };
+  next.then(cleanup, cleanup);
   return next;
 }
 

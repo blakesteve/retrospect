@@ -243,9 +243,11 @@ describe("the answers store", () => {
     expect(b.stamp).toBe(`${plays.length}|${plays[0].uts}|${plays[plays.length - 1].uts}`);
   });
 
-  it("counts a record current only on the same history, version and NASA log", () => {
+  it("counts a record current only on the same history, version, format and NASA log", () => {
     const record = computeAnswers("current-check", plays, "UTC", 1_000);
     expect(isCurrent(record, plays, null, 2_000)).toBe(true);
+    // A record from before pairings: recomputed, with the same seeds.
+    expect(isCurrent({ ...record, format: undefined }, plays, null, 2_000)).toBe(false);
     expect(isCurrent(record, plays.slice(1), null, 2_000)).toBe(false);
     expect(isCurrent(record, plays, "2026-10-01", 2_000)).toBe(false);
     // A question that threw is retried, but at most once an hour.

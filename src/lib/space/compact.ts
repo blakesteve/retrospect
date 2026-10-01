@@ -21,6 +21,8 @@ export interface DonkiCompact {
   kp: Record<string, [number, number, number][]>;
   /** X-class flare peaks by month: [peak, class]. */
   xflares: Record<string, [number, string][]>;
+  /** Each storm's start, by month, for "{n} solar storms" (8.3). */
+  starts: Record<string, number[]>;
   /** When each month above was read from DONKI. A stored month newer than
       this is patched in again: two passes at once can write the log over
       each other, and the one written last may hold the older month. */
@@ -28,7 +30,7 @@ export interface DonkiCompact {
   xflaresAt: Record<string, string>;
 }
 
-export const emptyCompact = (): DonkiCompact => ({ refreshedAt: "", kp: {}, xflares: {}, kpAt: {}, xflaresAt: {} });
+export const emptyCompact = (): DonkiCompact => ({ refreshedAt: "", kp: {}, xflares: {}, starts: {}, kpAt: {}, xflaresAt: {} });
 
 const uts = (isoTime: string) => Date.parse(isoTime) / 1000;
 
@@ -52,6 +54,7 @@ export function patchStorms(c: DonkiCompact, month: string, storms: Storm[], rea
   c.kp[month] = storms.flatMap((s) =>
     s.readings.map((r): [number, number, number] => [...readingSpan(uts(s.start), uts(r.time)), r.kp]),
   );
+  c.starts[month] = storms.map((s) => uts(s.start));
   c.kpAt[month] = readAt;
 }
 
@@ -96,6 +99,8 @@ export interface NasaLog {
   kp: [number, number, number][];
   /** [peak, class], sorted by peak. */
   xflares: [number, string][];
+  /** Each storm's start, sorted. Empty for a log written before starts were kept. */
+  stormStarts: number[];
 }
 
 /** FNV-1a over a string, as 8 hex digits. */
@@ -126,14 +131,18 @@ export function nasaLogFrom(c: DonkiCompact | null): NasaLog | null {
   const coveredUntil = lagged - (lagged % 86_400);
   const kp = Object.values(c.kp).flat().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const xflares = Object.values(c.xflares).flat().sort((a, b) => a[0] - b[0]);
+  const stormStarts = Object.values(c.starts ?? {}).flat().sort((a, b) => a - b);
   return {
-    stamp: `${new Date(coveredUntil * 1000).toISOString().slice(0, 10)}|${fnv1a(JSON.stringify([kp, xflares]))}`,
+    // Storm starts are in the hash: a log that gains them moves the stamp, so
+    // records built before ("0 solar storms") are rebuilt.
+    stamp: `${new Date(coveredUntil * 1000).toISOString().slice(0, 10)}|${fnv1a(JSON.stringify([kp, xflares, stormStarts]))}`,
     refreshedAt,
     coveredUntil,
     stormsFrom: uts(`${FIRST_DATES["donki-gst"]}T00:00:00Z`),
     flaresFrom: uts(`${FIRST_DATES["donki-flr"]}T00:00:00Z`),
     kp,
     xflares,
+    stormStarts,
   };
 }
 

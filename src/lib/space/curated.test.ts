@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import eclipses from "@/data/eclipses.json";
+import donki from "@/lib/answers/testdata/donki-compact.json";
 import { zoneClock } from "@/lib/zone";
 import { SPACE_EVENTS, SPACE_PHOTOS } from "./curated";
 
@@ -94,5 +95,37 @@ describe("the curated events (spec 7.3)", () => {
     });
     for (const e of SPACE_EVENTS.filter((x) => x.kind === "eclipse")) expect(peaks.has(e.at), e.id).toBe(true);
     expect(new Set(SPACE_EVENTS.map((e) => e.id)).size).toBe(SPACE_EVENTS.length);
+  });
+});
+
+/* Two titles rest on NASA's log as well as their source ("so far", with an
+   as-of date, architect 1 Oct 2026). These hold them to the log committed
+   for the null test, DONKI as of 1 Oct 2026: a log refreshed with a bigger
+   flare fails here instead of leaving a false title on the page. */
+describe("superlatives that rest on NASA's log", () => {
+  const flares = Object.values(donki.xflares)
+    .flat()
+    .map(([peak, cls]) => ({ peak: new Date((peak as number) * 1000).toISOString(), size: Number(String(cls).slice(1)) }));
+  const biggest = (from: string, to: string) =>
+    flares.filter((f) => f.peak >= from && f.peak < to).sort((a, b) => b.size - a.size)[0];
+  const event = (id: string) => SPACE_EVENTS.find((e) => e.id === id)!;
+
+  it("checks a log that reaches the as-of month", () => {
+    expect(donki.refreshedAt >= "2026-09-30").toBe(true);
+    for (const e of SPACE_EVENTS.filter((x) => /NASA's log/.test(x.title))) {
+      expect(e.checkedAgainst, e.id).toMatch(/September 2026$/);
+      expect(e.title, e.id).toMatch(/, as of September 2026$/);
+    }
+  });
+
+  it("has nothing in the log bigger than the X9.3 of Sept 6, 2017", () => {
+    expect(biggest("2010-01-01", "2026-10-01")).toEqual({ peak: "2017-09-06T12:02:00.000Z", size: 9.3 });
+    expect(event("flare-2017-09-06").title).toBe("The largest flare in NASA's log, as of September 2026");
+  });
+
+  it("has nothing bigger than the X9.0 of Oct 3, 2024 since NOAA called it Solar Cycle 25's largest", () => {
+    expect(biggest("2024-10-03T12:19:00Z", "2026-10-01")!.size).toBeLessThan(9.0);
+    expect(biggest("2024-10-01", "2024-10-04")).toEqual({ peak: "2024-10-03T12:18:00.000Z", size: 9 });
+    expect(event("flare-2024-10-03").title).toBe("The largest flare of this solar cycle in NASA's log, as of September 2026");
   });
 });

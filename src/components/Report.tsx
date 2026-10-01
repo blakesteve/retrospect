@@ -8,7 +8,6 @@ import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/
 import { METRICS, humanDays, type MetricKey } from "@/lib/analysis/metrics";
 import { GripMeter } from "./GripMeter";
 import { BirthChartPanel } from "./BirthChartPanel";
-import { GenresPanel } from "./GenresPanel";
 import { SkyScan } from "./SkyScan";
 import { ListeningProfile } from "./ListeningProfile";
 import type { NatalChart } from "@/lib/astro/natal";
@@ -708,11 +707,6 @@ export function Report({ username }: { username: string }) {
             />
           </div>
         )}
-      </section>
-
-      {/* ---- Genres × the sky ---- */}
-      <section className="mb-12 rise" style={{ "--rise-delay": "0.3s" } as React.CSSProperties}>
-        <GenresPanel username={username} body={r.body} />
       </section>
 
       {/* ---- Birth chart + astrology deep-dive ---- */}

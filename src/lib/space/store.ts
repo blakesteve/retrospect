@@ -136,6 +136,46 @@ export async function writeSpaceJson(key: string, value: unknown): Promise<void>
 /** "2024-05" for a date or ISO time. */
 export const monthOf = (iso: string) => iso.slice(0, 7);
 
+const DAY_MS = 86_400_000;
+/** A month is final once read this long after it ended: every source logs late. */
+export const FINAL_AFTER_MS = 7 * DAY_MS;
+/** The first moment after `month`, in ms. */
+export const monthEnd = (month: string) => {
+  const [y, m] = month.split("-").map(Number);
+  return Date.UTC(y, m, 1);
+};
+/** Whether a month read at `readAt` (ms) can still change. */
+export const changing = (month: string, readAt: number) => readAt < monthEnd(month) + FINAL_AFTER_MS;
+
+/* Final months never change, so a process keeps the ones it has read. */
+const finalMonths = new Map<string, SpaceMonth<SpaceSource>>();
+
+/** Test hook. */
+export function forgetFinalMonths(): void {
+  finalMonths.clear();
+}
+
+/** Several months of a source, a dozen reads at a time; a month not stored is left out. */
+export async function readMonths<S extends SpaceSource>(source: S, months: string[]): Promise<Map<string, SpaceMonth<S>>> {
+  const out = new Map<string, SpaceMonth<S>>();
+  const todo = months.filter((m) => {
+    const hit = finalMonths.get(monthKey(source, m));
+    if (hit) out.set(m, hit as SpaceMonth<S>);
+    return !hit;
+  });
+  for (let i = 0; i < todo.length; i += 12) {
+    await Promise.all(
+      todo.slice(i, i + 12).map(async (m) => {
+        const file = await readMonth(source, m);
+        if (!file) return;
+        out.set(m, file);
+        if (!changing(m, Date.parse(file.refreshedAt))) finalMonths.set(monthKey(source, m), file);
+      }),
+    );
+  }
+  return out;
+}
+
 /** Every month from `from` to `to`, inclusive, as "YYYY-MM". */
 export function monthsBetween(from: string, to: string): string[] {
   const out: string[] = [];

@@ -2,7 +2,8 @@
 
 **Index**
 
-- **Done:** NASA's data, and questions 7 and 8 (1 Oct 2026) · The answers
+- **Done:** Nights, songs, highlights and genres as facts (1 Oct 2026) ·
+  NASA's data, and questions 7 and 8 (1 Oct 2026) · The answers
   engine, and stored answers (1 Oct 2026) · Real time
   zones, and nights (30 Sept) · The sky through 2035, and the redesign's sky
   data (30 Sept) · The store audit, and share cards that can't outlive a
@@ -16,6 +17,25 @@
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### Nights, songs, highlights and genres as facts (1 October 2026)
+
+- **Every night, served.** `/nights` gives up to a year of nights in the
+  listener's zone: plays against a usual night of that weekday, the songs
+  first heard, the Moon at 9 p.m., the questions and filters that held, the
+  wild title, the genre mix and NASA's facts with the night's photos.
+- **Songs, highlights and the sky.** `/songs` picks the 12 to show (and 50 to
+  list) by spec 7.5, each with its chip and pairing sentence; `/highlights`
+  serves the reveal; `/api/sky/at` and `/api/sky/now` serve any minute's sky
+  and what's coming up.
+- **Stored like the answers.** One record per listener and zone, a
+  registered per-listener key, recomputed after the response when anything
+  it was built from moves. The answers now carry each question's pairings,
+  with the same seeds.
+- **Genres are facts now.** The genre-versus-sky test, its headline and its
+  forecast are gone, and so is the panel that showed them; the tags stay and
+  become each genre's share, top artists, "rising" and biggest night.
+- **Not yet:** no page calls the new endpoints; phase 3 does.
 
 ### NASA's data, and questions 7 and 8 (1 October 2026)
 
