@@ -39,6 +39,7 @@ describe("the compact storm and flare log", () => {
       [at("2024-05-10T18:00:00Z"), at("2024-05-10T21:00:00Z"), 9],
     ]);
     expect(c.xflares["2024-05"]).toEqual([[at("2024-05-14T16:51:00Z"), "X8.7"]]);
+    expect(c.starts["2024-05"]).toEqual([at("2024-05-10T15:00:00Z")]);
     expect([c.kpAt["2024-05"], c.xflaresAt["2024-05"]]).toEqual([READ, READ]);
     // A refreshed month replaces what was there.
     patchStorms(c, "2024-05", [], "2026-10-02T00:00:00.000Z");
@@ -126,6 +127,8 @@ describe("the compact storm and flare log", () => {
       [at("2024-05-11T00:00:00Z"), at("2024-05-11T03:00:00Z"), 9],
     ]);
     expect(log.xflares.map(([, cls]) => cls)).toEqual(["X9.3", "X9.0"]);
+    // synthCompact keeps no storms, only readings.
+    expect(log.stormStarts).toEqual([]);
   });
 
   it("moves its stamp at most daily, or when what NASA logged changes", () => {
@@ -137,6 +140,10 @@ describe("the compact storm and flare log", () => {
     // A new storm, or the next day, moves it.
     expect(stamp("2026-10-01T21:00:00Z", [["2026-09-30T21:00:00Z", 6]])).not.toBe(morning);
     expect(stamp("2026-10-02T00:30:00Z")).toMatch(/^2026-09-29\|/);
+    // A log that gains storms' starts moves it too: records built before say 0 storms.
+    const withStarts = synthCompact("2026-10-01T21:00:00Z");
+    withStarts.starts["2024-05"] = [Date.parse("2024-05-10T15:00:00Z") / 1000];
+    expect(nasaLogFrom(withStarts)!.stamp).not.toBe(morning);
   });
 });
 

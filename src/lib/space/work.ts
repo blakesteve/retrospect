@@ -14,6 +14,8 @@ import {
 } from "./sources";
 import {
   SPACE_PREFIX,
+  changing,
+  monthEnd,
   monthOf,
   monthsBetween,
   readMonth,
@@ -56,8 +58,6 @@ const DONKI_STALE_MS = 3 * HOUR;
 /** Under a day: Vercel fires a daily cron anywhere in its hour, so a 24-hour
     threshold would skip every other day. */
 const DAILY_MS = 20 * HOUR;
-/** A month is final once read this long after it ended. */
-const FINAL_AFTER_MS = 7 * DAY;
 /** EPIC posts a day's photos a day or two late: days this recent are read again daily. */
 const EPIC_REREAD_MS = 3 * DAY;
 
@@ -67,14 +67,7 @@ const SDO_DONE_KEY = `${SPACE_PREFIX}sdo-done.json`;
 const EPIC_DONE_KEY = `${SPACE_PREFIX}epic-done.json`;
 const APOD_CURSOR_KEY = `${SPACE_PREFIX}apod-backfill.json`;
 
-/** The first moment after `month`, in ms. */
-const monthEnd = (month: string) => {
-  const [y, m] = month.split("-").map(Number);
-  return Date.UTC(y, m, 1);
-};
 const lastDayOf = (month: string) => new Date(monthEnd(month) - DAY).toISOString().slice(0, 10);
-/** Whether a month read at `readAt` (ms) can still change. */
-const changing = (month: string, readAt: number) => readAt < monthEnd(month) + FINAL_AFTER_MS;
 
 export interface WorkSummary {
   /** Another pass was already running in this process, or one ran too recently. */
@@ -187,8 +180,12 @@ async function pass({ only }: WorkOptions, deadline: number): Promise<WorkSummar
         const readAt = have.get(m);
         return readAt === undefined || (changing(m, readAt) && started - readAt >= DONKI_STALE_MS);
       };
-      // A stored month the log doesn't hold, or holds older than stored, is patched in from storage.
-      const repatch = (m: string) => have.get(m)! > (patchedAt[m] ? Date.parse(patchedAt[m]) : -Infinity) + 60_000;
+      /* A stored month the log doesn't hold, or holds older than stored, is
+         patched in from storage; so is a storm month from a log written
+         before storms' starts were kept. */
+      const repatch = (m: string) =>
+        have.get(m)! > (patchedAt[m] ? Date.parse(patchedAt[m]) : -Infinity) + 60_000 ||
+        (source === "donki-gst" && !(m in compact.starts));
       const todo = monthsBetween(BACKFILL_FROM[source], thisMonth).filter((m) => refetch(m) || repatch(m));
       // Months that can still change first: they're what keeps the log current.
       const live = (m: string) => !have.has(m) ? m === thisMonth : changing(m, have.get(m)!);
@@ -321,7 +318,9 @@ async function pass({ only }: WorkOptions, deadline: number): Promise<WorkSummar
       return 1;
     });
     if (available) {
-      const index = (await readSpaceJson<{ days: string[]; rereadAt?: string }>(EPIC_DONE_KEY)) ?? { days: [] };
+      // EPIC's list of dates is kept too: a date it doesn't list has no photo, "none" (7.3).
+      const stored = (await readSpaceJson<{ days: string[]; rereadAt?: string; available?: string[] }>(EPIC_DONE_KEY)) ?? { days: [] };
+      const index = { ...stored, available: [...(available as string[])].sort() };
       const done = new Set(index.days);
       const rereadDue = !index.rereadAt || started - Date.parse(index.rereadAt) >= DAILY_MS;
       const recentFrom = new Date(started - EPIC_REREAD_MS).toISOString().slice(0, 10);
@@ -332,7 +331,9 @@ async function pass({ only }: WorkOptions, deadline: number): Promise<WorkSummar
         days: [...done].sort(),
       }));
       if (finished && rereadDue && recent.length > 0) {
-        await writeSpaceJson(EPIC_DONE_KEY, { days: [...done].sort(), rereadAt: nowIso });
+        await writeSpaceJson(EPIC_DONE_KEY, { ...index, days: [...done].sort(), rereadAt: nowIso });
+      } else if (JSON.stringify(stored.available ?? []) !== JSON.stringify(index.available)) {
+        await writeSpaceJson(EPIC_DONE_KEY, { ...index, days: [...done].sort() });
       }
     }
   }

@@ -30,6 +30,7 @@ function question(id: QuestionId, over: Partial<QuestionRecord> = {}): QuestionR
     earlyReads: [],
     typicalSingleSwing: null,
     nullSamples: [],
+    pairings: [],
     ...over,
   };
 }

@@ -91,7 +91,9 @@ describe("client modules and the generated sky", () => {
   });
 
   it("finds a client module even with a comment above \"use client\"", () => {
-    expect(clientRoots.length).toBeGreaterThan(20);
+    // A control that the walk found client modules at all: 20 since step 5
+    // deleted GenresPanel (21 before). Headroom so a deleted component isn't a failure.
+    expect(clientRoots.length).toBeGreaterThan(15);
     expect(startsUseClient('/* note */\n// more\n"use client";\nimport x from "y";')).toBe(true);
     expect(startsUseClient('import x from "y";\n"use client";')).toBe(false);
   });

@@ -1,102 +1,50 @@
 import { NextResponse } from "next/server";
-import { analyzeGenres, readTagStore, type GenreAnalysis } from "@/lib/genres";
-import { runTagChunk } from "@/lib/tagsync";
+import { loadListener } from "@/lib/listener/serve";
 import { getStore } from "@/lib/store/jsonStore";
-import { getBlobStore } from "@/lib/store/blob";
-import { userKey } from "@/lib/store/userKeys";
-import { isNoiseArtist } from "@/lib/report";
-import { emptyHistoryResponse } from "@/lib/emptyHistory";
-import { takeBackIfRemoved } from "@/lib/removal";
-
-
-/** Bump when analyzeGenres changes what it returns. */
-const GENRE_ANALYSIS_VERSION = 2;
+import { runTagChunk } from "@/lib/tagsync";
+import { isValidUsername } from "@/lib/username";
 
 export const dynamic = "force-dynamic";
-// The genre analysis runs every genre against every phenomenon with 400
-// calendar scrambles each; a 500k-play library needs ~30s cold.
 export const maxDuration = 60;
 
 /**
- * GET /api/user/:name/genres
+ * GET /api/user/:name/genres?tz=America/Chicago: genres as facts about your
+ * listening, never as claims about the sky (spec 7.6), in its three states:
  *
- * Advances the tag fetch one budgeted chunk per call (poll until ready, like
- * the scrobble sync), then returns the full genre × phenomenon analysis.
- * The analysis is cached per (user, newest scrobble, artists tagged).
+ * - "building": the history or the tags are still being read. Each call
+ *   advances the tag fetch one budgeted chunk; poll until ready.
+ * - "ready": `{ done, total, genres }`, at most 12, each with its plays,
+ *   share, top artists, "rising" and its biggest night. None with 50 plays
+ *   yet is a ready list with none in it.
+ * - "failed": the tags can't be fetched (no Last.fm key here) or something
+ *   broke; the client tries again on the next visit.
  */
-const cache = new Map<string, { key: string; analysis: GenreAnalysis }>();
-
-async function handler(
-  _req: Request,
-  { params }: { params: Promise<{ name: string }> }
-) {
-  const { name } = await params;
-  const username = decodeURIComponent(name).trim();
-  const startedAt = Date.now();
-
-  const all = await getStore().getScrobbles(username);
-  if (all.length === 0) return emptyHistoryResponse(username);
-  const scrobbles = all.filter((s) => !isNoiseArtist(s.artist));
-  if (scrobbles.length === 0) {
-    return NextResponse.json(
-      { error: "Every scrobble in this history is a sleep or noise track, so there's no music to sort into genres." },
-      { status: 404 },
-    );
-  }
-
-  const sync = await runTagChunk(username);
-  if (!sync.complete) {
-    return NextResponse.json({ status: "building", done: sync.done, total: sync.total });
-  }
-
-  const newestUts = scrobbles[scrobbles.length - 1].uts;
-  /* The version changes whenever the analysis itself does, so a stored
-     result from the old scramble test (whose p could be 0, or too small)
-     isn't served to a listener who hasn't scrobbled since. */
-  const cacheKey = `${GENRE_ANALYSIS_VERSION}|${newestUts}|${sync.total}`;
-  const memoUser = username.toLowerCase();
-  const hit = cache.get(memoUser);
-  if (hit && hit.key === cacheKey) return NextResponse.json(hit.analysis);
-
-  // Persistent cache: the analysis is expensive (~30s on a big library), so
-  // it must survive serverless cold starts, not just this process.
-  const blobKey = userKey("genres", username);
-  const persisted = await getBlobStore().get(blobKey);
-  if (persisted) {
-    try {
-      const parsed = JSON.parse(persisted.toString("utf8"));
-      if (parsed.key === cacheKey) {
-        cache.set(memoUser, { key: cacheKey, analysis: parsed.analysis });
-        return NextResponse.json(parsed.analysis);
-      }
-    } catch {
-      // corrupt cache: recompute
-    }
-  }
-
-  const tagStore = await readTagStore(username);
-  const analysis = analyzeGenres(scrobbles, tagStore);
-  await getBlobStore().put(blobKey, Buffer.from(JSON.stringify({ key: cacheKey, analysis })));
-  /* The analysis can take half a minute, long enough for this listener to
-     remove their data from another tab. If they did, take the write back
-     rather than store their genres again after "removed". */
-  if (await takeBackIfRemoved(username, startedAt, [blobKey])) {
-    return emptyHistoryResponse(username);
-  }
-  cache.set(memoUser, { key: cacheKey, analysis });
-  return NextResponse.json(analysis);
-}
-
-/** Surface real error messages instead of opaque empty 500s. */
-export async function GET(
-  req: Request,
-  ctx: { params: Promise<{ name: string }> }
-) {
+export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
-    return await handler(req, ctx);
+    const { name } = await params;
+    const username = decodeURIComponent(name).trim();
+    if (!isValidUsername(username)) {
+      return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
+    }
+    if ((await getStore().getSyncState(username))?.status === "syncing") {
+      return NextResponse.json({ status: "building", done: 0, total: 0, genres: [] });
+    }
+    const tags = await runTagChunk(username);
+    if (tags.total > 0 && !tags.complete) {
+      if (!process.env.LASTFM_API_KEY?.trim()) return NextResponse.json({ status: "failed", done: tags.done, total: tags.total, genres: [] });
+      return NextResponse.json({ status: "building", done: tags.done, total: tags.total, genres: [] });
+    }
+    const loaded = await loadListener(req, name);
+    if (loaded.kind === "response") return loaded.response;
+    const { record, status, zone, zoneFellBack } = loaded;
+    // Built before the tags finished, and being rebuilt after this response.
+    if (record.tagged === -1) return NextResponse.json({ status: "building", done: tags.done, total: tags.total, genres: [] });
+    /* A record behind only on its tags was rebuilt inside the load, so its
+       genres are current; "updating" means it's behind on something else
+       and its genres are still the ones from the finished tags. */
+    return NextResponse.json({ status: "ready", record: status, done: tags.done, total: tags.total, zone, zoneFellBack, genres: record.genres });
   } catch (err) {
-    const routeError = err instanceof Error ? err.message : String(err);
-    console.error(`[retrospect] route failure:`, err);
-    return NextResponse.json({ error: routeError, code: "server" }, { status: 500 });
+    console.error("[retrospect] route failure:", err);
+    return NextResponse.json({ status: "failed", done: 0, total: 0, genres: [], error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

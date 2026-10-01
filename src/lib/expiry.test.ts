@@ -43,7 +43,7 @@ describe("the expiry sweep", () => {
     const summary = await expireStaleHistories();
 
     expect(await keysFor("ninety-one")).toEqual([]);
-    expect(await keysFor("eighty-nine")).toHaveLength(5);
+    expect(await keysFor("eighty-nine")).toHaveLength(6);
     expect(summary).toEqual({ usernames: 2, expired: 1, revisited: 0, deferred: 0, markersPruned: 0 });
   });
 
@@ -54,7 +54,7 @@ describe("the expiry sweep", () => {
 
     vi.setSystemTime(T0 + 91 * DAY);
     const summary = await expireStaleHistories();
-    expect(await keysFor("revisited")).toHaveLength(5);
+    expect(await keysFor("revisited")).toHaveLength(6);
     // Judged fresh from the listing itself, not saved by the last-moment check.
     expect(summary).toMatchObject({ expired: 0, revisited: 0 });
   });
@@ -69,7 +69,7 @@ describe("the expiry sweep", () => {
       return list(prefix);
     };
     const summary = await expireStaleHistories();
-    expect(await keysFor("came-back")).toHaveLength(5);
+    expect(await keysFor("came-back")).toHaveLength(6);
     expect(summary.revisited).toBe(1);
   });
 
@@ -121,14 +121,14 @@ describe("the cron route", () => {
   it("refuses everyone, and removes nothing, when no secret is set", async () => {
     vi.stubEnv("CRON_SECRET", "");
     expect((await call("Bearer ")).status).toBe(503);
-    expect(await keysFor("stale")).toHaveLength(5);
+    expect(await keysFor("stale")).toHaveLength(6);
   });
 
   it("refuses a request without the secret, so a crawler's GET does nothing", async () => {
     vi.stubEnv("CRON_SECRET", "s3cret-value-for-tests");
     expect((await call()).status).toBe(401);
     expect((await call("Bearer wrong-value-for-tests")).status).toBe(401);
-    expect(await keysFor("stale")).toHaveLength(5);
+    expect(await keysFor("stale")).toHaveLength(6);
   });
 
   it("sweeps when Vercel's own request brings the secret", async () => {

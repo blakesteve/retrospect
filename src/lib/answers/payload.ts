@@ -55,7 +55,7 @@ export interface QuestionPayload {
   typicalSingleSwing: number | null;
   /** Unix seconds of the condition's next start, or null (questions 7 and 8). */
   nextStart: number | null;
-  /** Songs first played under the condition: step 5, with the songs (7.5). */
+  /** Songs first played while the condition held (7.4), as song ids. */
   pairings: string[];
   nullSamples: number[];
   phrases: QuestionPhrases;
@@ -545,6 +545,7 @@ const emptyRecord: QuestionRecord = {
   earlyReads: [],
   typicalSingleSwing: null,
   nullSamples: [],
+  pairings: [],
 };
 
 export interface ComputingPayload {
@@ -664,7 +665,7 @@ export function answersPayload(
       earlyReads: early ? rec.earlyReads : [],
       typicalSingleSwing: early ? rec.typicalSingleSwing : null,
       nextStart: next,
-      pairings: [],
+      pairings: rec.pairings ?? [],
       nullSamples: rec.nullSamples,
       phrases,
     };

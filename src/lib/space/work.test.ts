@@ -257,6 +257,18 @@ describe("DONKI", () => {
     expect(await log()).not.toBeNull();
   });
 
+  it("adds storms' starts to a log written before it kept them, from storage", async () => {
+    fake.storms["2017-09"] = [storm("2017-09-07T21:00Z", [["2017-09-08T00:00Z", 8.33]])];
+    await donki();
+    const old = (await readCompact())!;
+    // A log as step 4 wrote it, without starts.
+    await writeCompact({ ...old, starts: undefined } as unknown as typeof old);
+    later(HOUR);
+    asked = [];
+    expect((await donki()).fetches).toBe(0);
+    expect((await log())!.stormStarts).toEqual([Date.parse("2017-09-07T21:00Z") / 1000]);
+  });
+
   it("rebuilds a lost log from the stored months without fetching them", async () => {
     fake.storms["2017-09"] = [storm("2017-09-07T21:00Z", [["2017-09-08T00:00Z", 8.33]])];
     await donki();

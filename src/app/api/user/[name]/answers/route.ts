@@ -3,7 +3,7 @@ import { answersPayload, computingPayload } from "@/lib/answers/payload";
 import { computeOnce, isCurrent, readAnswers } from "@/lib/answers/store";
 import { emptyHistoryResponse } from "@/lib/emptyHistory";
 import { readNasaLog } from "@/lib/space/compact";
-import { runSpaceWork } from "@/lib/space/work";
+import { refreshNasaAfter } from "@/lib/space/refresh";
 import { getStore } from "@/lib/store/jsonStore";
 import { isValidUsername } from "@/lib/username";
 import { requestZone } from "@/lib/zone";
@@ -13,8 +13,6 @@ export const dynamic = "force-dynamic";
 // that on production (step 0 measured 1.9 to 2.4 times local).
 export const maxDuration = 60;
 
-const NASA_STALE_MS = 3 * 60 * 60 * 1000;
-const NASA_GAP_MS = 5 * 60 * 1000;
 
 /**
  * GET /api/user/:name/answers?tz=America/Chicago: the 12 questions' answers
@@ -53,15 +51,7 @@ async function handler(req: Request, { params }: { params: Promise<{ name: strin
   ]);
   if (stored.length === 0) return emptyHistoryResponse(username);
 
-  /* Keep NASA's log current without making anyone wait: after the response,
-     refresh DONKI when it's over 3 hours old, or carry on filling it while
-     it's incomplete (7.3). One pass at a time, and one per 5 minutes, per
-     process. */
-  if (!nasa || Date.now() - nasa.refreshedAt * 1000 > NASA_STALE_MS) {
-    after(() =>
-      runSpaceWork({ budgetMs: 20_000, only: ["donki-gst", "donki-flr"], minGapMs: NASA_GAP_MS }).then(() => undefined),
-    );
-  }
+  refreshNasaAfter(nasa);
 
   if (state?.status === "syncing") {
     return existing

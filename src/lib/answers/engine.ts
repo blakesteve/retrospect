@@ -6,6 +6,7 @@ import { isNoiseArtist } from "@/lib/noise";
 import { degreeInSign, longitude, signOf, type SkyBody } from "@/lib/sky/sky";
 import { zoneClock, type ZoneClock } from "@/lib/zone";
 import type { NasaLog } from "@/lib/space/compact";
+import { selectSongs, songsOf } from "@/lib/listener/songs";
 import { conditionFor, nightsCondition, type Condition, type ConditionWindow } from "./conditions";
 import { QUESTIONS, type Measure, type Question, type QuestionId } from "./questions";
 import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
@@ -22,6 +23,10 @@ import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
 /** Bump when anything here changes what an answer would be. Stored answers
     from another version are served once, then recomputed (spec 6.6). */
 export const ANSWERS_VERSION = 1;
+/** The stored record's shape, apart from the analysis: a record in an older
+    format is recomputed, with the same seeds (6.6 keeps the analysis version
+    in the seed, and adding pairings changed no answer). 2: pairings. */
+export const RECORD_FORMAT = 2;
 export const ROTATIONS = 2_000;
 /** At most this many shuffles go to the client, for the histogram. */
 export const MAX_NULL_SAMPLES = 600;
@@ -84,10 +89,16 @@ export interface QuestionRecord {
   typicalSingleSwing: number | null;
   /** Shuffled indexes, at most MAX_NULL_SAMPLES, for the histogram. */
   nullSamples: number[];
+  /** Songs first played while the condition held (7.4): the listed songs
+      (7.5) whose first play falls inside a window, or for 7 and 8 on a
+      night NASA logged. Facts, not proof. */
+  pairings: string[];
 }
 
 export interface AnswerRecord {
   version: number;
+  /** RECORD_FORMAT when computed; missing on a record from before step 5. */
+  format?: number;
   zone: string;
   /** What the history held: plays, first and last play. Behind the store's
       means a recompute. */
@@ -264,6 +275,7 @@ const blank = (q: Question, rest: Partial<QuestionRecord>): QuestionRecord => ({
   earlyReads: [],
   typicalSingleSwing: null,
   nullSamples: [],
+  pairings: [],
   ...rest,
 });
 
@@ -613,6 +625,7 @@ export function computeAnswers(
   const kept = plays.length > 0 ? plays : stored;
   const record: AnswerRecord = {
     version: ANSWERS_VERSION,
+    format: RECORD_FORMAT,
     zone,
     stamp: historyStamp(stored),
     nasaStamp: nasa?.stamp ?? null,
@@ -632,6 +645,10 @@ export function computeAnswers(
   const measures = tagMeasures(kept, zone);
   const history = { first: record.historyStart, last: record.historyEnd };
   const clock = zoneClock(zone, history.first, history.last);
+  // Songs whose first play is news: listed (7.5), and not from the first 90 days.
+  const songs = selectSongs(songsOf(kept), kept[0].uts).listed.filter((s) => !s.early);
+  const pairingsOf = (condition: Condition) =>
+    songs.filter((s) => condition.windows.some((w) => s.firstPlayUts >= w.start && s.firstPlayUts <= w.end)).map((s) => s.songId);
   record.questions = QUESTIONS.map((q) => {
     if (q.nasa && !nasa) return blank(q, { notChecked: "nasa" });
     try {
@@ -647,9 +664,11 @@ export function computeAnswers(
           ? { ...measure, spanStart: covered.spanStart, spanEnd: covered.spanEnd }
           : { ...measure, spanEnd: measure.spanStart };
         const nights = covered ? nasaNights(id, nasa!, clock, covered.first, covered.last) : [];
-        return runQuestion(q, nightsCondition(nights, clock), span, history, drawsFor(username, q.id));
+        const condition = nightsCondition(nights, clock);
+        return { ...runQuestion(q, condition, span, history, drawsFor(username, q.id)), pairings: pairingsOf(condition) };
       }
-      return runQuestion(q, conditionFor(q.id)!, measures[q.measure], history, drawsFor(username, q.id));
+      const condition = conditionFor(q.id)!;
+      return { ...runQuestion(q, condition, measures[q.measure], history, drawsFor(username, q.id)), pairings: pairingsOf(condition) };
     } catch (err) {
       console.error(`[retrospect] question ${q.id} failed:`, err);
       record.incomplete = true;
