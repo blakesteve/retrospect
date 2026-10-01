@@ -2,18 +2,39 @@
 
 **Index**
 
-- **Done:** The sky through 2035, and the redesign's sky data (30 Sept 2026) ·
-  The store audit, and share cards that can't outlive a removal (30 Sept) ·
-  A way to remove your data, and an empty account that isn't a dead end
-  (30 Sept) · The report tells the truth about its own confidence (28 Sept) ·
-  A young history gets a real report (28 Sept) · The bundle-shape guard
-  (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster
-  4.12.1 (16 Sept) · Roster sweep (5 Sept)
+- **Done:** Real time zones, and nights (30 Sept 2026) · The sky through 2035,
+  and the redesign's sky data (30 Sept) · The store audit, and share cards
+  that can't outlive a removal (30 Sept) · A way to remove your data, and an
+  empty account that isn't a dead end (30 Sept) · The report tells the truth
+  about its own confidence (28 Sept) · A young history gets a real report
+  (28 Sept) · The bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) ·
+  Roster 4.13.0 (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### Real time zones, and nights (30 September 2026)
+
+- **The listener's zone, not one offset.** The profile read a whole history at
+  the offset the browser had that day, so in summer every winter play in
+  Chicago landed an hour late, and in winter every summer play an hour early.
+  The browser now sends its IANA zone, and each play is read with the offset
+  in force when it was played, daylight saving included, under the rules of
+  its year (the US moved its dates in 2007; Brazil dropped daylight saving in
+  2019). `lib/zone.ts` finds a zone's offset changes once per year and
+  binary-searches each play: asking `Intl` about 500,000 plays takes 1.4 s on
+  its own. The profile runs faster than it did, not slower.
+- **Nights.** A night runs 4 a.m. to 4 a.m. and is named by the date it
+  starts on, so a 1 a.m. Saturday play is Friday night's. The profile's
+  busiest night, streak, weekday and loudest month count nights.
+- **No zone, no guess.** A missing or refused zone reads the history in UTC
+  and the response says so (`zoneFellBack`), for the redesign to tell the
+  listener. A browser that is on UTC isn't flagged.
+- The report route keeps today's single offset until the redesign's answers
+  replace it. First-load JS: `/u/[username]` grows 21 bytes, the rest not at
+  all.
 
 ### The sky through 2035, and the redesign's sky data (30 September 2026)
 

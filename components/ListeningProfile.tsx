@@ -31,7 +31,10 @@ export function ListeningProfile({
 
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams({ tzm: String(-new Date().getTimezoneOffset()) });
+    // The browser's IANA zone: the server reads every play with its real offsets.
+    const params = new URLSearchParams();
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (zone) params.set("tz", zone);
     if (excludeNoise) params.set("noise", "exclude");
     /* Every answer replaces both, failures included, so toggling the noise
        filter can't leave the last setting's panel up under the new one. */
