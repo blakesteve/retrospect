@@ -102,8 +102,15 @@ const PKG = "@blakesteve/roster";
  * drift between Roster bumps and far below the 18.49% class of regression this
  * exists to catch. Raise either in a commit that says what grew and why, rather
  * than to make a red build green.
+ *
+ * Raised 30 September 2026, JS 1,694,000 to 1,751,000. What grew: today's UI
+ * ephemeris (lib/ephemeris/*.json) extended from 2026 to 2035 so reports keep
+ * working past January 2027. The same JSON sits in several route chunks, so
+ * client JS rose 55,538 bytes to 1,671,074 and left 22,926 of headroom. The
+ * new ceiling restores 4.8% slack (79,926 bytes). The redesign deletes these
+ * imports; re-baseline then, per spec 13.
  */
-const CLIENT_JS_CEILING = 1_694_000;
+const CLIENT_JS_CEILING = 1_751_000;
 const CLIENT_CSS_CEILING = 175_000;
 
 const problems = [];

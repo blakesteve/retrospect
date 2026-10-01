@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "node scripts/check-bundle-shape.mjs",
+    "postbuild": "node scripts/check-bundle-shape.mjs && node scripts/check-sky-server-only.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ephemeris": "node scripts/retrograde-windows.mjs 2002 2026 Mercury && node scripts/retrograde-windows.mjs 2002 2026 Venus && node scripts/retrograde-windows.mjs 2002 2026 Mars && node scripts/full-moons.mjs 2002 2026 && node scripts/eclipses.mjs 2002 2026 && cp data/*.json lib/ephemeris/",
+    "ephemeris": "node scripts/retrograde-windows.mjs 2002 2035 Mercury && node scripts/retrograde-windows.mjs 2002 2035 Venus && node scripts/retrograde-windows.mjs 2002 2035 Mars && node scripts/full-moons.mjs 2002 2035 && node scripts/eclipses.mjs 2002 2035 && cp data/*.json lib/ephemeris/",
+    "sky": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sky-data.mjs 2002 2035",
     "check:bundle": "node scripts/check-bundle-shape.mjs"
   },
   "dependencies": {

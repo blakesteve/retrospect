@@ -2,7 +2,7 @@
   "body": "Mars",
   "generatedBy": "astronomy-engine",
   "startYear": 2002,
-  "endYear": 2026,
+  "endYear": 2035,
   "windows": [
     {
       "start": "2003-07-29T07:38:05.156Z",
@@ -69,6 +69,36 @@
       "end": "2025-02-24T02:00:35.156Z",
       "sign": "Leo",
       "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2027-01-10T13:00:49.218Z",
+      "end": "2027-04-01T14:10:25.781Z",
+      "sign": "Virgo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2029-02-14T08:13:56.718Z",
+      "end": "2029-05-05T18:57:18.281Z",
+      "sign": "Libra",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2031-03-29T00:35:30.468Z",
+      "end": "2031-06-13T11:51:54.843Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2033-05-26T23:47:41.718Z",
+      "end": "2033-08-01T14:21:40.781Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2035-08-15T10:08:33.281Z",
+      "end": "2035-10-15T08:33:37.968Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
     }
   ]
 }
