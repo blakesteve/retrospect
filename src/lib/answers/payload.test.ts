@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AnswerRecord, QuestionRecord } from "./engine";
+import { ANSWERS_VERSION, type AnswerRecord, type QuestionRecord } from "./engine";
 import { answersPayload, computingPayload, formatP } from "./payload";
 import { QUESTIONS, type QuestionId } from "./questions";
 
@@ -40,7 +40,7 @@ function question(id: QuestionId, over: Partial<QuestionRecord> = {}): QuestionR
 function record(target: QuestionId, over: Partial<QuestionRecord>, others: number[] = []): AnswerRecord {
   let k = 0;
   return {
-    version: 1,
+    version: ANSWERS_VERSION,
     zone: "America/Chicago",
     stamp: "1|2|3",
     nasaStamp: null,
@@ -95,13 +95,14 @@ describe("the word line and Tonight's line (9.2)", () => {
 
   it("Maybe, Not clearly and No", () => {
     const maybe = phrasesOf(record("moonstrong", { status: "tested", index: 0.95, p: 0.07, iterations: 2000 }, rest9), "moonstrong");
-    expect(maybe.phrases.wordLine).toBe("Maybe. While the Moon was strong, you listened 5% less, which could be chance.");
-    expect(maybe.phrases.tonightLine).toBe("Maybe: 5% less listening, which could be chance.");
+    // Spec 9.2's own examples, since questions 5 and 6 changed measures (1 Oct 2026).
+    expect(maybe.phrases.wordLine).toBe(
+      "Maybe. While the Moon was strong, a 5% smaller share of your plays were old favorites, which could be chance.",
+    );
+    expect(maybe.phrases.tonightLine).toBe("Maybe: a 5% smaller share of old favorites, which could be chance.");
 
     const notClearly = phrasesOf(record("venusmars", { status: "tested", index: 1.11, p: 0.2, iterations: 2000 }, rest9), "venusmars");
-    expect(notClearly.phrases.wordLine).toBe(
-      "Not clearly. While Venus and Mars got along, an 11% bigger share of your plays came after midnight, which could be chance.",
-    );
+    expect(notClearly.phrases.wordLine).toBe("Not clearly. While Venus and Mars got along, you listened 11% more, which could be chance.");
 
     const no = phrasesOf(record("mercury", { status: "tested", index: 0.99, p: 0.6, iterations: 2000 }, rest9), "mercury");
     expect(no.phrases.wordLine).toBe(
@@ -268,7 +269,8 @@ describe("Tonight's heads-up (8.4)", () => {
   it("names the next station within a week, and what the listener has lived through", () => {
     // History from 1 Jan 2025: one Venus retrograde so far (Mar 1 to Apr 12, 2025).
     const p = answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", NOW);
-    expect(p.headsUp).toEqual({ id: "venusrx", line: "Venus turns retrograde Saturday. You've lived through one; see what it did." });
+    // Never "see what it did": that says Venus did something to the listener (9.6).
+    expect(p.headsUp).toEqual({ id: "venusrx", line: "Venus turns retrograde Saturday. You've lived through one; see how your listening went." });
   });
 
   it("is quiet when nothing starts within a week", () => {

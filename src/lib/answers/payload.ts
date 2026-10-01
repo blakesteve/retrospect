@@ -492,7 +492,9 @@ const STATIONS: QuestionId[] = ["mercury", "venusrx", "marsrx"];
 const SIGN_CHANGES: QuestionId[] = ["venushome", "marswater", "venusdet"];
 const ASPECTS: QuestionId[] = ["venusmars"];
 
-/** "Venus turns retrograde Saturday. You've lived through one; see what it did." */
+/** "Venus turns retrograde Saturday. You've lived through one; see how your
+    listening went." Never "see what it did": that says Venus did something
+    to the listener (9.6). */
 function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: string, nowUts: number): string | null {
   if (![...STATIONS, ...SIGN_CHANGES, ...ASPECTS].includes(q.id)) return null;
   const next = nextStartOf(q.id, nowUts);
@@ -523,7 +525,7 @@ function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: s
       ? "It'll be your first."
       : firstYearOnly
         ? `You've lived through one, in your first year, before ${WARMUP_NOUN[q.measure]} count.`
-        : `You've lived through ${spelled(n)}; see what ${n === 1 ? "it" : "they"} did.`;
+        : `You've lived through ${spelled(n)}; see how your listening went.`;
   return `${opening[q.id]} ${when}. ${second}`;
 }
 

@@ -26,7 +26,10 @@ describe("histories with no sky effect", () => {
 
   it("test enough questions for the correction to matter", () => {
     const tested = Object.values(summary.perQuestion).reduce((n, q) => n + q.tested, 0);
-    expect(tested / summary.histories).toBeGreaterThan(5);
+    // 4.92 since question 5 counts old favorites (1 Oct 2026), down from
+    // 5.16: once its first year is dropped, 26 of these light histories have
+    // under 500 plays in its windows. Same 100 histories every run.
+    expect(tested / summary.histories).toBeGreaterThan(4.8);
   });
 
   it("reach NASA's two questions, against its real log", () => {

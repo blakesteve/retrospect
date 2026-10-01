@@ -22,7 +22,9 @@ import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
 
 /** Bump when anything here changes what an answer would be. Stored answers
     from another version are served once, then recomputed (spec 6.6). */
-export const ANSWERS_VERSION = 1;
+/** 2: questions 5 and 6 measure old favorites and how much you listen
+    (1 Oct 2026). The version is in every seed (6.6), so all 12 reshuffle. */
+export const ANSWERS_VERSION = 2;
 /** The stored record's shape, apart from the analysis: a record in an older
     format is recomputed, with the same seeds (6.6 keeps the analysis version
     in the seed, and adding pairings changed no answer). 2: pairings. */
@@ -45,7 +47,7 @@ export interface EarlyRead {
   swing: number | null;
   /** Still going when the history ends. */
   inProgress: boolean;
-  /** Before the measure's warm-up ended (questions 1 and 11's first year). */
+  /** Before the measure's warm-up ended (the first year, for questions 1, 3, 5 and 11). */
   firstYear: boolean;
   /** Retrogrades: "from 10°50′ Aries back to 24°37′ Pisces". */
   path: string | null;

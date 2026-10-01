@@ -187,6 +187,18 @@ describe("a young history (spec 14)", () => {
     expect(venus.typicalSingleSwing).toBeGreaterThan(0);
   });
 
+  it("warms up question 5 for a year: the Moon's old favorites need one", () => {
+    // From 1 Jan 2026 to 30 Sept 2026: under a year.
+    const plays = synthHistory(20_000, 606, 2026);
+    const months = computeAnswers("engine-test", plays, "UTC");
+    const moon = byId(months, "moonstrong");
+    expect(moon.status).toBe("warming-up");
+    // A year from the first play, not from anything the engine works out.
+    expect(moon.warmupReadyFrom).toBe(plays[0].uts + 365 * 86_400);
+    // Question 6 needs none: it answers, or says what it lacks, from the start.
+    expect(byId(months, "venusmars").status).not.toBe("warming-up");
+  });
+
   it("calls a first-year retrograde unmeasurable for old favorites", () => {
     // Plays from 1 Jan 2024: Mercury's retrogrades that year fall in the warm-up.
     const short = computeAnswers("engine-test", synthHistory(20_000, 303, 2024, 2025), "UTC");
@@ -276,9 +288,10 @@ describe("early reads (6.5)", () => {
 
 describe("the seed (6.6)", () => {
   it("is FNV-1a of the lowercased username, the question and the version", () => {
-    // Written out independently: 32-bit FNV-1a of "engine-test|mercury|1".
+    // Written out independently: 32-bit FNV-1a of "engine-test|mercury|2",
+    // version 2 since questions 5 and 6 changed measures (1 Oct 2026).
     let h = 2166136261;
-    for (const ch of "engine-test|mercury|1") {
+    for (const ch of "engine-test|mercury|2") {
       h ^= ch.charCodeAt(0);
       h = Math.imul(h, 16777619) >>> 0;
     }
@@ -289,10 +302,15 @@ describe("the seed (6.6)", () => {
 describe("a single play", () => {
   it("is too few plays for the questions with no warm-up, and says how many", () => {
     const rec = computeAnswers("engine-test", [{ uts: at("2026-01-10T03:00:00Z"), artist: "Artist", track: "Track" }], "UTC");
-    for (const id of ["fullmoon", "venushome", "moonstrong", "venusmars", "marswater", "venusdet", "marsrx"]) {
+    // Eight need no warm-up: these six, and storms and flares, which need
+    // NASA's log and aren't checked here. Question 5 has needed a year since
+    // 1 Oct 2026.
+    for (const id of ["fullmoon", "venushome", "venusmars", "marswater", "venusdet", "marsrx"]) {
       expect(byId(rec, id).status, id).toBe("too-few-plays");
     }
-    expect(byId(rec, "mercury").status).toBe("warming-up");
+    for (const id of ["mercury", "newmoon", "moonstrong", "venusrx"]) {
+      expect(byId(rec, id).status, id).toBe("warming-up");
+    }
   });
 });
 
