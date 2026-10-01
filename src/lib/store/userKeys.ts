@@ -34,6 +34,9 @@ export const USER_KEY_KINDS = {
   tags: { prefix: "tags/", suffix: ".json" },
   /** The worked-out genre results, kept so they survive a cold start. */
   genres: { prefix: "cache/genres-", suffix: ".json" },
+  /** The answers to the 12 questions, a record per time zone (spec 6.6),
+      in one blob so removal and expiry find them like everything else. */
+  answers: { prefix: "answers/", suffix: ".json" },
 } as const satisfies Record<string, KeyShape>;
 
 export type UserKeyKind = keyof typeof USER_KEY_KINDS;

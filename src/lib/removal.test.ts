@@ -54,6 +54,7 @@ describe("removing a username", () => {
       { key: "scrobbles/remove_me.jsonl.gz", existed: true, gone: true },
       { key: "tags/remove_me.json", existed: true, gone: true },
       { key: "cache/genres-remove_me.json", existed: true, gone: true },
+      { key: "answers/remove_me.json", existed: true, gone: true },
     ]);
     expect(await keysFor("Remove.Me")).toEqual([]);
   });
@@ -62,7 +63,7 @@ describe("removing a username", () => {
     await seed("remove-me");
     await seed("keep-me");
     await requestRemoval("remove-me");
-    expect(await keysFor("keep-me")).toHaveLength(4);
+    expect(await keysFor("keep-me")).toHaveLength(5);
   });
 
   it("says so when nothing is stored, without using up a removal", async () => {
@@ -78,7 +79,7 @@ describe("removing a username", () => {
     };
     await syncing(59_000);
     expect((await requestRemoval("mid-read")).kind).toBe("busy");
-    expect(await keysFor("mid-read")).toHaveLength(4);
+    expect(await keysFor("mid-read")).toHaveLength(5);
     // A read abandoned a minute ago isn't running any more.
     await syncing(61_000);
     expect((await requestRemoval("mid-read")).kind).toBe("removed");
@@ -122,7 +123,7 @@ describe("the per-username limit", () => {
     vi.setSystemTime(T0 + DAY - 60_000);
     const refused = await requestRemoval("wiped");
     expect(refused).toEqual({ kind: "cooldown", retryAt: T0 + DAY });
-    expect(await keysFor("wiped")).toHaveLength(4);
+    expect(await keysFor("wiped")).toHaveLength(5);
 
     vi.setSystemTime(T0 + DAY + 60_000);
     expect((await requestRemoval("wiped")).kind).toBe("removed");
@@ -147,7 +148,7 @@ describe("the cap across all usernames", () => {
     vi.setSystemTime(T0 + 20 * HOUR);
     // A slot frees when the first removal is a day old.
     expect(await requestRemoval("listener-20")).toEqual({ kind: "too-many", retryAt: T0 + DAY });
-    expect(await keysFor("listener-20")).toHaveLength(4);
+    expect(await keysFor("listener-20")).toHaveLength(5);
 
     vi.setSystemTime(T0 + DAY + 1);
     expect((await requestRemoval("listener-20")).kind).toBe("removed");
@@ -193,7 +194,7 @@ describe("the removal route", () => {
     await seed("confirm-me");
     expect((await post("confirm-me")).status).toBe(400);
     expect((await post("confirm-me", { confirm: "someone-else" })).status).toBe(400);
-    expect(await keysFor("confirm-me")).toHaveLength(4);
+    expect(await keysFor("confirm-me")).toHaveLength(5);
 
     const res = await post("confirm-me", { confirm: "Confirm-Me" });
     expect(res.status).toBe(200);

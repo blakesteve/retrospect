@@ -143,6 +143,47 @@ describe("the local blob directory", () => {
   });
 });
 
+describe("which bucket a deployment may use", () => {
+  /* A preview on the production bucket would write test data into real
+     listeners' records, and a removal tried there would delete them. The
+     store refuses it, so nobody has to check a preview's settings by hand. */
+  async function storeFor(vercelEnv: string | undefined, bucket: string) {
+    vi.stubEnv("R2_ACCOUNT_ID", "test-account");
+    vi.stubEnv("R2_ACCESS_KEY_ID", "test-key");
+    vi.stubEnv("R2_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("R2_BUCKET", bucket);
+    if (vercelEnv !== undefined) {
+      vi.stubEnv("VERCEL", "1");
+      vi.stubEnv("VERCEL_ENV", vercelEnv);
+    }
+    vi.resetModules();
+    const { getBlobStore } = await import("./store/blob");
+    const { R2BlobStore } = await import("./store/r2");
+    return { open: () => getBlobStore(), R2BlobStore };
+  }
+
+  it("refuses the production bucket on a preview, or under vercel dev", async () => {
+    for (const env of ["preview", "development"]) {
+      const { open } = await storeFor(env, "retrospect");
+      expect(open, env).toThrow(/production bucket \(retrospect\)/);
+    }
+    const { open } = await storeFor("preview", "  retrospect ");
+    expect(open).toThrow(/production bucket/);
+  });
+
+  it("lets a preview use the preview bucket, and production use its own", async () => {
+    const preview = await storeFor("preview", "retrospect-preview");
+    expect(preview.open()).toBeInstanceOf(preview.R2BlobStore);
+    const production = await storeFor("production", "retrospect");
+    expect(production.open()).toBeInstanceOf(production.R2BlobStore);
+  });
+
+  it("enforces nothing off Vercel", async () => {
+    const local = await storeFor(undefined, "retrospect");
+    expect(local.open()).toBeInstanceOf(local.R2BlobStore);
+  });
+});
+
 describe("metadataBase in the root layout", () => {
   /** `metadataBase` is typed `string | URL`, so compare it as a string. */
   async function freshBase(baseUrl?: string): Promise<string> {

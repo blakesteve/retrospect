@@ -1,6 +1,6 @@
 /**
  * Lists every key in the store and reports any that the app doesn't account
- * for: not one of the four per-user kinds in `src/lib/store/userKeys.ts`, and not
+ * for: not one of the per-user kinds in `src/lib/store/userKeys.ts`, and not
  * a removal marker. Removal and expiry only ever see keys that list covers, so
  * anything outside it is kept forever.
  *

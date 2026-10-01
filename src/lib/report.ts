@@ -13,6 +13,7 @@ import { getPhenomenon, type PhenomenonKey } from "./ephemeris/phenomena";
 import { getStore } from "./store/jsonStore";
 import { TOO_SOON_HEADLINE, warmupExplanation, type Warmup } from "./readiness";
 import { countEvents } from "./analysis/confidence";
+import { isNoiseArtist } from "./noise";
 
 const DAY = 86400;
 const PERMUTATIONS = 2000;
@@ -36,15 +37,9 @@ export interface ReportOptions {
   excludeNoise?: boolean;
 }
 
-/**
- * Sleep-noise detector. Scrobblers faithfully log eight hours of "Rolling
- * Thunder — Nature Sounds.ca" every night, which buries actual music taste
- * under a monsoon. Artist-name heuristic; intentionally conservative.
- */
-const NOISE_RE =
-  /\b(white noise|brown noise|pink noise|nature sounds?|rain sounds?|sleep sounds?|ocean sounds?|asmr|binaural|noise machine|sounds? for sleep|sleep(y)? (noise|sounds?|music)|meditation sounds?)\b/i;
-export const isNoiseArtist = (artist: string) =>
-  NOISE_RE.test(artist) || /\bsounds?\b.*\.(ca|com|net|org)\b/i.test(artist);
+// The noise filter lives in noise.ts; the profile and genre routes and
+// genres.ts still import it from here.
+export { isNoiseArtist };
 
 export interface Report {
   username: string;

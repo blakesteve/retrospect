@@ -124,10 +124,26 @@ export class MemoryBlobStore implements BlobStore {
 
 let active: BlobStore | null = null;
 
+/**
+ * The production bucket. Only a production deployment may use it: a preview
+ * pointed here would write test data into real listeners' records, and a
+ * removal tried on a preview would delete them. Previews use
+ * `retrospect-preview`. This replaces checking a preview's settings by hand.
+ * Off Vercel (`VERCEL_ENV` unset) nothing is enforced.
+ */
+export const PRODUCTION_BUCKET = "retrospect";
+
 /** Backend selection: R2 when its env vars are present, local folder otherwise. */
 export function getBlobStore(): BlobStore {
   if (active) return active;
-  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
+  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, VERCEL_ENV } = process.env;
+
+  if (VERCEL_ENV && VERCEL_ENV !== "production" && R2_BUCKET?.trim() === PRODUCTION_BUCKET) {
+    throw new Error(
+      `This ${VERCEL_ENV} deployment is set to the production bucket (${PRODUCTION_BUCKET}). ` +
+        `Point its R2_BUCKET at retrospect-preview in Vercel and redeploy.`
+    );
+  }
 
   // On Vercel the filesystem is read-only, so a silent fallback would only
   // produce confusing ENOENT errors later. Fail loudly, naming the gap.
