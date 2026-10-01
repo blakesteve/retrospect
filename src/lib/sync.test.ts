@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryBlobStore, setBlobStore } from "./store/blob";
+import { MemoryBlobStore, getBlobStore, setBlobStore } from "./store/blob";
+import { userKey } from "./store/userKeys";
 import { getStore } from "./store/jsonStore";
 import { LastfmError, getRecentTracksPage, type RecentTracksPage } from "./lastfm";
 import { removeUserData, requestRemoval } from "./removal";
@@ -348,5 +350,59 @@ describe("a sync chunk that outlives a removal", () => {
     await runSyncChunk("removed-mid-refresh");
     expect(await getStore().getSyncState("removed-mid-refresh")).toBeNull();
     expect(await getStore().getScrobbles("removed-mid-refresh")).toEqual([]);
+  });
+});
+
+describe("the chunk that finishes a backfill", () => {
+  /* A backfill keeps a play twice when Last.fm's pages shift under it (new
+     plays arriving push old ones onto the next page); reads drop the repeat.
+     They were 21% of the largest real history. The finishing chunk rewrites
+     the history without them, in the write it makes anyway. */
+  const at0 = Date.UTC(2025, 0, 1) / 1000;
+  const play = (i: number) => ({ uts: at0 + i * 600, artist: `Artist ${i % 3}`, track: `Track ${i}` });
+  const linesOf = async (name: string) =>
+    gunzipSync((await getBlobStore().get(userKey("scrobbles", name)))!).toString("utf8").split("\n").filter(Boolean);
+
+  async function midBackfill(name: string, totalPages: number) {
+    const first = Array.from({ length: 10 }, (_, i) => play(i));
+    await getStore().appendScrobbles(name, first);
+    await getStore().appendScrobbles(name, first.slice(5)); // the shifted page, read again
+    await getStore().setSyncState({
+      username: name,
+      status: "syncing",
+      pagesDone: 1,
+      totalPages,
+      totalScrobbles: 15,
+      newestUts: first[9].uts,
+      oldestUts: first[0].uts,
+      updatedAt: Date.now(),
+    });
+    // Page 2: one play page 1 already had, and five older ones.
+    return [first[0], ...Array.from({ length: 5 }, (_, i) => play(-1 - i))];
+  }
+
+  it("stores each play once when the backfill finishes", async () => {
+    const lastPage = await midBackfill("compactor", 2);
+    fetchPage.mockResolvedValue(page({ scrobbles: lastPage, page: 2, totalPages: 2, totalScrobbles: 15 }));
+    expect((await runSyncChunk("compactor")).status).toBe("ready");
+    const lines = await linesOf("compactor");
+    expect(lines).toHaveLength(15);
+    expect(new Set(lines).size).toBe(15);
+    expect((await getStore().getScrobbles("compactor")).map((s) => s.uts)).toEqual(
+      Array.from({ length: 15 }, (_, i) => at0 + (i - 5) * 600),
+    );
+  });
+
+  it("leaves the repeats for the last chunk while the backfill is still going", async () => {
+    const lastPage = await midBackfill("halfway", 2);
+    // Page 2 arrives and says the history has grown a third page, which then
+    // fails with a network blip, so the chunk stops short of the end.
+    fetchPage.mockImplementation(async (_name, n) => {
+      if (n === 2) return page({ scrobbles: lastPage, page: 2, totalPages: 3, totalScrobbles: 15 });
+      throw new TypeError("fetch failed");
+    });
+    expect((await runSyncChunk("halfway")).status).toBe("syncing");
+    expect(await linesOf("halfway")).toHaveLength(10 + 5 + 6);
+    expect(await getStore().getScrobbles("halfway")).toHaveLength(15);
   });
 });

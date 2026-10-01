@@ -2,18 +2,48 @@
 
 **Index**
 
-- **Done:** Real time zones, and nights (30 Sept 2026) · The sky through 2035,
-  and the redesign's sky data (30 Sept) · The store audit, and share cards
-  that can't outlive a removal (30 Sept) · A way to remove your data, and an
-  empty account that isn't a dead end (30 Sept) · The report tells the truth
-  about its own confidence (28 Sept) · A young history gets a real report
-  (28 Sept) · The bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) ·
-  Roster 4.13.0 (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
+- **Done:** The answers engine, and stored answers (1 Oct 2026) · Real time
+  zones, and nights (30 Sept) · The sky through 2035, and the redesign's sky
+  data (30 Sept) · The store audit, and share cards that can't outlive a
+  removal (30 Sept) · A way to remove your data, and an empty account that
+  isn't a dead end (30 Sept) · The report tells the truth about its own
+  confidence (28 Sept) · A young history gets a real report (28 Sept) · The
+  bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
+  (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### The answers engine, and stored answers (1 October 2026)
+
+- **The 12 questions, in one pass.** `/api/user/{name}/answers?tz=…` answers
+  all twelve for a listener and time zone and stores them. It rotates the
+  sky's windows instead of the plays, which gives the old test's counts
+  exactly (a test holds the two together) in about 1.6 s for 500,000 plays,
+  locally; step 0 timed the old per-play loop at 160 s for the same work.
+  Events merge as the spec says, so Venus backing out of Aries and returning
+  during her 2025 retrograde is one stretch.
+- **A Yes allows for asking several questions.** It needs Benjamini-Hochberg at
+  10% and its own p under 0.05. `npm run null-test` runs the 12 on 1,000
+  made-up histories with no sky in them and fails above 13% with any Yes; the
+  suite runs 100 quick ones.
+- **Stored, and current.** One record per listener and zone, served at once
+  and recomputed in the background when the history grows. It's a registered
+  per-listener key, so removal and expiry cover it, and a removal that lands
+  mid-compute takes the write back. The endpoint returns every sentence the
+  page shows.
+- **Not yet:** solar storms and flares read "Not checked yet" until NASA's
+  data arrives (step 4), and pairings come with the songs (step 5). No page
+  calls the endpoint yet.
+- **Smaller histories.** The chunk that finishes a backfill drops the
+  duplicate lines a backfill keeps: a local copy of the largest history went
+  from 11.0 MB to 8.6 MB. Histories already read keep theirs until a backfill
+  runs again.
+- **A preview can't touch production's data.** A deployment that isn't
+  production refuses the production bucket, so nobody has to check a
+  preview's settings by hand.
 
 ### Real time zones, and nights (30 September 2026)
 

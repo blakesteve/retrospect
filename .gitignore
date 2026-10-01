@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .data/
+
+# scripts/nostalgia-index.mjs caches a whole listening history here
+src/data/scrobbles-*.json

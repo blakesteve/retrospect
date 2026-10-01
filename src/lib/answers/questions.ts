@@ -1,0 +1,234 @@
+/**
+ * The 12 questions (spec 5), fixed, in this order, for everyone. The number is
+ * part of the copy ("Question 7") and never changes. The words each question
+ * needs for its sentences come from spec 9.2.
+ *
+ * No data and no sky math here, so client code may import this module.
+ */
+
+export type QuestionId =
+  | "mercury"
+  | "fullmoon"
+  | "newmoon"
+  | "venushome"
+  | "moonstrong"
+  | "venusmars"
+  | "storms"
+  | "flares"
+  | "marswater"
+  | "venusdet"
+  | "venusrx"
+  | "marsrx";
+
+/** What a question measures (spec 6.7). Three are shares of your plays; how
+    much you listen is a rate, plays per day. */
+export type Measure = "oldfavorites" | "aftermidnight" | "firstlistens" | "listening";
+
+export interface Question {
+  number: number;
+  id: QuestionId;
+  question: string;
+  /** The folklore it tests, under the question, never in it. */
+  story: string;
+  /** For the 3-by-4 grid and the chips. */
+  shortName: string;
+  measure: Measure;
+  /** Days at the start of a history this measure can't count. */
+  warmupDays: number;
+  /** Questions 7 and 8 test nights NASA logged. */
+  nasa: boolean;
+  /** Spec 9.2: "If {subject} moves you at all…". */
+  subject: string;
+  /** Whether the subject takes a plural verb ("solar storms move you"). */
+  plural: boolean;
+  /** Spec 9.2: "{When}, you listened 5% more." */
+  when: string;
+  eventNoun: { one: string; many: string };
+  /** "How soon depends on how much you listen and how often {this}." */
+  howOften: string;
+}
+
+export const QUESTIONS: readonly Question[] = [
+  {
+    number: 1,
+    id: "mercury",
+    question: "Does Mercury retrograde change how often you go back to old favorites?",
+    story: "The famous one: messages go astray, and people drift back to old comforts.",
+    shortName: "Mercury retrograde",
+    measure: "oldfavorites",
+    warmupDays: 365,
+    nasa: false,
+    subject: "Mercury retrograde",
+    plural: false,
+    when: "while Mercury was retrograde",
+    eventNoun: { one: "retrograde", many: "retrogrades" },
+    howOften: "Mercury turns retrograde",
+  },
+  {
+    number: 2,
+    id: "fullmoon",
+    question: "Does a full moon change how late you listen?",
+    story: "Full-moon lore says nobody sleeps.",
+    shortName: "Full moon",
+    measure: "aftermidnight",
+    warmupDays: 0,
+    nasa: false,
+    subject: "a full moon",
+    plural: false,
+    when: "around full moons",
+    eventNoun: { one: "full moon", many: "full moons" },
+    howOften: "the Moon is full",
+  },
+  {
+    number: 3,
+    id: "newmoon",
+    question: "Does the new moon change how much new music you find?",
+    story: "A new moon is for beginnings: new starts, new sounds.",
+    shortName: "New moon",
+    measure: "firstlistens",
+    warmupDays: 365,
+    nasa: false,
+    subject: "the new moon",
+    plural: false,
+    when: "around new moons",
+    eventNoun: { one: "new moon", many: "new moons" },
+    howOften: "the Moon is new",
+  },
+  {
+    number: 4,
+    id: "venushome",
+    question: "When Venus is at home, do you listen more, or less?",
+    story: "Venus rules pleasure. At home in Taurus or Libra, she's at her most generous.",
+    shortName: "Venus at home",
+    measure: "listening",
+    warmupDays: 0,
+    nasa: false,
+    subject: "Venus at home",
+    plural: false,
+    when: "while Venus was at home",
+    eventNoun: { one: "stretch", many: "stretches" },
+    howOften: "Venus is at home",
+  },
+  {
+    number: 5,
+    id: "moonstrong",
+    question: "When the Moon is strong, do you listen more, or less?",
+    story: "The Moon rules moods and habits. In Cancer or Taurus, she's steady and strong.",
+    shortName: "Strong Moon",
+    measure: "listening",
+    warmupDays: 0,
+    nasa: false,
+    subject: "a strong Moon",
+    plural: false,
+    when: "while the Moon was strong",
+    eventNoun: { one: "visit", many: "visits" },
+    howOften: "the Moon is strong",
+  },
+  {
+    number: 6,
+    id: "venusmars",
+    question: "When Venus and Mars get along, does it change how late you listen?",
+    story: "Desire and drive pulling the same way.",
+    shortName: "Venus and Mars",
+    measure: "aftermidnight",
+    warmupDays: 0,
+    nasa: false,
+    subject: "Venus and Mars getting along",
+    plural: false,
+    when: "while Venus and Mars got along",
+    eventNoun: { one: "stretch", many: "stretches" },
+    howOften: "Venus and Mars get along",
+  },
+  {
+    number: 7,
+    id: "storms",
+    question: "Do solar storms change how late you listen?",
+    story: "When the solar wind hits hard, auroras spread far from the poles.",
+    shortName: "Solar storms",
+    measure: "aftermidnight",
+    warmupDays: 0,
+    nasa: true,
+    subject: "solar storms",
+    plural: true,
+    when: "on storm nights",
+    eventNoun: { one: "stretch of storm nights", many: "stretches of storm nights" },
+    howOften: "storms come",
+  },
+  {
+    number: 8,
+    id: "flares",
+    question: "Do big solar flares change how much you listen?",
+    story: "X-class flares are the Sun at its loudest.",
+    shortName: "Big flares",
+    measure: "listening",
+    warmupDays: 0,
+    nasa: true,
+    subject: "big solar flares",
+    plural: true,
+    when: "on X-flare nights",
+    eventNoun: { one: "stretch of X-flare nights", many: "stretches of X-flare nights" },
+    howOften: "big flares come",
+  },
+  {
+    number: 9,
+    id: "marswater",
+    question: "Does Mars in a water sign change how late you listen?",
+    story: "In the water signs, Mars's drive runs deep and restless.",
+    shortName: "Mars in water",
+    measure: "aftermidnight",
+    warmupDays: 0,
+    nasa: false,
+    subject: "Mars in a water sign",
+    plural: false,
+    when: "while Mars was in a water sign",
+    eventNoun: { one: "stretch", many: "stretches" },
+    howOften: "Mars is in a water sign",
+  },
+  {
+    number: 10,
+    id: "venusdet",
+    question: "When Venus is in detriment, does your listening change?",
+    story: "Opposite her homes, Venus works against the grain.",
+    shortName: "Venus in detriment",
+    measure: "listening",
+    warmupDays: 0,
+    nasa: false,
+    subject: "Venus in detriment",
+    plural: false,
+    when: "while Venus was in detriment",
+    eventNoun: { one: "stretch", many: "stretches" },
+    howOften: "Venus is in detriment",
+  },
+  {
+    number: 11,
+    id: "venusrx",
+    question: "Does Venus retrograde change how often you go back to old favorites?",
+    story: "Venus retrograde is said to bring back old loves, and their songs.",
+    shortName: "Venus retrograde",
+    measure: "oldfavorites",
+    warmupDays: 365,
+    nasa: false,
+    subject: "Venus retrograde",
+    plural: false,
+    when: "while Venus was retrograde",
+    eventNoun: { one: "retrograde", many: "retrogrades" },
+    howOften: "Venus turns retrograde",
+  },
+  {
+    number: 12,
+    id: "marsrx",
+    question: "Does Mars retrograde change how much you listen?",
+    story: "Mars retrograde is when drive stalls and old frustrations resurface.",
+    shortName: "Mars retrograde",
+    measure: "listening",
+    warmupDays: 0,
+    nasa: false,
+    subject: "Mars retrograde",
+    plural: false,
+    when: "while Mars was retrograde",
+    eventNoun: { one: "retrograde", many: "retrogrades" },
+    howOften: "Mars turns retrograde",
+  },
+];
+
+export const questionById = (id: QuestionId): Question => QUESTIONS.find((q) => q.id === id)!;

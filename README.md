@@ -58,11 +58,12 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 `.data/` after that.
 
 ```bash
-npm test             # analysis, report, profile, zone, sky, sync, store and error-copy tests
+npm test             # analysis, answers, report, profile, zone, sky, sync, store and error-copy tests
 npm run lint
 npm run typecheck
 npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
 npm run sky          # regenerate the redesign's sky data, 2002 through 2035
+npm run null-test    # the answers' null-data test at full size, about a minute
 ```
 
 All three of the first ones run in CI on every pull request, which is new — the
@@ -140,11 +141,11 @@ blob layout.
 
 ## What's stored, and removing it
 
-Everything stored for a listener sits under four keys, all named in
+Everything stored for a listener sits under five keys, all named in
 `src/lib/store/userKeys.ts`: the scrobbles, the sync state, the genre tags for
-their top artists (per listener, not shared) and the worked-out genre results.
-The footer's "remove my data" opens `/remove`, which deletes all four with a
-POST. No GET a visitor can reach deletes anything; the expiry sweep's GET
+their top artists (per listener, not shared), the worked-out genre results, and
+the answers to the 12 questions (a record per time zone, in one blob). The
+footer's "remove my data" opens `/remove`, which deletes all five with a POST. No GET a visitor can reach deletes anything; the expiry sweep's GET
 refuses anyone without `CRON_SECRET`. Anyone can remove any name, without
 signing in: nothing is lost, since Last.fm keeps the history. Two limits keep
 that from being abused, both in `src/lib/retention.ts`: one removal per name per
@@ -156,12 +157,13 @@ calls `/api/cron/expire` once a day (`vercel.json`), and the sweep reads "last
 looked up" from the store's own write times, so a visit costs nothing extra.
 
 A removal can land while something is still writing for that name: a sync
-chunk appending a history, or a genre request fetching tags or analyzing.
+chunk appending a history, a genre request fetching tags or analyzing, or the
+answers being computed.
 Each of those checks after its write whether the name was removed since it
 started, and takes its write back if so.
 
 `scripts/audit-store-keys.mjs` lists the store, names only, and reports any
-key outside those four kinds and the removal markers: those are the keys
+key outside those five kinds and the removal markers: those are the keys
 removal and expiry never touch. It reads no object and prints no username;
 `--local` runs it against `.data`.
 
@@ -227,6 +229,36 @@ starts on, so a 1 a.m. song belongs to the night before. The profile
 (`/api/user/{name}/profile?tz=America/Chicago`) counts its busiest night,
 streak, weekday and loudest month in nights. The report route still takes
 today's single offset (`tzm`) until the redesign's answers replace it.
+
+## The 12 questions
+
+The redesign asks every listener the same 12 questions (`src/lib/answers/`),
+and `/api/user/{name}/answers?tz=…` answers them all in one pass: about 1.6
+seconds for 500,000 plays locally. Each is today's rotation test below, run by
+rotating the sky's windows instead of the plays, which gives identical counts
+(`rotation.test.ts` holds it to today's per-play test) at a fraction of the
+cost. Events merge as the spec says: Venus backing out of a sign and returning
+during a retrograde is one stretch, not two.
+
+The answer word allows for asking several questions at once. A Yes needs the
+question to pass a Benjamini-Hochberg false-discovery correction at 10% across
+every question that was tested, and its own p under 0.05. Below that it's
+Maybe, Not clearly or No by p alone, and a question without enough to test is
+Too early. `npm run null-test` runs the 12 on 1,000 made-up histories with no
+sky in them and fails if more than 13% get any Yes; the suite runs a quick 100.
+
+Answers are stored per listener and time zone, with the history they were
+computed from. A record that's behind (the history grew, the analysis changed)
+is served at once and recomputed in the background. The endpoint returns every
+sentence the page shows, built when it's served, so copy can change without a
+recompute. Questions 7 and 8 (solar storms and flares) read "Not checked yet"
+until NASA's data is stored.
+
+A backfill keeps a play twice when Last.fm's pages shift under it, and reads
+drop the repeat. The chunk that finishes a backfill now rewrites the history
+without them, in the write it makes anyway: a local copy of the largest
+history went from 11.0 MB to 8.6 MB. A history that's already been read keeps
+its repeats until a backfill runs for it again.
 
 ## How the math works
 

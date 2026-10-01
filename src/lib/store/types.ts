@@ -31,7 +31,8 @@ export interface SyncState {
 export interface ScrobbleStore {
   getSyncState(username: string): Promise<SyncState | null>;
   setSyncState(state: SyncState): Promise<void>;
-  appendScrobbles(username: string, scrobbles: Scrobble[]): Promise<void>;
+  /** `compact` also drops lines that repeat an earlier play. */
+  appendScrobbles(username: string, scrobbles: Scrobble[], opts?: { compact?: boolean }): Promise<void>;
   /** Deduped (by uts+artist+track), sorted ascending by uts. */
   getScrobbles(username: string): Promise<Scrobble[]>;
 }

@@ -198,9 +198,6 @@ async function backfill(
   }
 
   if (await removedMidChunk(username, resumed)) return notStarted(username);
-  if (collected.length > 0) {
-    await store.appendScrobbles(username, collected);
-  }
   /* An account with no scrobbles reports `totalPages: 0`, and the old rule
      only called a sync done when there was at least one page. So it stayed
      "syncing" for good: every poll fetched one more empty page past the end,
@@ -216,6 +213,11 @@ async function backfill(
     : confirmedEmpty || (state.totalPages > 0 && state.pagesDone >= state.totalPages)
       ? "ready"
       : "syncing";
+  /* The chunk that finishes the backfill also drops the duplicate lines the
+     backfill kept while pages shifted under it, in the same write. */
+  if (collected.length > 0 || state.status === "ready") {
+    await store.appendScrobbles(username, collected, { compact: state.status === "ready" });
+  }
   state.error = fatal?.message;
   state.errorCode = fatal?.code;
   state.updatedAt = Date.now();

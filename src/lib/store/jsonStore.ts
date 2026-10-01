@@ -35,14 +35,22 @@ export class BlobScrobbleStore implements ScrobbleStore {
     );
   }
 
-  async appendScrobbles(username: string, scrobbles: Scrobble[]): Promise<void> {
-    if (scrobbles.length === 0) return;
+  /**
+   * Adds plays to the stored history. With `compact`, the rewrite also drops
+   * every line that repeats an earlier one, as reads do: a backfill keeps
+   * them on purpose while pages shift under it, and they were 21% of the
+   * largest real history (step 0). The sync asks for it once, on the chunk
+   * that finishes a backfill, so it costs no extra write.
+   */
+  async appendScrobbles(username: string, scrobbles: Scrobble[], opts: { compact?: boolean } = {}): Promise<void> {
+    if (scrobbles.length === 0 && !opts.compact) return;
     const store = getBlobStore();
     const key = scrobbleKey(username);
     const existing = await store.get(key);
+    if (!existing && scrobbles.length === 0) return;
     const prior = existing ? gunzipSync(existing).toString("utf8") : "";
-    const lines = scrobbles.map((s) => JSON.stringify(s)).join("\n") + "\n";
-    await store.put(key, gzipSync(prior + lines));
+    const lines = scrobbles.map((s) => JSON.stringify(s) + "\n").join("");
+    await store.put(key, gzipSync(opts.compact ? withoutRepeats(prior + lines) : prior + lines));
     this.memo.delete(safeName(username));
   }
 
@@ -79,6 +87,27 @@ export class BlobScrobbleStore implements ScrobbleStore {
     this.memo.set(memoKey, { bytes: raw.length, scrobbles });
     return scrobbles;
   }
+}
+
+/** The history's lines, each play once (the first time it appears), keyed
+    the way reads key it. Lines that don't parse go, since reads skip them. */
+function withoutRepeats(text: string): string {
+  const seen = new Set<string>();
+  let out = "";
+  for (const line of text.split("\n")) {
+    if (!line) continue;
+    let s: Scrobble;
+    try {
+      s = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const key = `${s.uts}|${s.artist}|${s.track}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out += line + "\n";
+  }
+  return out;
 }
 
 // Module-level singleton; survives across requests within one server process.

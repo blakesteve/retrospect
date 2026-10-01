@@ -37,6 +37,7 @@ export default function RemovePage() {
               The genre tags Last.fm gives the artists played most, and the genre results worked
               out from them.
             </li>
+            <li>The answers to Retrospect&rsquo;s questions, worked out from the listening.</li>
           </ul>
           <p className="mt-2">
             Birth details for a birth chart stay in your browser and never reach Retrospect, so

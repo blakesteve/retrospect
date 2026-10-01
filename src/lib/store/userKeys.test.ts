@@ -8,6 +8,7 @@ import { runSyncChunk } from "@/lib/sync";
 import { runTagChunk } from "@/lib/tagsync";
 import { removeUserData, requestRemoval } from "@/lib/removal";
 import { GET as genresRoute } from "@/app/api/user/[name]/genres/route";
+import { GET as answersRoute } from "@/app/api/user/[name]/answers/route";
 
 /* "Remove my data" deletes the keys in `userKeys.ts` and nothing else, and
    the expiry sweep only finds names through them. So a per-user blob stored
@@ -43,13 +44,14 @@ afterEach(() => {
 });
 
 describe("the list of per-user keys", () => {
-  it("is exactly these four, sync state first", () => {
+  it("is exactly these five, sync state first", () => {
     // Literals, so a key renamed or added shows up here as a decision.
     expect(allUserKeys("Some.Listener")).toEqual([
       "sync/some_listener.json",
       "scrobbles/some_listener.jsonl.gz",
       "tags/some_listener.json",
       "cache/genres-some_listener.json",
+      "answers/some_listener.json",
     ]);
   });
 
@@ -82,13 +84,18 @@ describe("everything the app writes for a listener", () => {
       vi.fn(async () => Response.json({ toptags: { tag: [{ name: "indie rock" }] } })),
     );
 
-    // Every writer there is today: the sync, the tag fetch, the genre route.
+    // Every writer there is today: the sync, the tag fetch, the genre route,
+    // and the answers route.
     expect((await runSyncChunk(name)).status).toBe("ready");
     expect((await runTagChunk(name)).complete).toBe(true);
     const res = await genresRoute(new Request("http://x/api/user/Key.Tester/genres"), {
       params: Promise.resolve({ name }),
     });
     expect(res.status).toBe(200);
+    const answered = await answersRoute(new Request("http://x/api/user/Key.Tester/answers?tz=UTC"), {
+      params: Promise.resolve({ name }),
+    });
+    expect(answered.status).toBe(200);
 
     // Nothing written for this listener outside the list...
     for (const key of store.written) {
@@ -172,6 +179,7 @@ describe("modules that touch the blob store", () => {
     "src/app/api/user/[name]/genres/route.ts": "the genre cache, keyed through userKeys.ts",
     "src/lib/removal.ts": "deletes userKeys.ts's keys; its own markers hold a hash, not a name",
     "src/lib/expiry.ts": "lists userKeys.ts's prefixes",
+    "src/lib/answers/store.ts": "stored answers, keyed through userKeys.ts",
   };
   const TOUCHES_STORE = /\b(getBlobStore|FsBlobStore|R2BlobStore)\b|@aws-sdk\/client-s3/;
   /* A key built by hand: any string that opens with a folder, whether it's
