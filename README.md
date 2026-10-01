@@ -61,7 +61,8 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 npm test             # analysis, report, profile, sync, store and error-copy tests
 npm run lint
 npm run typecheck
-npm run ephemeris    # regenerate retrograde/full-moon/eclipse windows
+npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
+npm run sky          # regenerate the redesign's sky data, 2002 through 2035
 ```
 
 All three of the first ones run in CI on every pull request, which is new — the
@@ -178,6 +179,34 @@ A brand-new Last.fm account with no scrobbles gets a page that says how to
 start scrobbling and a "Check again" button. An empty history counts as fresh
 for a minute, not the hour a history with plays in it gets, so someone who
 plays a few songs and checks again a minute or more later sees them.
+
+## The sky data
+
+Two sets, both generated with astronomy-engine and committed, both covering
+2002 through 2035. A test fails once either covers less than a year ahead.
+
+- **Today's UI** reads `lib/ephemeris/*.json` (Mercury, Venus and Mars
+  retrogrades, full moons, eclipses). Client components import these small
+  files directly, until the redesign replaces them.
+- **The redesign** reads `lib/sky/data/` through `lib/sky/windows.ts`: sign
+  windows for the Sun, Moon and five planets, retrogrades including Jupiter and
+  Saturn, full and new moons, eclipses, and the Venus and Mars harmony
+  windows. About a megabyte, and **server only**: no client module may import
+  it. `lib/sky/clientImports.test.ts` walks the import graph, and
+  `scripts/check-sky-server-only.mjs` scans the built client chunks after every
+  build.
+
+The sign, dignity and aspect math is one module with no data in it,
+`lib/sky/sky.ts`. The generator (`scripts/sky-data.mjs`) computes every window
+with it, and the Sky view will import it, so the data and the live math can't
+disagree at a sign boundary.
+
+Accuracy, against published sources (details in `lib/sky/data.test.ts`):
+eclipses within seconds of NASA's catalog, the Sun and Moon within about a
+minute and a half of USNO and JPL Horizons, Mercury and Mars stations within a
+couple of minutes. Jupiter and Saturn are good to about half an hour:
+astronomy-engine's positions for the slow planets can be a few arcseconds off,
+which is minutes to tens of minutes of their motion.
 
 ## How the math works
 

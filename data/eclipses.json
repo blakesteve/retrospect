@@ -2,7 +2,7 @@
   "body": "Eclipses",
   "generatedBy": "astronomy-engine",
   "startYear": 2002,
-  "endYear": 2026,
+  "endYear": 2035,
   "windows": [
     {
       "start": "2002-05-24T00:03:13.490Z",
@@ -883,6 +883,334 @@
       "kind": "partial lunar",
       "sign": "Pisces",
       "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2027-02-04T03:59:32.957Z",
+      "end": "2027-02-09T03:59:32.957Z",
+      "peak": "2027-02-06T15:59:32.957Z",
+      "kind": "annular solar",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2027-02-18T11:12:44.142Z",
+      "end": "2027-02-23T11:12:44.142Z",
+      "peak": "2027-02-20T23:12:44.142Z",
+      "kind": "penumbral lunar",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2027-07-16T04:02:54.880Z",
+      "end": "2027-07-21T04:02:54.880Z",
+      "peak": "2027-07-18T16:02:54.880Z",
+      "kind": "penumbral lunar",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2027-07-30T22:06:34.636Z",
+      "end": "2027-08-04T22:06:34.636Z",
+      "peak": "2027-08-02T10:06:34.636Z",
+      "kind": "total solar",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2027-08-14T19:13:44.931Z",
+      "end": "2027-08-19T19:13:44.931Z",
+      "peak": "2027-08-17T07:13:44.931Z",
+      "kind": "penumbral lunar",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2028-01-09T16:13:00.859Z",
+      "end": "2028-01-14T16:13:00.859Z",
+      "peak": "2028-01-12T04:13:00.859Z",
+      "kind": "partial lunar",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2028-01-24T03:07:42.381Z",
+      "end": "2028-01-29T03:07:42.381Z",
+      "peak": "2028-01-26T15:07:42.381Z",
+      "kind": "annular solar",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2028-07-04T06:19:38.379Z",
+      "end": "2028-07-09T06:19:38.379Z",
+      "peak": "2028-07-06T18:19:38.379Z",
+      "kind": "partial lunar",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2028-07-19T14:55:24.627Z",
+      "end": "2028-07-24T14:55:24.627Z",
+      "peak": "2028-07-22T02:55:24.627Z",
+      "kind": "total solar",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2028-12-29T04:51:54.549Z",
+      "end": "2029-01-03T04:51:54.549Z",
+      "peak": "2028-12-31T16:51:54.549Z",
+      "kind": "total lunar",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2029-01-12T05:12:28.816Z",
+      "end": "2029-01-17T05:12:28.816Z",
+      "peak": "2029-01-14T17:12:28.816Z",
+      "kind": "partial solar",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2029-06-09T16:04:55.151Z",
+      "end": "2029-06-14T16:04:55.151Z",
+      "peak": "2029-06-12T04:04:55.151Z",
+      "kind": "partial solar",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2029-06-23T15:22:06.538Z",
+      "end": "2029-06-28T15:22:06.538Z",
+      "peak": "2029-06-26T03:22:06.538Z",
+      "kind": "total lunar",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2029-07-09T03:36:03.870Z",
+      "end": "2029-07-14T03:36:03.870Z",
+      "peak": "2029-07-11T15:36:03.870Z",
+      "kind": "partial solar",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2029-12-03T03:02:39.906Z",
+      "end": "2029-12-08T03:02:39.906Z",
+      "peak": "2029-12-05T15:02:39.906Z",
+      "kind": "partial solar",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2029-12-18T10:41:54.610Z",
+      "end": "2029-12-23T10:41:54.610Z",
+      "peak": "2029-12-20T22:41:54.610Z",
+      "kind": "total lunar",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2030-05-29T18:27:58.051Z",
+      "end": "2030-06-03T18:27:58.051Z",
+      "peak": "2030-06-01T06:27:58.051Z",
+      "kind": "annular solar",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2030-06-13T06:33:14.732Z",
+      "end": "2030-06-18T06:33:14.732Z",
+      "peak": "2030-06-15T18:33:14.732Z",
+      "kind": "partial lunar",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2030-11-22T18:50:19.626Z",
+      "end": "2030-11-27T18:50:19.626Z",
+      "peak": "2030-11-25T06:50:19.626Z",
+      "kind": "total solar",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2030-12-07T10:27:32.805Z",
+      "end": "2030-12-12T10:27:32.805Z",
+      "peak": "2030-12-09T22:27:32.805Z",
+      "kind": "penumbral lunar",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2031-05-04T15:50:47.970Z",
+      "end": "2031-05-09T15:50:47.970Z",
+      "peak": "2031-05-07T03:50:47.970Z",
+      "kind": "penumbral lunar",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2031-05-18T19:14:49.744Z",
+      "end": "2031-05-23T19:14:49.744Z",
+      "peak": "2031-05-21T07:14:49.744Z",
+      "kind": "annular solar",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2031-06-02T23:44:03.888Z",
+      "end": "2031-06-07T23:44:03.888Z",
+      "peak": "2031-06-05T11:44:03.888Z",
+      "kind": "penumbral lunar",
+      "sign": "Sagittarius",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2031-10-27T19:45:19.656Z",
+      "end": "2031-11-01T19:45:19.656Z",
+      "peak": "2031-10-30T07:45:19.656Z",
+      "kind": "penumbral lunar",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2031-11-12T09:06:12.934Z",
+      "end": "2031-11-17T09:06:12.934Z",
+      "peak": "2031-11-14T21:06:12.934Z",
+      "kind": "total solar",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2032-04-23T03:13:29.907Z",
+      "end": "2032-04-28T03:13:29.907Z",
+      "peak": "2032-04-25T15:13:29.907Z",
+      "kind": "total lunar",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2032-05-07T01:25:23.487Z",
+      "end": "2032-05-12T01:25:23.487Z",
+      "peak": "2032-05-09T13:25:23.487Z",
+      "kind": "annular solar",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2032-10-16T07:02:22.696Z",
+      "end": "2032-10-21T07:02:22.696Z",
+      "peak": "2032-10-18T19:02:22.696Z",
+      "kind": "total lunar",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2032-10-31T17:32:53.713Z",
+      "end": "2032-11-05T17:32:53.713Z",
+      "peak": "2032-11-03T05:32:53.713Z",
+      "kind": "partial solar",
+      "sign": "Scorpio",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2033-03-28T06:01:16.136Z",
+      "end": "2033-04-02T06:01:16.136Z",
+      "peak": "2033-03-30T18:01:16.136Z",
+      "kind": "total solar",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2033-04-12T07:12:31.297Z",
+      "end": "2033-04-17T07:12:31.297Z",
+      "peak": "2033-04-14T19:12:31.297Z",
+      "kind": "total lunar",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2033-09-21T01:53:11.132Z",
+      "end": "2033-09-26T01:53:11.132Z",
+      "peak": "2033-09-23T13:53:11.132Z",
+      "kind": "partial solar",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2033-10-05T22:55:02.604Z",
+      "end": "2033-10-10T22:55:02.604Z",
+      "peak": "2033-10-08T10:55:02.604Z",
+      "kind": "total lunar",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2034-03-17T22:17:27.264Z",
+      "end": "2034-03-22T22:17:27.264Z",
+      "peak": "2034-03-20T10:17:27.264Z",
+      "kind": "total solar",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2034-04-01T07:05:34.466Z",
+      "end": "2034-04-06T07:05:34.466Z",
+      "peak": "2034-04-03T19:05:34.466Z",
+      "kind": "penumbral lunar",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2034-09-10T04:18:03.806Z",
+      "end": "2034-09-15T04:18:03.806Z",
+      "peak": "2034-09-12T16:18:03.806Z",
+      "kind": "annular solar",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2034-09-25T14:46:19.262Z",
+      "end": "2034-09-30T14:46:19.262Z",
+      "peak": "2034-09-28T02:46:19.262Z",
+      "kind": "partial lunar",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2035-02-19T21:04:43.451Z",
+      "end": "2035-02-24T21:04:43.451Z",
+      "peak": "2035-02-22T09:04:43.451Z",
+      "kind": "penumbral lunar",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2035-03-07T11:04:31.488Z",
+      "end": "2035-03-12T11:04:31.488Z",
+      "peak": "2035-03-09T23:04:31.488Z",
+      "kind": "annular solar",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2035-08-16T13:10:55.732Z",
+      "end": "2035-08-21T13:10:55.732Z",
+      "peak": "2035-08-19T01:10:55.732Z",
+      "kind": "partial lunar",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2035-08-30T13:55:23.141Z",
+      "end": "2035-09-04T13:55:23.141Z",
+      "peak": "2035-09-02T01:55:23.141Z",
+      "kind": "total solar",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
     }
   ]
 }

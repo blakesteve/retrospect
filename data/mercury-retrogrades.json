@@ -2,7 +2,7 @@
   "body": "Mercury",
   "generatedBy": "astronomy-engine",
   "startYear": 2002,
-  "endYear": 2026,
+  "endYear": 2035,
   "windows": [
     {
       "start": "2002-01-18T20:49:06.093Z",
@@ -477,6 +477,174 @@
       "end": "2026-11-13T15:53:05.156Z",
       "sign": "Scorpio",
       "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2027-02-09T17:35:44.531Z",
+      "end": "2027-03-03T12:35:30.468Z",
+      "sign": "Pisces",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2027-06-10T18:19:20.156Z",
+      "end": "2027-07-04T19:40:11.718Z",
+      "sign": "Cancer",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2027-10-07T14:39:15.468Z",
+      "end": "2027-10-28T14:11:07.968Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2028-01-24T11:03:23.906Z",
+      "end": "2028-02-14T12:39:43.593Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2028-05-21T08:39:57.656Z",
+      "end": "2028-06-14T06:06:40.781Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2028-09-19T16:30:21.093Z",
+      "end": "2028-10-11T10:29:38.906Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2029-01-07T07:57:04.218Z",
+      "end": "2029-01-27T18:37:37.031Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2029-05-01T23:10:25.781Z",
+      "end": "2029-05-25T19:15:35.156Z",
+      "sign": "Taurus",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2029-09-02T12:14:24.843Z",
+      "end": "2029-09-25T02:02:41.718Z",
+      "sign": "Libra",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2029-12-22T05:49:48.281Z",
+      "end": "2030-01-11T05:44:10.781Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2030-04-13T02:28:00.468Z",
+      "end": "2030-05-06T20:18:09.843Z",
+      "sign": "Taurus",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2030-08-16T01:22:37.031Z",
+      "end": "2030-09-08T09:22:08.906Z",
+      "sign": "Virgo",
+      "signAtDirect": "Virgo"
+    },
+    {
+      "start": "2030-12-06T02:44:10.781Z",
+      "end": "2030-12-25T21:17:13.593Z",
+      "sign": "Capricorn",
+      "signAtDirect": "Sagittarius"
+    },
+    {
+      "start": "2031-03-26T00:47:27.656Z",
+      "end": "2031-04-18T11:14:38.906Z",
+      "sign": "Aries",
+      "signAtDirect": "Aries"
+    },
+    {
+      "start": "2031-07-29T06:47:27.656Z",
+      "end": "2031-08-22T04:26:07.968Z",
+      "sign": "Leo",
+      "signAtDirect": "Leo"
+    },
+    {
+      "start": "2031-11-19T21:12:18.281Z",
+      "end": "2031-12-09T16:26:07.968Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2032-03-07T16:23:19.218Z",
+      "end": "2032-03-30T14:29:24.843Z",
+      "sign": "Aries",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2032-07-10T02:28:42.656Z",
+      "end": "2032-08-03T06:58:00.468Z",
+      "sign": "Leo",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2032-11-02T11:56:07.968Z",
+      "end": "2032-11-22T14:00:35.156Z",
+      "sign": "Sagittarius",
+      "signAtDirect": "Scorpio"
+    },
+    {
+      "start": "2033-02-18T21:17:55.781Z",
+      "end": "2033-03-13T02:58:56.718Z",
+      "sign": "Pisces",
+      "signAtDirect": "Pisces"
+    },
+    {
+      "start": "2033-06-21T10:13:28.593Z",
+      "end": "2033-07-15T14:13:14.531Z",
+      "sign": "Cancer",
+      "signAtDirect": "Cancer"
+    },
+    {
+      "start": "2033-10-16T22:05:02.343Z",
+      "end": "2033-11-06T12:38:19.218Z",
+      "sign": "Scorpio",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2034-02-02T11:20:16.406Z",
+      "end": "2034-02-23T22:56:22.031Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Aquarius"
+    },
+    {
+      "start": "2034-06-02T05:16:45.468Z",
+      "end": "2034-06-26T05:29:24.843Z",
+      "sign": "Gemini",
+      "signAtDirect": "Gemini"
+    },
+    {
+      "start": "2034-09-30T02:59:38.906Z",
+      "end": "2034-10-21T10:23:19.218Z",
+      "sign": "Libra",
+      "signAtDirect": "Libra"
+    },
+    {
+      "start": "2035-01-17T06:43:56.718Z",
+      "end": "2035-02-07T01:23:19.218Z",
+      "sign": "Aquarius",
+      "signAtDirect": "Capricorn"
+    },
+    {
+      "start": "2035-05-13T18:44:38.906Z",
+      "end": "2035-06-06T14:46:17.343Z",
+      "sign": "Gemini",
+      "signAtDirect": "Taurus"
+    },
+    {
+      "start": "2035-09-13T02:23:47.343Z",
+      "end": "2035-10-05T04:55:39.843Z",
+      "sign": "Libra",
+      "signAtDirect": "Virgo"
     }
   ]
 }

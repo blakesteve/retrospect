@@ -2,17 +2,36 @@
 
 **Index**
 
-- **Done:** The store audit, and share cards that can't outlive a removal
-  (30 Sept 2026) · A way to remove your data, and an empty account that isn't
-  a dead end (30 Sept) · The report tells the truth about its own confidence
-  (28 Sept) · A young history gets a real report (28 Sept) · The bundle-shape
-  guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster
+- **Done:** The sky through 2035, and the redesign's sky data (30 Sept 2026) ·
+  The store audit, and share cards that can't outlive a removal (30 Sept) ·
+  A way to remove your data, and an empty account that isn't a dead end
+  (30 Sept) · The report tells the truth about its own confidence (28 Sept) ·
+  A young history gets a real report (28 Sept) · The bundle-shape guard
+  (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0 (17 Sept) · Roster
   4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** The redesign
 - **Next, quality:** framework error pages a visitor can still reach · the
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### The sky through 2035, and the redesign's sky data (30 September 2026)
+
+- **No more January 2027 cliff.** Today's ephemeris ended with 2026, and from
+  10 Jan 2027 (Mars stationing retrograde) reports would have counted new
+  listening as outside skies that were happening. The five files now run
+  through 2035, and 2002-2026 is byte-for-byte unchanged. The landing's
+  calendar shows the next Mars retrograde and the next eclipse again. A test
+  fails once any sky data covers less than a year ahead. Costs 27,769 bytes of
+  first-load JS on `/`, `/u/` and `/vs/` until the redesign drops these files,
+  and the bundle-shape guard's client JS rises 55,538 bytes to 1,671,074 of
+  its 1,694,000 ceiling (it counts every copy of a chunk).
+- **The redesign's sky data, server only.** Sign windows for seven bodies,
+  retrogrades for five, full and new moons, eclipses and the Venus and Mars
+  harmony windows, 2002-2035, from one data-free math module. Checked
+  against USNO, NASA's eclipse catalog and JPL Horizons. It reaches no client
+  chunk, and two guards (the import graph, and the built chunks) keep it
+  that way.
 
 ### The store audit, and share cards that can't outlive a removal (30 September 2026)
 
