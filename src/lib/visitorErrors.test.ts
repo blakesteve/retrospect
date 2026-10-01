@@ -82,15 +82,15 @@ describe("syncErrorCode", () => {
 });
 
 describe("page source", () => {
-  const root = path.resolve(__dirname, "..");
+  const root = path.resolve(__dirname, "../..");
   const pageFiles = [
-    ...readdirSync(path.join(root, "components")).map((f) => path.join("components", f)),
+    ...readdirSync(path.join(root, "src/components")).map((f) => path.join("src/components", f)),
     ...[
-      "app/page.tsx",
-      "app/layout.tsx",
-      "app/u/[username]/page.tsx",
-      "app/vs/[a]/[b]/page.tsx",
-      "app/remove/page.tsx",
+      "src/app/page.tsx",
+      "src/app/layout.tsx",
+      "src/app/u/[username]/page.tsx",
+      "src/app/vs/[a]/[b]/page.tsx",
+      "src/app/remove/page.tsx",
     ],
   ].filter((f) => f.endsWith(".tsx"));
 

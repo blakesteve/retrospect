@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * the name, so a stray POST with no body does nothing either.
  *
  * Every answer carries `outcome`; the page turns it into words
- * (`lib/removalCopy.ts`). `keys` lists each stored key, whether it existed
+ * (`src/lib/removalCopy.ts`). `keys` lists each stored key, whether it existed
  * and whether it's gone, read back after deleting: the record that the
  * removal did what it says.
  */

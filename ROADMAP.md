@@ -23,7 +23,7 @@
   The browser now sends its IANA zone, and each play is read with the offset
   in force when it was played, daylight saving included, under the rules of
   its year (the US moved its dates in 2007; Brazil dropped daylight saving in
-  2019). `lib/zone.ts` finds a zone's offset changes once per year and
+  2019). `src/lib/zone.ts` finds a zone's offset changes once per year and
   binary-searches each play: asking `Intl` about 500,000 plays takes 1.4 s on
   its own. The profile runs faster than it did, not slower.
 - **Nights.** A night runs 4 a.m. to 4 a.m. and is named by the date it
@@ -83,12 +83,12 @@ needed". Neither existed: nothing deleted, and nothing expired.
   can't slip past the limit. A removal while a sync is mid-read is refused
   until the read finishes, and anything still writing for the name when a
   removal lands (a sync chunk, a genre request) takes its write back.
-- **Every per-listener key in one list.** `lib/store/userKeys.ts` names the
+- **Every per-listener key in one list.** `src/lib/store/userKeys.ts` names the
   four (scrobbles, sync state, genre tags, genre results), and removal and
   expiry read it. A test fails if any module reaches the store without being
   listed, or if a removal leaves any key with the name in it.
 - **History expires.** About 90 days after a name was last looked up, one
-  constant in `lib/retention.ts`, swept daily by Vercel Cron. "Last looked up"
+  constant in `src/lib/retention.ts`, swept daily by Vercel Cron. "Last looked up"
   comes from the store's own write times, so a visit costs nothing extra.
   Needs `CRON_SECRET` set in Vercel, or nothing expires.
 - **The empty account has a next step.** "Nothing to read yet." now says how
@@ -406,7 +406,7 @@ itself: `Input` gained `Button`'s size scale, so `size="lg"` is `h-11` on each
 and the pair is height-matched by construction rather than by a hardcoded
 number; and `outline` now reads `--roster-control-bg` / `-border` /
 `-border-focus` / `-text` instead of hardcoding them, so the deep indigo field
-with the gold hairline is reachable from `app/globals.css`. `inputClassName`
+with the gold hairline is reachable from `src/app/globals.css`. `inputClassName`
 covers what the tokens do not.
 
 One raw control remains, with the reason at the usage:
@@ -508,7 +508,7 @@ the `threshold` refactor.
 ### Quality
 
 - [ ] **Framework error pages a visitor can still reach.** There is no
-      `app/error.tsx`, `global-error.tsx` or `not-found.tsx`, so a render
+      `src/app/error.tsx`, `global-error.tsx` or `not-found.tsx`, so a render
       exception would show Next's own "Application error" text. Nothing
       found triggers one today. A hand-typed URL with broken percent-encoding
       (`/u/abc%`) gets Next's bare "Internal Server Error", and a hand-edited

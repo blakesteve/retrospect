@@ -9,7 +9,7 @@ import { Body, Ecliptic, GeoVector, Illumination, MakeTime, MoonPhase, SearchMoo
  * computes every window with these functions, the server reads the windows,
  * and the Sky view will import this module to draw the wheel, so the three
  * can't disagree at a sign boundary. Anything that needs the generated windows
- * goes through `lib/sky/windows.ts`, which is server-only.
+ * goes through `src/lib/sky/windows.ts`, which is server-only.
  *
  * Positions are geocentric, tropical and apparent: astronomy-engine's
  * `GeoVector` with aberration, rotated by `Ecliptic` onto the true ecliptic

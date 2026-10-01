@@ -1,4 +1,4 @@
-{"generatedBy":"astronomy-engine via lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"windows":[
+{"generatedBy":"astronomy-engine via src/lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"windows":[
 {"body":"Sun","sign":"Capricorn","start":"2001-12-21T19:21:23Z","end":"2002-01-20T06:01:57Z","retrogradeAtStart":false,"retrogradeAtEnd":false},
 {"body":"Sun","sign":"Aquarius","start":"2002-01-20T06:01:57Z","end":"2002-02-18T20:13:09Z","retrogradeAtStart":false,"retrogradeAtEnd":false},
 {"body":"Sun","sign":"Pisces","start":"2002-02-18T20:13:09Z","end":"2002-03-20T19:16:00Z","retrogradeAtStart":false,"retrogradeAtEnd":false},

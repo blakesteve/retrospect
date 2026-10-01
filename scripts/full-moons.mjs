@@ -3,7 +3,7 @@
 // retrograde scripts so the analysis machinery is reusable.
 //
 // Usage: node scripts/full-moons.mjs [startYear] [endYear]
-// Output: data/full-moons.json
+// Output: src/data/full-moons.json
 
 import { SearchMoonPhase, EclipticGeoMoon, MakeTime } from 'astronomy-engine';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -39,9 +39,9 @@ for (;;) {
   cursor = MakeTime(new Date(fm.date.getTime() + 20 * 86400 * 1000));
 }
 
-mkdirSync('data', { recursive: true });
+mkdirSync('src/data', { recursive: true });
 writeFileSync(
-  'data/full-moons.json',
+  'src/data/full-moons.json',
   JSON.stringify({ body: 'Moon', generatedBy: 'astronomy-engine', startYear, endYear, windows }, null, 2)
 );
 console.error(`Found ${windows.length} full moons in ${((Date.now() - t0) / 1000).toFixed(1)}s (${(windows.length / (endYear - startYear + 1)).toFixed(1)}/yr)`);

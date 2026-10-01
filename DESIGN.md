@@ -52,7 +52,7 @@ All sky math is `astronomy-engine` (MIT, ~100KB, no network). Retrograde detecti
 
 **Validated in the spike** (`scripts/retrograde-windows.mjs`): 2002–2026 yields **79 windows, avg 22.2 days, 3.16/year**, and the 2025–26 dates match published astronomical tables exactly (e.g. 2025: Mar 15–Apr 7, Jul 18–Aug 11, Nov 9–29). Runtime: 0.3s for the full 25-year scan.
 
-Windows are identical for all users → computed at build time, shipped as static JSON (`data/mercury-retrogrades.json`), imported like any constant. No runtime ephemeris in v1. When the moon/seasons features land, the same build step emits a daily ephemeris table (~9k rows).
+Windows are identical for all users → computed at build time, shipped as static JSON (`src/data/mercury-retrogrades.json`), imported like any constant. No runtime ephemeris in v1. When the moon/seasons features land, the same build step emits a daily ephemeris table (~9k rows).
 
 ## 4. Architecture
 
@@ -124,7 +124,7 @@ Visual language: deep-sky navy, gold hairlines, engraved-almanac serif for displ
 ## 6. Build order
 
 1. **Spike (done / in progress)** — `scripts/retrograde-windows.mjs` ✅ validated · `scripts/nostalgia-index.mjs` ready, needs `LASTFM_API_KEY` + username. **Gate: is the number interesting on real data?**
-2. **Scaffold** — `create-next-app` (TS, App Router). Port spike fns to `lib/` as pure, tested modules (Vitest). No DB yet: JSON-file cache behind the same interface.
+2. **Scaffold** — `create-next-app` (TS, App Router). Port spike fns to `src/lib/` as pure, tested modules (Vitest). No DB yet: JSON-file cache behind the same interface.
 3. **Supabase** — *create the project here, not before.* Swap the cache interface to Postgres. Resumable sync worker + status polling.
 4. **Report UI** — hero stat, verdict, skeptic panel, sync experience.
 5. **Share card** — Satori OG route. This is launch.

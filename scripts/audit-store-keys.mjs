@@ -1,6 +1,6 @@
 /**
  * Lists every key in the store and reports any that the app doesn't account
- * for: not one of the four per-user kinds in `lib/store/userKeys.ts`, and not
+ * for: not one of the four per-user kinds in `src/lib/store/userKeys.ts`, and not
  * a removal marker. Removal and expiry only ever see keys that list covers, so
  * anything outside it is kept forever.
  *
@@ -25,10 +25,10 @@
 import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
-import { USER_KEY_KINDS, usernameFromKey } from "../lib/store/userKeys.ts";
+import { USER_KEY_KINDS, usernameFromKey } from "../src/lib/store/userKeys.ts";
 
 /* The one prefix that isn't per user. Kept in step with MARKER_PREFIX in
-   `lib/removal.ts` by hand: importing that module drags in the whole app. */
+   `src/lib/removal.ts` by hand: importing that module drags in the whole app. */
 const MARKER_PREFIX = "limits/removals/";
 
 async function listR2() {

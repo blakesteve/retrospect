@@ -25,7 +25,7 @@ export const PROFILE_MIN_SCROBBLES = 500;
  *
  * So a habit is reported only once this many plays have passed its warm-up,
  * the same floor a trial needs inside its windows before it gives a verdict
- * (MIN_RETRO_N in lib/report.ts). Below it the share is null and the habit is
+ * (MIN_RETRO_N in src/lib/report.ts). Below it the share is null and the habit is
  * listed in `pending` with the date it can start.
  */
 export const HABIT_MIN_COUNTED = 500;

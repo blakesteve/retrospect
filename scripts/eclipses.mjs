@@ -2,7 +2,7 @@
 // tropical sign at peak. Same output shape as the other ephemeris scripts.
 //
 // Usage: node scripts/eclipses.mjs [startYear] [endYear]
-// Output: data/eclipses.json
+// Output: src/data/eclipses.json
 
 import {
   SearchLunarEclipse,
@@ -59,9 +59,9 @@ while (solar.peak.date.getTime() < limit) {
 
 windows.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 
-mkdirSync('data', { recursive: true });
+mkdirSync('src/data', { recursive: true });
 writeFileSync(
-  'data/eclipses.json',
+  'src/data/eclipses.json',
   JSON.stringify({ body: 'Eclipses', generatedBy: 'astronomy-engine', startYear, endYear, windows }, null, 2)
 );
 console.error(`Found ${windows.length} eclipses in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

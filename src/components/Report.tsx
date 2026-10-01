@@ -115,7 +115,7 @@ export function Report({ username }: { username: string }) {
   );
   const [showStory, setShowStory] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
-  /* A code, never raw text: see lib/visitorErrors.ts. `fatal` replaces the
+  /* A code, never raw text: see src/lib/visitorErrors.ts. `fatal` replaces the
      page and is only for failures before there is a report to show. Once one
      is on screen a failed recompute leaves it there and sets `notice`
      instead, so picking an era with no listening can't blank the page. */

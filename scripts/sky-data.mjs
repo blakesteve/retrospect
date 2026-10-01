@@ -1,17 +1,17 @@
 // Retrospect: the redesign's sky data, 2002 through 2035 (spec 7.2).
 //
-// Every window comes from lib/sky/sky.ts, the same module the server and the
+// Every window comes from src/lib/sky/sky.ts, the same module the server and the
 // Sky view use, so the data and the live math can't disagree at a boundary.
 // Events are bisected to the second (well inside the spec's "to the minute").
 // Windows at the range's edges keep their true start and end: the scan runs
 // three years either side, then keeps what overlaps the range.
 //
-// Output (server-only; read through lib/sky/windows.ts, never by client code):
-//   lib/sky/data/retrogrades.json  Mercury, Venus, Mars, Jupiter, Saturn
-//   lib/sky/data/signs.json        sign windows for the seven bodies
-//   lib/sky/data/moons.json        full and new moons, +/- 36 h
-//   lib/sky/data/eclipses.json     lunar and solar, +/- 60 h, with the kind
-//   lib/sky/data/harmony.json      Venus and Mars trine or sextile within 3 deg
+// Output (server-only; read through src/lib/sky/windows.ts, never by client code):
+//   src/lib/sky/data/retrogrades.json  Mercury, Venus, Mars, Jupiter, Saturn
+//   src/lib/sky/data/signs.json        sign windows for the seven bodies
+//   src/lib/sky/data/moons.json        full and new moons, +/- 36 h
+//   src/lib/sky/data/eclipses.json     lunar and solar, +/- 60 h, with the kind
+//   src/lib/sky/data/harmony.json      Venus and Mars trine or sextile within 3 deg
 //
 // Usage: node scripts/sky-data.mjs [startYear] [endYear]   (Node 23.6 or later:
 // it imports the .ts module directly)
@@ -39,7 +39,7 @@ import {
   offFrom,
   signIndexOf,
   signOf,
-} from '../lib/sky/sky.ts';
+} from '../src/lib/sky/sky.ts';
 
 const startYear = Number(process.argv[2] ?? 2002);
 const endYear = Number(process.argv[3] ?? 2035);
@@ -49,7 +49,7 @@ const SCAN_FROM = Date.UTC(startYear - 3, 0, 1);
 const SCAN_TO = Date.UTC(endYear + 4, 0, 1);
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-const OUT = 'lib/sky/data';
+const OUT = 'src/lib/sky/data';
 
 /** An instant as ISO, rounded to the whole second. */
 const iso = (ms) => new Date(Math.round(ms / 1000) * 1000).toISOString().replace('.000Z', 'Z');
@@ -244,7 +244,7 @@ const harmony = [];
 }
 
 mkdirSync(OUT, { recursive: true });
-const meta = { generatedBy: 'astronomy-engine via lib/sky/sky.ts', frame: 'geocentric, tropical, apparent', range };
+const meta = { generatedBy: 'astronomy-engine via src/lib/sky/sky.ts', frame: 'geocentric, tropical, apparent', range };
 /* One record per line: compact, and a regenerated file diffs line by line. */
 const write = (name, key, rows) => {
   const head = JSON.stringify({ ...meta, [key]: [] }).slice(0, -3);

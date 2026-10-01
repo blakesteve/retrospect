@@ -1,4 +1,4 @@
-{"generatedBy":"astronomy-engine via lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"windows":[
+{"generatedBy":"astronomy-engine via src/lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"windows":[
 {"aspect":60,"side":"+","start":"2002-01-13T17:57:11Z","end":"2002-01-25T02:25:13Z","rateAtStart":-0.5277,"rateAtEnd":-0.5295},
 {"aspect":60,"side":"-","start":"2003-04-16T09:01:30Z","end":"2003-04-26T07:01:26Z","rateAtStart":-0.5975,"rateAtEnd":-0.6133},
 {"aspect":120,"side":"-","start":"2003-07-08T06:27:58Z","end":"2003-07-14T06:05:42Z","rateAtStart":-0.9707,"rateAtEnd":-1.0357},

@@ -1,4 +1,4 @@
-{"generatedBy":"astronomy-engine via lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"events":[
+{"generatedBy":"astronomy-engine via src/lib/sky/sky.ts","frame":"geocentric, tropical, apparent","range":{"from":"2002-01-01T00:00:00Z","to":"2036-01-01T00:00:00Z"},"events":[
 {"phase":"new","peak":"2002-01-13T13:29:17Z","start":"2002-01-12T01:29:17Z","end":"2002-01-15T01:29:17Z","sign":"Capricorn"},
 {"phase":"full","peak":"2002-01-28T22:51:05Z","start":"2002-01-27T10:51:05Z","end":"2002-01-30T10:51:05Z","sign":"Leo"},
 {"phase":"new","peak":"2002-02-12T07:41:34Z","start":"2002-02-10T19:41:34Z","end":"2002-02-13T19:41:34Z","sign":"Aquarius"},

@@ -9,7 +9,7 @@
  *
  * Roster 4.13.0 regressed a sibling app by 18.49% and nobody found out until
  * somebody measured by hand. Every gate this app has is blind to it: vitest is
- * scoped to the `lib` tree and never imports Roster or renders anything, eslint
+ * scoped to the `src/lib` tree and never imports Roster or renders anything, eslint
  * reads source and never build output, and `tsc` cares about types. A build
  * that ships twice the JS is green four times over.
  *
@@ -104,7 +104,7 @@ const PKG = "@blakesteve/roster";
  * than to make a red build green.
  *
  * Raised 30 September 2026, JS 1,694,000 to 1,751,000. What grew: today's UI
- * ephemeris (lib/ephemeris/*.json) extended from 2026 to 2035 so reports keep
+ * ephemeris (src/lib/ephemeris/*.json) extended from 2026 to 2035 so reports keep
  * working past January 2027. The same JSON sits in several route chunks, so
  * client JS rose 55,538 bytes to 1,671,074 and left 22,926 of headroom. The
  * new ceiling restores 4.8% slack (79,926 bytes). The redesign deletes these

@@ -82,7 +82,7 @@ fixed.
 
 Roster's `Input` takes its surface, border, focus border and text from four
 `--roster-control-*` variables, and floating panels take three more from
-`--roster-popover-*`. Both are mapped in `app/globals.css` to this app's own
+`--roster-popover-*`. Both are mapped in `src/app/globals.css` to this app's own
 `--surface-1`/`--surface-2`, `--hairline`, `--gold` and `--text-primary`, in
 **both** `:root` and `.dark`. Both scopes are load-bearing, not belt and
 braces: `Select` copies the `dark` class onto its portaled menu, so Roster's
@@ -97,7 +97,7 @@ outer field wrapper — use `inputClassName` to reach the control itself.
 Visitors never see an API's `error` text. It's written for whoever is
 debugging, and it can name environment variables, storage settings or HTTP
 statuses. Every error a page can show carries a `code` instead, and the page
-renders the plain-English message for that code from `lib/visitorErrors.ts`,
+renders the plain-English message for that code from `src/lib/visitorErrors.ts`,
 logging the raw text to the console. Adding a new failure means adding a code
 there, not passing a message through. A test checks every message for
 developer text, and checks the page source for the old hints.
@@ -141,13 +141,13 @@ blob layout.
 ## What's stored, and removing it
 
 Everything stored for a listener sits under four keys, all named in
-`lib/store/userKeys.ts`: the scrobbles, the sync state, the genre tags for
+`src/lib/store/userKeys.ts`: the scrobbles, the sync state, the genre tags for
 their top artists (per listener, not shared) and the worked-out genre results.
 The footer's "remove my data" opens `/remove`, which deletes all four with a
 POST. No GET a visitor can reach deletes anything; the expiry sweep's GET
 refuses anyone without `CRON_SECRET`. Anyone can remove any name, without
 signing in: nothing is lost, since Last.fm keeps the history. Two limits keep
-that from being abused, both in `lib/retention.ts`: one removal per name per
+that from being abused, both in `src/lib/retention.ts`: one removal per name per
 day, and at most 20 removals a day across every name.
 
 Stored history also expires on its own, about 90 days after its name was last
@@ -185,23 +185,23 @@ plays a few songs and checks again a minute or more later sees them.
 Two sets, both generated with astronomy-engine and committed, both covering
 2002 through 2035. A test fails once either covers less than a year ahead.
 
-- **Today's UI** reads `lib/ephemeris/*.json` (Mercury, Venus and Mars
+- **Today's UI** reads `src/lib/ephemeris/*.json` (Mercury, Venus and Mars
   retrogrades, full moons, eclipses). Client components import these small
   files directly, until the redesign replaces them.
-- **The redesign** reads `lib/sky/data/` through `lib/sky/windows.ts`: sign
+- **The redesign** reads `src/lib/sky/data/` through `src/lib/sky/windows.ts`: sign
   windows for the Sun, Moon and five planets, retrogrades including Jupiter and
   Saturn, full and new moons, eclipses, and the Venus and Mars harmony
   windows. About a megabyte, and **server only**: no client module may import
-  it. `lib/sky/clientImports.test.ts` walks the import graph, and
+  it. `src/lib/sky/clientImports.test.ts` walks the import graph, and
   `scripts/check-sky-server-only.mjs` scans the built client chunks after every
   build.
 
 The sign, dignity and aspect math is one module with no data in it,
-`lib/sky/sky.ts`. The generator (`scripts/sky-data.mjs`) computes every window
+`src/lib/sky/sky.ts`. The generator (`scripts/sky-data.mjs`) computes every window
 with it, and the Sky view will import it, so the data and the live math can't
 disagree at a sign boundary.
 
-Accuracy, against published sources (details in `lib/sky/data.test.ts`):
+Accuracy, against published sources (details in `src/lib/sky/data.test.ts`):
 eclipses within seconds of NASA's catalog, the Sun and Moon within about a
 minute and a half of USNO and JPL Horizons, Mercury and Mars stations within a
 couple of minutes. Jupiter and Saturn are good to about half an hour:
@@ -212,7 +212,7 @@ which is minutes to tens of minutes of their motion.
 
 The browser sends its IANA zone as `tz`, and the server reads every play with
 that zone's real offsets, daylight saving included, under the rules of the
-play's own year. `lib/zone.ts` finds a zone's offset changes once per year a
+play's own year. `src/lib/zone.ts` finds a zone's offset changes once per year a
 history covers and binary-searches each play, because asking `Intl` about
 500,000 plays takes over a second. A zone is accepted if a formatter accepts
 it and it's a named zone rather than a bare offset like `+05:30`. It's never

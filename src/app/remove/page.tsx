@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 /* Plain words on purpose: what's kept, for how long, what removing does.
-   The numbers come from `lib/retention.ts`, the same constants the expiry
+   The numbers come from `src/lib/retention.ts`, the same constants the expiry
    sweep and the removal limits use, so this page can't drift from them. */
 export default function RemovePage() {
   return (
