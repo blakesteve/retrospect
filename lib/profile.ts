@@ -2,6 +2,7 @@ import type { Scrobble, TagResult } from "./analysis/nostalgia";
 import { tagScrobbles } from "./analysis/nostalgia";
 import { tagDiscovery, tagOldFlame } from "./analysis/metrics";
 import type { PendingHabit, PendingHabitKey } from "./readiness";
+import { nightMonth, nightName, nightWeekday, zoneClock } from "./zone";
 
 /**
  * The sky-independent report: what actually runs this person's listening.
@@ -10,6 +11,7 @@ import type { PendingHabit, PendingHabitKey } from "./readiness";
  */
 
 const DAY = 86400;
+const HOUR = 3600;
 
 /** A profile needs this many scrobbles at all. */
 export const PROFILE_MIN_SCROBBLES = 500;
@@ -45,8 +47,12 @@ export interface ListeningProfile {
   /** Share of plays per local hour, 24 entries summing to ~1. */
   hourShares: number[];
   goldenHour: { startHour: number; endHour: number; share: number };
+  /** Share of plays from midnight to 3:59 a.m. local. */
   nightShare: number;
+  /** The weekday whose nights hold the most plays: a 1 a.m. Saturday play is
+      Friday's (spec 7.1). */
   topWeekday: { day: string; share: number };
+  /** By night too: a 1 a.m. play on 1 March is February's. */
   topMonth: { month: string; delta: number };
   playsPerDay: number;
   /** Share of post-warm-up plays that are old favorites; null while pending. */
@@ -57,29 +63,48 @@ export interface ListeningProfile {
   reunionShare: number | null;
   /** Habits withheld for want of history, and when each can start. */
   pending: PendingHabit[];
+  /** The busiest night, named by the date it starts on. */
   busiestDay: { date: string; count: number };
+  /** Nights in a row with at least one play. */
   longestStreakDays: number;
 }
 
-export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): ListeningProfile | null {
+/** What the profile route sends: the profile, and the zone it was read in. */
+export interface ProfileResponse extends ListeningProfile {
+  /** The zone it was read in, as `canonicalZone` names it. A key, not a
+      label: aliases fold onto one name, often the old one (Europe/Kyiv comes
+      back "Europe/Kiev"), so a page shows the zone it sent. */
+  zone: string;
+  /** True when the request sent no zone or a refused one, so it's UTC for
+      that reason (spec 7.1: the page says so). */
+  zoneFellBack: boolean;
+}
+
+/**
+ * The profile in a listener's IANA zone (`canonicalZone`), with its real
+ * offsets, daylight saving included. Hours are hours on the local clock; every
+ * per-day number counts nights, 4 a.m. to 4 a.m. (spec 7.1).
+ */
+export function buildProfile(scrobbles: Scrobble[], zone: string): ListeningProfile | null {
   if (scrobbles.length < PROFILE_MIN_SCROBBLES) return null;
   const sorted = [...scrobbles].sort((a, b) => a.uts - b.uts);
-  const shift = tzOffsetMinutes * 60;
   const n = sorted.length;
+  const clock = zoneClock(zone, sorted[0].uts, sorted[n - 1].uts);
 
-  // Local-time histograms.
   const hourCounts = new Array<number>(24).fill(0);
+  const nightCounts = new Map<number, number>();
+  for (const s of sorted) {
+    hourCounts[(Math.floor(clock.localSeconds(s.uts) / HOUR) % 24 + 24) % 24]++;
+    const night = clock.nightOf(s.uts);
+    nightCounts.set(night, (nightCounts.get(night) ?? 0) + 1);
+  }
   const weekdayCounts = new Array<number>(7).fill(0);
   const monthCounts = new Array<number>(12).fill(0);
-  const dayCounts = new Map<string, number>();
-  for (const s of sorted) {
-    const local = new Date((s.uts + shift) * 1000);
-    hourCounts[local.getUTCHours()]++;
-    weekdayCounts[local.getUTCDay()]++;
-    monthCounts[local.getUTCMonth()]++;
-    const day = local.toISOString().slice(0, 10);
-    dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+  for (const [night, count] of nightCounts) {
+    weekdayCounts[nightWeekday(night)] += count;
+    monthCounts[nightMonth(night)] += count;
   }
+  const nights = [...nightCounts.keys()].sort((a, b) => a - b);
   const hourShares = hourCounts.map((c) => c / n);
   const nightShare = (hourCounts[0] + hourCounts[1] + hourCounts[2] + hourCounts[3]) / n;
 
@@ -91,7 +116,7 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
   }
 
   const topWd = weekdayCounts.indexOf(Math.max(...weekdayCounts));
-  const topMonth = loudestMonth(monthCounts, sorted[0].uts + shift, sorted[n - 1].uts + shift);
+  const topMonth = loudestMonth(monthCounts, nights[0] * DAY, nights[nights.length - 1] * DAY);
 
   // Baseline habit shares (sky not consulted), withheld below the floor.
   const pending: PendingHabit[] = [];
@@ -115,19 +140,14 @@ export function buildProfile(scrobbles: Scrobble[], tzOffsetMinutes: number): Li
   const spanDays = Math.max(1, (sorted[n - 1].uts - sorted[0].uts) / DAY);
   const playsPerDay = n / spanDays;
 
-  // Busiest single (local) day + longest daily streak.
+  // Busiest night (the earliest, on a tie) and the longest run of nights.
   let busiestDay = { date: "", count: 0 };
-  for (const [date, count] of dayCounts) {
-    if (count > busiestDay.count) busiestDay = { date, count };
-  }
-  const days = [...dayCounts.keys()].sort();
   let longestStreakDays = 0;
   let run = 0;
-  let prev = -Infinity;
-  for (const d of days) {
-    const t = Date.parse(d + "T00:00:00Z");
-    run = t - prev === DAY * 1000 ? run + 1 : 1;
-    prev = t;
+  for (let i = 0; i < nights.length; i++) {
+    const count = nightCounts.get(nights[i])!;
+    if (count > busiestDay.count) busiestDay = { date: nightName(nights[i]), count };
+    run = i > 0 && nights[i] === nights[i - 1] + 1 ? run + 1 : 1;
     if (run > longestStreakDays) longestStreakDays = run;
   }
 
@@ -228,7 +248,8 @@ const MIN_MONTH_DAYS = 14;
  * history (a partial first or last month) can't win, unless no month has
  * that much, and isn't part of the usual pace it's compared against.
  *
- * Takes local-time seconds, so a day boundary is the listener's midnight.
+ * Takes the first and last nights' dates as seconds since 1970, so a day
+ * boundary is the start of a night.
  */
 export function loudestMonth(
   monthCounts: number[],

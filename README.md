@@ -58,7 +58,7 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 `.data/` after that.
 
 ```bash
-npm test             # analysis, report, profile, sync, store and error-copy tests
+npm test             # analysis, report, profile, zone, sky, sync, store and error-copy tests
 npm run lint
 npm run typecheck
 npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
@@ -207,6 +207,26 @@ minute and a half of USNO and JPL Horizons, Mercury and Mars stations within a
 couple of minutes. Jupiter and Saturn are good to about half an hour:
 astronomy-engine's positions for the slow planets can be a few arcseconds off,
 which is minutes to tens of minutes of their motion.
+
+## Time zones and nights
+
+The browser sends its IANA zone as `tz`, and the server reads every play with
+that zone's real offsets, daylight saving included, under the rules of the
+play's own year. `lib/zone.ts` finds a zone's offset changes once per year a
+history covers and binary-searches each play, because asking `Intl` about
+500,000 plays takes over a second. A zone is accepted if a formatter accepts
+it and it's a named zone rather than a bare offset like `+05:30`. It's never
+checked against `Intl.supportedValuesOf`, which leaves out UTC, Asia/Kolkata
+and Europe/Kyiv. A missing or refused zone reads in UTC, and the response says
+so with `zoneFellBack`. The `zone` a response names is a key, not a label:
+aliases fold onto one name, often the old one (Europe/Kyiv comes back
+`Europe/Kiev`), so pages show the zone they sent.
+
+A night runs from 4 a.m. to 4 a.m. local time and is named by the date it
+starts on, so a 1 a.m. song belongs to the night before. The profile
+(`/api/user/{name}/profile?tz=America/Chicago`) counts its busiest night,
+streak, weekday and loudest month in nights. The report route still takes
+today's single offset (`tzm`) until the redesign's answers replace it.
 
 ## How the math works
 
