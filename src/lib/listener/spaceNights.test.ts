@@ -127,6 +127,8 @@ describe("the arithmetic", () => {
     expect(lunarDistances(0.01)).toBeCloseTo(3.89, 2); // "about 4 lunar distances" (7.3)
     expect(metersFromH(22)).toBeCloseTo(141.4, 1);
     expect(metersFromH(17.75)).toBeCloseTo(1_000, -1);
+    // Six decimals, the same on every Node version (pow's last digits aren't).
+    expect(metersFromH(22)).toBe(141.403762);
     expect(["M9.9", "X1.0", "C3.0", "X9.3", "X10"].sort((a, b) => flareSize(b) - flareSize(a))).toEqual(["X10", "X9.3", "X1.0", "M9.9", "C3.0"]);
   });
 

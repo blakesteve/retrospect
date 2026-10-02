@@ -46,7 +46,14 @@
   about what Retrospect does, then the username, then NASA's EPIC photo of
   the Apr 8, 2024 eclipse with a caption tying it to the sample, then four
   working samples, each badged "Sample". The sample listener is a less poppy
-  made-up history, committed to `public/samples/`.
+  made-up history, committed to `public/samples/`, with NASA's real photos of
+  Earth and the Sun on its nights and JPL's flybys across its history.
+- **The samples read the same on every Node version.** The Moon's angle (to
+  0.01°) and lit fraction (to the whole percent), and an asteroid's size (to
+  six decimals), are rounded where they're computed: their last digits came
+  from trigonometry and powers that differ between Node versions and
+  platforms, so CI's Node 22 wrote different ones than Node 24. A test reads
+  every sample for longer ones.
 - **Roster 5.1.0**, for `Sheet` and `LiquidNav`.
 
 ### Questions 5 and 6 test their folklore (1 October 2026)

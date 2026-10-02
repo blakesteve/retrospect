@@ -14,6 +14,7 @@ import {
   sampleHistory,
 } from "../../scripts/sample-listener";
 import { openSheet, sheetDepth } from "@/components/listener/sheetUrl";
+import space from "../../scripts/sample-space.json";
 import { dropSample, openSample, SAMPLE_LABEL, SAMPLE_USER, SAMPLE_ZONE as LANDING_ZONE, sampleFile } from "@/components/landing/sampleUrls";
 import { tileFacts } from "@/components/landing/tileFacts";
 
@@ -86,7 +87,13 @@ interface NightOut {
   eclipse: { kind: string } | null;
   firstPlays: { songId: string; artist: string; track: string; pairing: string | null }[];
   wild: { title: string } | null;
-  space: { kp: number | null; biggestFlare: string | null };
+  space: {
+    kp: number | null;
+    biggestFlare: string | null;
+    epic: { url: string; credit: string } | "none" | "unknown";
+    photos: { kind?: string }[];
+    asteroid: { name: string } | null;
+  };
 }
 const songsFile = () => json<{ row: Song[]; listed: Song[] }>("songs.json");
 const night = (date: string) => json<{ nights: NightOut[] }>(`nights-${date.slice(0, 7)}.json`).nights.find((n) => n.date === date);
@@ -110,6 +117,32 @@ describe("the committed sample", () => {
     expect(stale, "public/samples is stale: run WRITE_SAMPLES=1 npx vitest run src/lib/samples.test.ts").toEqual([]);
   });
 
+  it("carries no digits that depend on the Node version (CI runs Node 22)", () => {
+    // Trigonometry and powers differ in their last digits between Node
+    // versions and platforms, so a value computed with them and written in
+    // full makes the committed files stale on CI. These are the ones the
+    // routes write; plain + - * / (a share, a p-value) is the same everywhere.
+    const LIMITS: Record<string, number> = { phaseAngle: 2, illumination: 2, meters: 6 };
+    const seen: Record<string, number> = { phaseAngle: 0, illumination: 0, meters: 0 };
+    const long: string[] = [];
+    const scan = (v: unknown, where: string) => {
+      if (Array.isArray(v)) v.forEach((x, i) => scan(x, `${where}[${i}]`));
+      else if (v && typeof v === "object")
+        for (const [k, x] of Object.entries(v)) {
+          if (k in LIMITS && typeof x === "number") {
+            seen[k]++;
+            if ((String(x).split(".")[1] ?? "").length > LIMITS[k]) long.push(`${where}.${k}: ${x}`);
+          } else scan(x, `${where}.${k}`);
+        }
+    };
+    for (const f of committedNames()) scan(json(f), f);
+    // Reach: the Moon on every night, and sizes in the nights and songs.
+    expect(seen.phaseAngle).toBeGreaterThan(200);
+    expect(seen.illumination).toBeGreaterThan(200);
+    expect(seen.meters).toBeGreaterThan(200);
+    expect(long.slice(0, 5)).toEqual([]);
+  });
+
   it("is generated the same way every time", () => {
     const a = sampleHistory();
     const b = sampleHistory();
@@ -118,7 +151,10 @@ describe("the committed sample", () => {
 
   it("stays small, since a sheet fetches it on demand", () => {
     const sizes = committedNames().map((f) => committed(f).length);
-    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(360_000);
+    // 2 Oct 2026: 375,998 characters once the nights carried NASA's photos
+    // and JPL's asteroids (300,397 at 29597fc). One sheet fetches one file.
+    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(400_000);
+    expect(Math.max(...sizes)).toBeLessThan(80_000);
   });
 });
 
@@ -154,11 +190,22 @@ describe("the sample is a made-up listener (8.1: never a real person's listening
     expect(named.length).toBeGreaterThan(100);
     expect(named.filter((s) => !catalog.has(s))).toEqual([]);
     // No file carries a listener's name: no name field, and no listener's page.
+    // The one name allowed is an asteroid's, JPL's designation ("2023 RF").
+    const asteroids: string[] = [];
     for (const f of committedNames()) {
-      const { strings, keys } = walk(json(f));
+      const parsed = JSON.parse(committed(f), (k, v) => {
+        if (k !== "asteroid" || !v || typeof v !== "object") return v;
+        asteroids.push(v.name);
+        const rest = { ...v };
+        delete rest.name;
+        return rest;
+      });
+      const { strings, keys } = walk(parsed);
       expect(keys.filter((k) => /^(user(name)?|listener|name)$/i.test(k)), f).toEqual([]);
       expect(strings.filter((s) => /\/u\//.test(s)), f).toEqual([]);
     }
+    expect(asteroids.length).toBeGreaterThan(100);
+    expect(asteroids.filter((a) => !/^\(?\d+/.test(a))).toEqual([]);
   });
 });
 
@@ -191,6 +238,27 @@ describe("the sample opens what the landing promises (8.1)", () => {
     expect(apr8).toMatchObject({ plays: 28, afterMidnight: 2, eclipse: { kind: "total solar" } });
     expect(apr8.wild?.title).toBe("A total solar eclipse across North America");
     expect(apr8.firstPlays.map((f) => f.track)).toContain("Aquarius");
+  });
+
+  it("shows NASA's photos on its nights, from the committed NASA months", () => {
+    // The eclipse night's Earth, facing Chicago, from EPIC's own archive.
+    const apr8 = night("2024-04-08")!.space.epic;
+    expect(apr8).toMatchObject({ credit: "NASA EPIC team" });
+    expect(typeof apr8 === "object" && apr8.url).toMatch(/^https:\/\/epic\.gsfc\.nasa\.gov\/archive\/natural\/2024\/04\/08\/jpg\/epic_1b_20240408\d{6}\.jpg$/);
+    // Every month the samples show has NASA's data: a sample regenerated
+    // into a new month fails here until `node scripts/sample-space.mjs` runs.
+    const epicMonths = new Set(space.months.filter((m) => m.source === "epic").map((m) => m.month));
+    const shown = new Set(committedNames().flatMap((f) => (f.startsWith("nights-") ? [f.slice(7, 14)] : [])));
+    for (const w of json<{ wild: { date: string }[] }>("highlights.json").wild) shown.add(w.date.slice(0, 7));
+    expect([...shown].filter((m) => !epicMonths.has(m))).toEqual([]);
+    // Most nights have Earth, never "unknown"; storm and flare nights have the Sun.
+    const nights = committedNames()
+      .filter((f) => f.startsWith("nights-"))
+      .flatMap((f) => json<{ nights: NightOut[] }>(f).nights);
+    expect(nights.filter((n) => typeof n.space.epic === "object").length).toBeGreaterThan(nights.length * 0.8);
+    expect(nights.filter((n) => n.space.epic === "unknown")).toEqual([]);
+    expect(nights.filter((n) => n.space.photos.some((p) => p.kind === "sdo")).length).toBeGreaterThan(20);
+    expect(json<{ counts: { flybys: number } }>("highlights.json").counts.flybys).toBeGreaterThan(1000);
   });
 
   it("has every selected song's night, so a song sheet always finds it", () => {

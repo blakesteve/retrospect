@@ -27,19 +27,22 @@
  * - Everything else is filler: songs played at most 11 times, which no route
  *   ever names. Their titles stay in this process.
  * - The sky is the real one, and NASA's log is the committed fixture
- *   (`src/lib/answers/testdata/donki-compact.json`, read 1 Oct 2026). No
- *   other NASA or JPL month is stored, so the sample has no asteroids,
- *   fireballs or EPIC photos: the routes say what they don't know.
+ *   (`src/lib/answers/testdata/donki-compact.json`, read 1 Oct 2026).
+ * - NASA's photos and JPL's flybys are real too, from
+ *   `scripts/sample-space.json` (`node scripts/sample-space.mjs`): EPIC's
+ *   Earth and SDO's Sun for the months the samples show, and close
+ *   approaches and fireballs for the whole history.
  */
 import type { Scrobble } from "@/lib/analysis/nostalgia";
 import { mulberry32 } from "@/lib/analysis/rng";
 import { writeTagStore } from "@/lib/genres";
 import { emptyCompact, writeCompact, type DonkiCompact } from "@/lib/space/compact";
-import { forgetFinalMonths } from "@/lib/space/store";
+import { forgetFinalMonths, SPACE_PREFIX, writeMonth, writeSpaceJson, type SpaceMonth, type SpaceSource } from "@/lib/space/store";
 import { getBlobStore, MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
 import { getStore } from "@/lib/store/jsonStore";
 import { intlOffset } from "@/lib/zone";
 import donki from "@/lib/answers/testdata/donki-compact.json";
+import space from "./sample-space.json";
 import { GET as answersRoute } from "@/app/api/user/[name]/answers/route";
 import { GET as songsRoute } from "@/app/api/user/[name]/songs/route";
 import { GET as highlightsRoute } from "@/app/api/user/[name]/highlights/route";
@@ -146,13 +149,13 @@ export const MORE: CatalogSong[] = [
   { artist: "Kendrick Lamar", track: "Not Like Us", first: "2024-05-05T11:20", plays: 29 },
   { artist: "Fontaines D.C.", track: "Starburster", first: "2024-05-14T17:45", plays: 14 },
   { artist: "Khruangbin", track: "May Ninth", first: "2024-05-10T23:05", plays: 33 },
-  { artist: "Yeah Yeah Yeahs", track: "Maps", first: "2024-05-22T21:02", plays: 20 },
+  { artist: "LCD Soundsystem", track: "All My Friends", first: "2024-05-22T21:02", plays: 20 },
   { artist: "Adrianne Lenker", track: "Sadness as a Gift", first: "2024-05-28T00:41", plays: 26 },
   { artist: "Pavement", track: "Harness Your Hopes", first: "2024-06-02T18:26", plays: 22 },
   { artist: "Mazzy Star", track: "Fade Into You", first: "2024-06-09T22:10", plays: 27 },
   { artist: "Big Thief", track: "Shark Smile", first: "2024-06-29T09:03", plays: 25 },
   { artist: "Clairo", track: "Sexy to Someone", first: "2024-06-14T20:33", plays: 16 },
-  { artist: "LCD Soundsystem", track: "All My Friends", first: "2024-06-21T21:47", plays: 31 },
+  { artist: "Charli xcx", track: "360", first: "2024-06-21T21:47", plays: 31 },
   { artist: "The Marías", track: "No One Noticed", first: "2024-07-03T23:12", plays: 19 },
   { artist: "Portishead", track: "Roads", first: "2024-07-08T16:55", plays: 17 },
   { artist: "Wednesday", track: "Bull Believer", first: "2024-07-19T21:30", plays: 23 },
@@ -225,7 +228,7 @@ export const ARTISTS: Record<string, { tag: string; filler: number }> = {
   "Mazzy Star": { tag: "dream pop", filler: 2 },
   "The Marías": { tag: "dream pop", filler: 2 },
   Stereolab: { tag: "post-rock", filler: 1 },
-  "Yeah Yeah Yeahs": { tag: "indie rock", filler: 1 },
+  "Charli xcx": { tag: "electropop", filler: 2 },
   Duster: { tag: "slowcore", filler: 1 },
   "Black Country, New Road": { tag: "post-rock", filler: 1 },
   "Animal Collective": { tag: "experimental", filler: 1 },
@@ -426,6 +429,10 @@ export async function generateSamples(): Promise<Map<string, string>> {
     inMemory();
     // The fixture predates the log's storm starts; the rest is the log as NASA had it.
     await writeCompact({ ...emptyCompact(), ...(donki as unknown as Partial<DonkiCompact>) });
+    // NASA's months for the sample, and EPIC's list of its days, as the
+    // fill's own index keeps it: a day EPIC doesn't list reads "none" (7.3).
+    for (const file of space.months) await writeMonth(file as SpaceMonth<SpaceSource>);
+    await writeSpaceJson(`${SPACE_PREFIX}epic-done.json`, { days: space.epicListed, available: space.epicListed });
     const history = sampleHistory();
     await getStore().appendScrobbles(SAMPLE_USERNAME, history);
     const artists = [...new Set(history.map((p) => p.artist))];

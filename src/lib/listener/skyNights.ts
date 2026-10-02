@@ -82,13 +82,18 @@ export function skyNights(clock: ZoneClock, first: number, last: number): SkyNig
 export const ninePm = (clock: ZoneClock, night: number) => clock.nightStart(night) + 17 * 3600;
 
 /** The Moon at 9 p.m. local: MoonPhase's angle (0 new, 180 full), the lit
-    fraction, and her sign (spec 7.4). */
+    fraction, and her sign (spec 7.4). The angle is kept to 0.01°, finer than
+    any drawing needs, and the fraction to the whole percent the copy says,
+    rounded once from the raw value (rounding twice moved "% lit" a point on
+    1 night in 200). The digits past those come from the trigonometry, which
+    differs between Node versions and platforms, and the committed sample
+    must read the same on CI's Node 22 as on a laptop's Node 24. */
 export function moonAt(uts: number): { phaseAngle: number; illumination: number; sign: Sign } {
   const date = new Date(uts * 1000);
   const t = MakeTime(date);
   return {
-    phaseAngle: MoonPhase(t),
-    illumination: Illumination(Body.Moon, t).phase_fraction,
+    phaseAngle: Math.round(MoonPhase(t) * 100) / 100,
+    illumination: Math.round(Illumination(Body.Moon, t).phase_fraction * 100) / 100,
     sign: signOf(longitude("Moon", date)),
   };
 }
