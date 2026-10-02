@@ -14,7 +14,8 @@ describe("a stored listener record", () => {
   const record = { version: LISTENER_VERSION, stamp: historyStamp(plays), nasaStamp: "2026-09-28|abc", tagged: 2 } as ListenerRecord;
 
   it("is current only on the same history, NASA log, tags and version", () => {
-    expect(LISTENER_VERSION).toBe(1);
+    // 2: the Surprise me facts are stored (2 Oct 2026).
+    expect(LISTENER_VERSION).toBe(2);
     expect(isCurrentListener(record, plays, "2026-09-28|abc", 2)).toBe(true);
     expect(isCurrentListener(record, [...plays, { uts: 1_700_002_000, artist: "Gamma", track: "x" }], "2026-09-28|abc", 2)).toBe(false);
     expect(isCurrentListener(record, plays, "2026-09-29|abc", 2)).toBe(false);

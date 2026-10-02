@@ -1,9 +1,19 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { buildProfile, loudestMonth } from "./profile";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildProfile, loudestMonth, profileResponse } from "./profile";
 import { MemoryBlobStore, setBlobStore } from "./store/blob";
 import { getStore } from "./store/jsonStore";
 import { GET as profileRoute } from "@/app/api/user/[name]/profile/route";
 import type { Scrobble } from "./analysis/nostalgia";
+
+// Nothing here may reach the network: a fetch that slips through fails loudly.
+beforeEach(() => {
+  vi.stubGlobal("fetch", () => Promise.reject(new Error("no network in tests")));
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /* Around a year old, three habits were computed from whatever few plays had
    passed their warm-up, and an empty list came back as 0%: a 365-day history
@@ -113,7 +123,14 @@ describe("the profile route on a very small history", () => {
       params: Promise.resolve({ name: "tiny" }),
     });
     expect(res.status).toBe(404);
-    expect(await res.json()).toMatchObject({ have: 300, needed: 500 });
+    // The whole body: the 8.4 tiny-history line reads `have` and `needed`,
+    // and `code` names the state the way the answers name it.
+    expect(await res.json()).toEqual({
+      error: "The profile needs at least 500 scrobbles.",
+      code: "too-few-plays",
+      have: 300,
+      needed: 500,
+    });
   });
 });
 
@@ -295,5 +312,285 @@ describe("the profile route takes the zone", () => {
       expect(p.hourShares[3], query).toBe(1);
     }
     expect(await get("unzoned", "tz=UTC")).toMatchObject({ zone: "UTC", zoneFellBack: false });
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Phase 3a: the "Your habits" row                                     */
+/* ------------------------------------------------------------------ */
+
+const getProfile = async (name: string, query = "") =>
+  profileRoute(new Request(`http://test/api/user/${name}/profile${query ? `?${query}` : ""}`), {
+    params: Promise.resolve({ name }),
+  });
+
+describe("the profile route writes the pending sentence (spec 13.5)", () => {
+  beforeEach(() => setBlobStore(new MemoryBlobStore()));
+  afterEach(() => setBlobStore(null));
+
+  it("returns it for a history just past a year, every start already behind us", async () => {
+    // 1 January 2023 to 14 January 2024, 5 plays a day at noon: 70 plays past
+    // the one-year warm-up, none past the 548 days reunions wait. Every start
+    // (January 2024, July 2024) is in the past on any day this runs, so the
+    // sentence counts songs and never names a month.
+    await getStore().appendScrobbles("young", history(utc(2023, 1, 1), utc(2024, 1, 15), 5));
+    const res = await getProfile("young", "tz=UTC");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pendingSentence).toBe(
+      "A few habits need more history before they mean anything: " +
+        "whether you mostly replay old favorites or go looking for new music (needs about 430 more songs), " +
+        "how often you try songs you've never played before (needs about 430 more songs), " +
+        "and whether you go back to artists after long breaks (needs about 500 more songs).",
+    );
+    // `pending` stays alongside it, for anything that wants the numbers.
+    expect(body.pending.map((p: { habit: string }) => p.habit)).toEqual(["old-favorites", "first-listens", "reunions"]);
+  });
+
+  it("returns null when nothing is pending", async () => {
+    await getStore().appendScrobbles("settled", history(utc(2023, 1, 1), utc(2026, 1, 1), 5));
+    const body = await (await getProfile("settled", "tz=UTC")).json();
+    expect(body.pending).toEqual([]);
+    expect(body.pendingSentence).toBeNull();
+  });
+});
+
+describe("profileResponse writes the sentence for the request's clock", () => {
+  // Three months from 1 January 2026, 8 plays a day at 1 a.m. UTC.
+  const young = buildProfile(history(utc(2026, 1, 1), utc(2026, 4, 1), 8, 1), "UTC")!;
+
+  it("names the month each habit can start while it's still ahead", () => {
+    const r = profileResponse(young, "UTC", false, Date.UTC(2026, 3, 1));
+    expect(r.pendingSentence).toBe(
+      "A few habits need more history before they mean anything: " +
+        "whether you mostly replay old favorites or go looking for new music (from January 2027, once you've played about 500 songs after that), " +
+        "how often you try songs you've never played before (from January 2027, once you've played about 500 songs after that), " +
+        "and whether you go back to artists after long breaks (from July 2027, once you've played about 500 songs after that).",
+    );
+    expect(r).toMatchObject({ zone: "UTC", zoneFellBack: false });
+  });
+
+  it("counts songs instead once those months have passed, from the same profile", () => {
+    const r = profileResponse(young, "UTC", false, Date.UTC(2027, 7, 1));
+    expect(r.pendingSentence).toBe(
+      "A few habits need more history before they mean anything: " +
+        "whether you mostly replay old favorites or go looking for new music (needs about 500 more songs), " +
+        "how often you try songs you've never played before (needs about 500 more songs), " +
+        "and whether you go back to artists after long breaks (needs about 500 more songs).",
+    );
+  });
+});
+
+/** Any emoji, as spec 8.9 means it: pictographs and the dingbat block. */
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+
+describe("archetypes carry no emoji (spec 8.9, 9.5)", () => {
+  afterEach(() => setBlobStore(null));
+
+  it("the pattern catches the badges' old emoji", () => {
+    // Positive control: these are three of the nine the badges carried.
+    for (const old of ["\u{1F989}", "\u2696\uFE0F", "\u26CF"]) expect(EMOJI.test(old), old).toBe(true);
+  });
+
+  it("each badge is a label and a sentence, and the response has no emoji in it", async () => {
+    setBlobStore(new MemoryBlobStore());
+    // Three years at 5 plays a day at noon: three badges, each of which had one.
+    await getStore().appendScrobbles("badged", history(utc(2023, 1, 1), utc(2026, 1, 1), 5));
+    const res = await getProfile("badged", "tz=UTC");
+    const text = await res.text();
+    const body = JSON.parse(text);
+    expect(body.archetypes.map((a: { label: string }) => a.label)).toEqual([
+      "Comfort Creature",
+      "Daylight Listener",
+      "Selective Ears",
+    ]);
+    for (const a of body.archetypes) expect(Object.keys(a).sort()).toEqual(["label", "why"]);
+    expect(text).not.toContain("emoji");
+    expect(text).not.toMatch(EMOJI);
+  });
+});
+
+describe("noise is always excluded (spec 4)", () => {
+  beforeEach(() => setBlobStore(new MemoryBlobStore()));
+  afterEach(() => setBlobStore(null));
+
+  /** `count` plays a minute apart from `start`, by `artist`. */
+  const run = (start: number, count: number, artist: string): Scrobble[] =>
+    Array.from({ length: count }, (_, i) => ({ uts: start + i * 60, artist, track: `Track ${i % 40}` }));
+
+  it("doesn't count a noise artist's plays toward the 500, whatever `noise` says", async () => {
+    // 450 songs and 100 plays of rain: 550 stored, 450 that count.
+    const plays = [...run(utc(2026, 6, 1), 450, "Artist 1"), ...run(utc(2026, 6, 2), 100, "Rain Sounds")];
+    await getStore().appendScrobbles("rainy", plays);
+    for (const query of ["", "noise=exclude", "noise=include"]) {
+      const res = await getProfile("rainy", query);
+      expect(res.status, query).toBe(404);
+      expect(await res.json(), query).toMatchObject({ code: "too-few-plays", have: 450, needed: 500 });
+    }
+  });
+
+  it("would have counted those 550 plays had they been songs", async () => {
+    // Control for the test above: the same 550 plays by a musician pass.
+    const plays = [...run(utc(2026, 6, 1), 450, "Artist 1"), ...run(utc(2026, 6, 2), 100, "Artist 2")];
+    await getStore().appendScrobbles("dry", plays);
+    expect((await getProfile("dry")).status).toBe(200);
+  });
+
+  it("leaves a noise artist's hours out of the habits", async () => {
+    // 600 songs at 03:00 UTC through July 2026, and 300 plays of rain at 08:00.
+    const songs = Array.from({ length: 600 }, (_, i) => ({
+      uts: Date.parse("2026-07-01T03:00:00Z") / 1000 + (i % 30) * DAY + Math.floor(i / 30) * 60,
+      artist: `Artist ${i % 9}`,
+      track: `Track ${i % 40}`,
+    }));
+    const rain = Array.from({ length: 300 }, (_, i) => ({
+      uts: Date.parse("2026-07-01T08:00:00Z") / 1000 + (i % 30) * DAY + Math.floor(i / 30) * 60,
+      artist: "Rain Sounds",
+      track: "Thunder",
+    }));
+    await getStore().appendScrobbles("sleeper", [...songs, ...rain]);
+    for (const query of ["tz=UTC", "tz=UTC&noise=include"]) {
+      const body = await (await getProfile("sleeper", query)).json();
+      expect(body.hourShares[3], query).toBe(1);
+      expect(body.hourShares[8], query).toBe(0);
+    }
+  });
+
+  it("reads a history that is all noise whole, as the answers do, rather than as nothing", async () => {
+    await getStore().appendScrobbles("allrain", run(utc(2026, 6, 1), 600, "Rain Sounds"));
+    const res = await getProfile("allrain", "tz=UTC");
+    expect(res.status).toBe(200);
+    expect((await res.json()).hourShares[0]).toBeGreaterThan(0);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* ListeningProfile.tsx, read as source                                */
+/* ------------------------------------------------------------------ */
+
+const root = path.resolve(__dirname, "../..");
+const COMPONENT = path.join(root, "src/components/ListeningProfile.tsx");
+const componentSource = readFileSync(COMPONENT, "utf8");
+
+/** Every module a file names, `import type` included. */
+const specifiersOf = (src: string): string[] =>
+  [
+    ...src.matchAll(/\bfrom\s+["']([^"']+)["']/g),
+    ...src.matchAll(/^\s*import\s+["']([^"']+)["']/gm),
+    ...src.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g),
+    ...src.matchAll(/\brequire\(\s*["']([^"']+)["']\s*\)/g),
+  ].map((m) => m[1]);
+
+/** A specifier as an "@/..." path, relative ones resolved from `fromFile`. */
+const asAlias = (fromFile: string, spec: string): string =>
+  spec.startsWith(".") ? `@/${path.relative(path.join(root, "src"), path.resolve(path.dirname(fromFile), spec))}` : spec;
+
+/** The modules a client file must never import (spec 13.5). */
+const BANNED = /^@\/lib\/(readiness|likelihood|report|ephemeris)(\/|\.|$)/;
+
+/** Where a runtime import lands, or null for a package. */
+function resolveFile(from: string, spec: string): string | null {
+  const alias = asAlias(from, spec);
+  if (!alias.startsWith("@/")) return null;
+  const base = path.join(root, "src", alias.slice(2));
+  for (const c of [base, `${base}.ts`, `${base}.tsx`, path.join(base, "index.ts")]) {
+    if (existsSync(c) && statSync(c).isFile()) return c;
+  }
+  return null;
+}
+
+/** Every file a module reaches through runtime imports (`import type` never bundles). */
+function reach(start: string): string[] {
+  const seen = new Set<string>();
+  const stack = [start];
+  while (stack.length) {
+    const f = stack.pop()!;
+    if (seen.has(f)) continue;
+    seen.add(f);
+    if (f.endsWith(".json")) continue;
+    const src = readFileSync(f, "utf8");
+    const runtime = [
+      ...src.matchAll(/^\s*import\s+(?!type\b)[^;]*?from\s+["']([^"']+)["']/gm),
+      ...src.matchAll(/^\s*export\s+(?!type\b)[^;]*?from\s+["']([^"']+)["']/gm),
+      ...src.matchAll(/^\s*import\s+["']([^"']+)["']/gm),
+      ...src.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g),
+    ].map((m) => m[1]);
+    for (const spec of runtime) {
+      const file = resolveFile(f, spec);
+      if (file) stack.push(file);
+    }
+  }
+  return [...seen].map((f) => path.relative(root, f));
+}
+
+/** Window data a client bundle must never carry (spec 7.2, 13.5). */
+const isWindowData = (f: string) =>
+  /^src\/lib\/ephemeris\/.*\.json$/.test(f) || f === "src/lib/sky/windows.ts" || f.startsWith("src/lib/sky/data/");
+
+describe("ListeningProfile.tsx, the habits row", () => {
+  it("reads the file it means to: the row's copy from spec 8.4 and 9.5 is there", () => {
+    // Positive control for every absence below.
+    expect(componentSource).toMatch(/^"use client";/);
+    expect(componentSource).toContain('const HEADING = "Your habits";');
+    expect(componentSource).toContain(
+      'const LINE = "Not the sky: when you listen, how much, and what you reach for, from every play.";',
+    );
+    expect(componentSource).toContain("of your plays to read. So far there are ");
+  });
+
+  it("asks for the profile in the zone the page sent, and nothing about noise", () => {
+    // No DOM here, so the request is read from the source: `tz` and the
+    // route, and no `noise` (the route always excludes it).
+    expect(componentSource).toContain("new URLSearchParams({ tz: zone })");
+    expect(componentSource).toContain("/api/user/${encodeURIComponent(username)}/profile${query}");
+    // A `noise` parameter, however it's set (the comments may say "noise").
+    expect(componentSource).not.toMatch(/noise=|["'`]noise["'`]|\bnoise:/);
+    expect('params.set("noise", "exclude")').toMatch(/noise=|["'`]noise["'`]|\bnoise:/);
+    expect("?tz=UTC&noise=exclude").toMatch(/noise=|["'`]noise["'`]|\bnoise:/);
+  });
+
+  it("is a row: a section and an h2 named Your habits, and one line when it fails (8.4, 11)", () => {
+    // The heading, section and failed line are the shared row's, so check
+    // the row draws them and that this one is named for the habits.
+    const pieces = readFileSync(path.join(root, "src/components/listener/pieces.tsx"), "utf8");
+    const row = pieces.slice(pieces.indexOf("export function Row("));
+    expect(row).toMatch(/<section aria-labelledby=/);
+    expect(row).toMatch(/<h2 id=/);
+    expect(pieces).toMatch(/\{name\} didn(?:'|\u2019|&rsquo;)t load\. Refresh to try again\./);
+    expect(componentSource).toMatch(/<Row id="your-habits" title=\{HEADING\} sub=\{LINE\}>/);
+    expect(componentSource).toContain("<RowFailed name={HEADING} />");
+  });
+
+  it("imports none of the modules that reach the window JSON", () => {
+    const specs = specifiersOf(componentSource);
+    // Controls: the scan sees the imports that are there, and the matcher
+    // fires on the banned ones however they're spelled.
+    expect(specs).toContain("react");
+    expect(specs).toContain("@blakesteve/roster");
+    for (const bad of ["@/lib/readiness", "@/lib/likelihood", "@/lib/report", "@/lib/ephemeris/retrogrades"]) {
+      expect(BANNED.test(bad), bad).toBe(true);
+    }
+    expect(BANNED.test(asAlias(COMPONENT, "../lib/readiness"))).toBe(true);
+    expect(specs.map((s) => asAlias(COMPONENT, s)).filter((s) => BANNED.test(s))).toEqual([]);
+  });
+
+  it("reaches no window data, and no readiness, likelihood or report, at run time", () => {
+    // Control: from the server's profile module the same walk does reach them.
+    const fromServer = reach(path.join(root, "src/lib/profile.ts"));
+    expect(fromServer).toContain("src/lib/readiness.ts");
+    expect(fromServer.filter(isWindowData)).toContain("src/lib/ephemeris/mercury-retrogrades.json");
+
+    const fromRow = reach(COMPONENT);
+    expect(fromRow).toContain("src/components/ListeningProfile.tsx");
+    expect(fromRow.filter(isWindowData)).toEqual([]);
+    expect(fromRow.filter((f) => /^src\/lib\/(readiness|likelihood|report)\.ts$/.test(f))).toEqual([]);
+  });
+
+  it("has no emoji and none of the old copy", () => {
+    expect(componentSource).not.toMatch(EMOJI);
+    expect(componentSource).not.toContain("Sky aside");
+    expect(componentSource).not.toContain("no horoscope required");
+    expect(componentSource).not.toMatch(/innocent/i);
+    expect(componentSource).not.toMatch(/\bemoji\b/);
   });
 });

@@ -1,7 +1,7 @@
 import type { Scrobble, TagResult } from "./analysis/nostalgia";
 import { tagScrobbles } from "./analysis/nostalgia";
 import { tagDiscovery, tagOldFlame } from "./analysis/metrics";
-import type { PendingHabit, PendingHabitKey } from "./readiness";
+import { pendingHabitsSentence, type PendingHabit, type PendingHabitKey } from "./readiness";
 import { nightMonth, nightName, nightWeekday, zoneClock } from "./zone";
 
 /**
@@ -36,8 +36,9 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+/** A badge: a name and the sentence that earns it. No emoji, anywhere
+    (spec 8.9 and 9.5): the badges used to carry one each. */
 export interface Archetype {
-  emoji: string;
   label: string;
   why: string;
 }
@@ -69,7 +70,8 @@ export interface ListeningProfile {
   longestStreakDays: number;
 }
 
-/** What the profile route sends: the profile, and the zone it was read in. */
+/** What the profile route sends: the profile, the zone it was read in, and
+    the one sentence the page shows about habits still waiting. */
 export interface ProfileResponse extends ListeningProfile {
   /** The zone it was read in, as `canonicalZone` names it. A key, not a
       label: aliases fold onto one name, often the old one (Europe/Kyiv comes
@@ -78,6 +80,38 @@ export interface ProfileResponse extends ListeningProfile {
   /** True when the request sent no zone or a refused one, so it's UTC for
       that reason (spec 7.1: the page says so). */
   zoneFellBack: boolean;
+  /** `pending` in words, or null when nothing is pending. Written here so
+      the page never imports readiness.ts, which reaches the window JSON
+      (spec 13.5). */
+  pendingSentence: string | null;
+}
+
+/** The profile route's 404 under PROFILE_MIN_SCROBBLES plays, noise excluded.
+    `have` and `needed` let the page say how far along the history is. */
+export interface ProfileTooFew {
+  error: string;
+  code: "too-few-plays";
+  have: number;
+  needed: number;
+}
+
+/**
+ * The response for a profile read in `zone`. `nowMs` decides whether a
+ * pending habit's start is still ahead (a date) or already past (a count of
+ * songs), so it's the request's clock, never the cached profile's.
+ */
+export function profileResponse(
+  profile: ListeningProfile,
+  zone: string,
+  zoneFellBack: boolean,
+  nowMs: number,
+): ProfileResponse {
+  return {
+    ...profile,
+    zone,
+    zoneFellBack,
+    pendingSentence: pendingHabitsSentence(profile.pending, nowMs),
+  };
 }
 
 /**
@@ -156,19 +190,16 @@ export function buildProfile(scrobbles: Scrobble[], zone: string): ListeningProf
   if (oldFavoriteShare !== null) {
     if (oldFavoriteShare >= 0.55) {
       archetypes.push({
-        emoji: "🛋",
         label: "Comfort Creature",
         why: `${Math.round(oldFavoriteShare * 100)}% of your plays are songs you already knew and loved. You return to what works.`,
       });
     } else if (oldFavoriteShare <= 0.35) {
       archetypes.push({
-        emoji: "🧭",
         label: "Restless Explorer",
         why: `Only ${Math.round(oldFavoriteShare * 100)}% of your plays are old favorites. You rarely look back; there's always something next.`,
       });
     } else {
       archetypes.push({
-        emoji: "⚖️",
         label: "Balanced Diet",
         why: `${Math.round(oldFavoriteShare * 100)}% comfort listens, ${100 - Math.round(oldFavoriteShare * 100)}% new territory. A genuinely even split is rarer than it sounds.`,
       });
@@ -176,40 +207,34 @@ export function buildProfile(scrobbles: Scrobble[], zone: string): ListeningProf
   }
   if (discoveryShare !== null && discoveryShare >= 0.1) {
     archetypes.push({
-      emoji: "⛏",
       label: "Crate Digger",
       why: `${Math.round(discoveryShare * 100)}% of your plays are first listens, tracks you had never played before that moment. You hunt.`,
     });
   }
   if (nightShare >= 0.12) {
     archetypes.push({
-      emoji: "🦉",
       label: "Night Owl",
       why: `${Math.round(nightShare * 100)}% of your listening lands between midnight and 4am. The small hours are your listening room.`,
     });
   } else if (nightShare <= 0.04) {
     archetypes.push({
-      emoji: "🌤",
       label: "Daylight Listener",
       why: `Almost none of your listening happens between midnight and 4am (${(nightShare * 100).toFixed(1)}%). Your headphones sleep when you do.`,
     });
   }
   if (playsPerDay >= 60) {
     archetypes.push({
-      emoji: "📻",
       label: "Always On",
       why: `${Math.round(playsPerDay)} plays a day, averaged over your whole history. Music is the background radiation of your life.`,
     });
   } else if (playsPerDay <= 15) {
     archetypes.push({
-      emoji: "🎯",
       label: "Selective Ears",
       why: `A deliberate ${Math.round(playsPerDay)} plays a day. You choose what you hear; quality over volume.`,
     });
   }
   if (reunionShare !== null && reunionShare >= 0.015) {
     archetypes.push({
-      emoji: "🕯",
       label: "Rekindler",
       why: "You regularly return to artists after years of silence. Some doors never close for you.",
     });

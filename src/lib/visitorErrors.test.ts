@@ -83,16 +83,19 @@ describe("syncErrorCode", () => {
 
 describe("page source", () => {
   const root = path.resolve(__dirname, "../..");
-  const pageFiles = [
-    ...readdirSync(path.join(root, "src/components")).map((f) => path.join("src/components", f)),
-    ...[
-      "src/app/page.tsx",
-      "src/app/layout.tsx",
-      "src/app/u/[username]/page.tsx",
-      "src/app/vs/[a]/[b]/page.tsx",
-      "src/app/remove/page.tsx",
-    ],
-  ].filter((f) => f.endsWith(".tsx"));
+  // Every component and every page or layout, at any depth: the redesign's
+  // components live in subfolders, and a fixed list would let them escape.
+  const walk = (dir: string): string[] =>
+    readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? (e.name === "api" ? [] : walk(path.join(dir, e.name))) : [path.join(dir, e.name)],
+    );
+  const pageFiles = [...walk("src/components"), ...walk("src/app")].filter((f) => f.endsWith(".tsx") || f.endsWith(".ts"));
+
+  it("reaches the redesign's components and pages", () => {
+    expect(pageFiles).toContain(path.join("src/components/listener/Shell.tsx"));
+    expect(pageFiles).toContain(path.join("src/app/u/[username]/layout.tsx"));
+    expect(pageFiles).toContain(path.join("src/app/page.tsx"));
+  });
 
   it.each(pageFiles)("%s has no developer hint for visitors", (file) => {
     const source = readFileSync(path.join(root, file), "utf8");

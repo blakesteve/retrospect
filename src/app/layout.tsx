@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL?.trim() || "http://localhost:3000"),
   title: "Retrospect — Your Music Taste vs. the Actual Sky",
   description:
-    "Retrospect turns your Last.fm history into a music horoscope backed by real math. Does Mercury retrograde change what you play? Find out, with proof.",
+    "See the planets, solar storms, eclipses and asteroids behind your Last.fm history, and find out, honestly, whether any of it moved you.",
 };
 
 export default function RootLayout({

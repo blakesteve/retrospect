@@ -323,6 +323,30 @@ describe("a pass", () => {
     expect(waited.fetches).toBe(26); // this month, then 2002 to 2026 a year at a time
   });
 
+  it("fails a pass whose store is down without an unhandled rejection", async () => {
+    setBlobStore({
+      get: async () => {
+        throw new Error("store down");
+      },
+      put: async () => {
+        throw new Error("store down");
+      },
+      del: async () => {},
+      has: async () => false,
+      list: async () => [],
+    } as unknown as Parameters<typeof setBlobStore>[0]);
+    const unhandled: unknown[] = [];
+    const seen = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", seen);
+    try {
+      await expect(runSpaceWork({ budgetMs: 1_000 })).rejects.toThrow("store down");
+      await new Promise((r) => setTimeout(r, 20));
+    } finally {
+      process.off("unhandledRejection", seen);
+    }
+    expect(unhandled).toEqual([]);
+  });
+
   it("spends a short budget on DONKI before anything else", async () => {
     fake.msPerFetch = 1_000;
     fake.apod = ["2026-10-12"];

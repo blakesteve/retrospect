@@ -1,149 +1,86 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Button, Checkbox, Disclosure, Input, Select } from "@blakesteve/roster";
-import { PHENOMENA, PHENOMENON_KEYS, type PhenomenonKey } from "@/lib/ephemeris/phenomena";
-import { METRICS, type MetricKey } from "@/lib/analysis/metrics";
-import { BirthChartPanel } from "./BirthChartPanel";
+import { Button, Card, Input } from "@blakesteve/roster";
+import { isValidUsername } from "@/lib/username";
 
 /**
- * The front door: username + Consult, with the full reading configurable up
- * front — sky, measure, era, noise filter, and birth chart. Everything flows
- * into the report via the URL (birth data via localStorage, never the URL).
+ * `aria-invalid="true"` on a Roster `Input` (spec 8.1, 11). Roster's field is
+ * Headless UI's, which sets `aria-invalid` from its own `invalid` prop and
+ * overwrites one passed directly, so the prop that reaches it is `invalid`.
+ * Roster's types don't list it; it rides through Roster's rest props.
+ */
+export const invalidProps = (invalid: boolean) => ({ invalid, "aria-invalid": invalid ? ("true" as const) : undefined });
+
+/**
+ * The username card (spec 8.1 item 6). The name is checked in the browser
+ * with the status route's own pattern before anything is asked of the
+ * server; a good one goes to `/u/{name}` with nothing else in the URL. There
+ * is nothing to configure: the 12 questions are the same for everyone (4).
  */
 export function UsernameForm() {
   const router = useRouter();
+  const field = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
-  const [body, setBody] = useState<PhenomenonKey>("mercury");
-  const [metric, setMetric] = useState<"classic" | MetricKey>("classic");
-  const [fromMonth, setFromMonth] = useState("");
-  const [toMonth, setToMonth] = useState("");
-  const [excludeNoise, setExcludeNoise] = useState(true);
+  const [invalid, setInvalid] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // A page restored from the back-forward cache keeps its state: without
+  // this, the button would still be loading when you come back.
+  useEffect(() => {
+    const restore = (e: PageTransitionEvent) => {
+      if (e.persisted) setSubmitting(false);
+    };
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, []);
 
   return (
-    <form
-      className="flex flex-col items-center w-full max-w-xl gap-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const trimmed = name.trim();
-        if (!trimmed) return;
-        const params = new URLSearchParams();
-        if (body !== "mercury") params.set("body", body);
-        if (metric !== "classic") params.set("metric", metric);
-        if (fromMonth) params.set("from", fromMonth);
-        if (toMonth) params.set("to", toMonth);
-        if (excludeNoise) params.set("noise", "exclude");
-        const q = params.toString();
-        router.push(`/u/${encodeURIComponent(trimmed)}${q ? `?${q}` : ""}`);
-      }}
-    >
-      {/* `items-center` because Roster's Button pins its own height and will not
-          stretch, so without it the pair is top-aligned and the button rides
-          high. `size="lg"` on both is the height match: Roster 4.8.0 gave
-          `Input` the same size scale as `Button`, and `lg` is `h-11` on each,
-          so the two read as one control rather than two that happen to sit
-          side by side. That, and `outline` reading `--roster-control-*`
-          instead of hardcoding its own border and fill, is what let this stop
-          being a raw element. */}
-      <div className="flex w-full max-w-md items-center gap-3">
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="your Last.fm username"
-          aria-label="Last.fm username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          variant="outline"
-          size="lg"
-          className="flex-1"
-          /* The one thing the tokens do not cover: `outline` hardcodes a gray
-             placeholder, and this app's muted ink is a cooler blue. */
-          inputClassName="placeholder:text-ink-3"
-        />
-        <Button type="submit" colorScheme="primary" variant="solid" size="lg">
-          Consult
-        </Button>
-      </div>
-
-      <Disclosure
-        title="⚙ Configure your reading (optional)"
-        className="w-full text-left"
+    <Card padding="none" className="sky-card mt-7 p-4 sm:p-5">
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          const trimmed = name.trim();
+          if (!isValidUsername(trimmed)) {
+            setInvalid(true);
+            field.current?.focus();
+            return;
+          }
+          setSubmitting(true);
+          router.push(`/u/${encodeURIComponent(trimmed)}`);
+        }}
+        className="flex flex-col gap-3 sm:flex-row sm:items-start"
       >
-        <div className="flex flex-col gap-4 pt-2">
-          <div className="grid sm:grid-cols-2 gap-3">
-            {/* No trigger override any more. These used to reset the control
-                tokens back to Roster's grays so the trigger would match a menu
-                that could not be themed; 4.8.1 gave the panel
-                `--roster-popover-*`, so both halves take this app's palette and
-                the trigger can go back to looking like every other field. */}
-            <Select
-              label="Sky on trial"
-              value={body}
-              onChange={(v) => setBody(v as PhenomenonKey)}
-              options={PHENOMENON_KEYS.map((k) => ({
-                value: k,
-                label: `${PHENOMENA[k].glyph} ${PHENOMENA[k].title}`,
-              }))}
-            />
-            <Select
-              label="Measure"
-              value={metric}
-              onChange={(v) => setMetric(v as "classic" | MetricKey)}
-              options={[
-                {
-                  value: "classic",
-                  label: `✦ Classic pairing (${METRICS[PHENOMENA[body].metric].name})`,
-                },
-                ...(Object.keys(METRICS) as MetricKey[]).map((k) => ({
-                  value: k,
-                  label: METRICS[k].name,
-                })),
-              ]}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-2">
-            <span className="text-ink-3">Focus on an era (optional):</span>
-            <Input
-              type="month"
-              value={fromMonth}
-              max={toMonth || undefined}
-              onChange={(e) => setFromMonth(e.target.value)}
-              aria-label="Era start month"
-              variant="outline"
-              size="sm"
-              /* `Input`'s field wrapper is `w-full`, so in a flex row each one
-                 takes a whole line unless told otherwise. */
-              className="w-auto"
-              inputClassName="text-xs"
-            />
-            <span className="text-ink-3">&ndash;</span>
-            <Input
-              type="month"
-              value={toMonth}
-              min={fromMonth || undefined}
-              onChange={(e) => setToMonth(e.target.value)}
-              aria-label="Era end month"
-              variant="outline"
-              size="sm"
-              className="w-auto"
-              inputClassName="text-xs"
-            />
-            <span className="text-ink-3 italic">
-              &ldquo;that stretch of 2023 when I was going through it&rdquo;
-            </span>
-          </div>
-
-          <label className="flex items-center gap-2 text-xs text-ink-2 cursor-pointer">
-            <Checkbox checked={excludeNoise} onChange={setExcludeNoise} />
-            🌧 ignore sleep &amp; noise tracks (rain sounds, white noise, ASMR)
-          </label>
-
-          <BirthChartPanel onChart={() => {}} />
+        <div className="min-w-0 flex-1">
+          <Input
+            ref={field}
+            label="Your Last.fm username"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setInvalid(false);
+            }}
+            {...invalidProps(invalid)}
+            errorMessage={invalid ? "That doesn't look like a Last.fm username." : undefined}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="off"
+            enterKeyHint="go"
+            variant="outline"
+            size="lg"
+          />
         </div>
-      </Disclosure>
-    </form>
+        {/* Level with the field, under its 20px label, from 640px up. */}
+        <Button type="submit" size="lg" isLoading={submitting} className="w-full sm:mt-5 sm:w-auto">
+          Read my sky
+        </Button>
+      </form>
+      <p className="mt-3 text-[13px] leading-snug text-ink-2">
+        Public Last.fm profiles only. A big history takes a few minutes the first time.
+      </p>
+    </Card>
   );
 }

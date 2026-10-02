@@ -27,6 +27,7 @@ import { tallyNights, usualByWeekday } from "./nights";
 import { skyNights } from "./skyNights";
 import { selectSongs, songsOf, type SelectedSong } from "./songs";
 import { spaceNights } from "./spaceNights";
+import { factSeeds, NO_FACTS, type FactSeeds } from "./tonightCards";
 import { dateIn, timeIn } from "./words";
 import type { TagStore } from "@/lib/genres";
 
@@ -40,8 +41,9 @@ import type { TagStore } from "@/lib/genres";
  * is served and recomputed in the background.
  */
 
-/** Bump when anything stored here, sentences included, changes. */
-export const LISTENER_VERSION = 1;
+/** Bump when anything stored here, sentences included, changes. 2: the
+    Surprise facts' examples (`surpriseFacts`). */
+export const LISTENER_VERSION = 2;
 export const MAX_ZONES = 4;
 
 /** The Every night filters (8.5), each counting nights you listened. */
@@ -119,6 +121,9 @@ export interface ListenerRecord {
   genreCounts: Record<string, number>;
   /** The reveal's count-ups (8.3), within the history. */
   counts: { plays: number; venusSignChanges: number; storms: number; flybys: number };
+  /** What the Surprise facts name (7.5). Absent from a version 1 record,
+      which is still served while it's rebuilt. */
+  surpriseFacts?: FactSeeds;
 }
 
 const keyOf = (username: string) => userKey("listener", username);
@@ -177,6 +182,7 @@ export async function computeListener(
     filterCounts: Object.fromEntries(FILTERS.map((f) => [f, 0])) as Record<FilterId, number>,
     genreCounts: {},
     counts: { plays: 0, venusSignChanges: 0, storms: 0, flybys: 0 },
+    surpriseFacts: NO_FACTS,
   };
   if (plays.length === 0) return empty;
 
@@ -271,6 +277,7 @@ export async function computeListener(
 
   const facts = genreFacts(plays, genres, tallies);
   const listened = (n: number) => (tallies.get(n)?.plays ?? 0) > 0;
+  const surpriseFacts = factSeeds({ clock, first, last, listened, space, eclipses: sky.eclipse, xflares: nasa?.xflares ?? [] });
   const countNights = (nights: Iterable<number>) => {
     let c = 0;
     for (const n of new Set(nights)) if (listened(n)) c++;
@@ -330,6 +337,7 @@ export async function computeListener(
       storms: (nasa?.stormStarts ?? []).filter((t) => t >= first && t <= last).length,
       flybys: [...space.values()].reduce((n, s) => n + s.flybys, 0),
     },
+    surpriseFacts,
   };
 }
 

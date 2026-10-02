@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BODIES, type SkyAt, type SkyBody, type Sign } from "@/lib/sky/sky";
-import { lengthWords, skyLine, strangestLine, wildLine } from "./sentences";
+import { kickerDate, lengthWords, skyLine, strangestLine, wildCardLine, wildLine } from "./sentences";
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 function sky(signs: Partial<Record<SkyBody, Sign>>, conditions: SkyAt["conditions"] = []): SkyAt {
@@ -68,5 +68,22 @@ describe("the reveal's sentences (spec 8.3)", () => {
     expect(strangestLine("7:18 a.m. CDT", "Oct 3, 2024", "the minute an X9.0 flare peaked", sky({ Venus: "Scorpio", Mars: "Cancer" }, ["newmoon"]))).toBe(
       "First played at 7:18 a.m. CDT, Oct 3, 2024, the minute an X9.0 flare peaked. Venus was in her detriment, Mars in his fall, and the Moon was new.",
     );
+  });
+});
+
+describe("a wild night card's words (spec 8.4)", () => {
+  it("writes the line as the spec does, in the singular, with separators, and with no usual", () => {
+    expect(wildCardLine(39, "Friday", 50)).toBe("39 songs · a usual Friday is 50");
+    expect(wildCardLine(1, "Tuesday", 12)).toBe("1 song · a usual Tuesday is 12");
+    expect(wildCardLine(1_204, "Saturday", 1_050)).toBe("1,204 songs · a usual Saturday is 1,050");
+    expect(wildCardLine(39, "Friday", null)).toBe("39 songs");
+    expect(wildCardLine(1, "Friday", null)).toBe("1 song");
+  });
+
+  it("dates the card's kicker, with Sept for September", () => {
+    const night = (date: string) => Date.parse(`${date}T00:00:00Z`) / 86_400_000;
+    expect(kickerDate(night("2024-05-10"))).toBe("Fri, May 10, 2024");
+    expect(kickerDate(night("2024-09-22"))).toBe("Sun, Sept 22, 2024");
+    expect(kickerDate(night("2025-03-13"))).toBe("Thu, Mar 13, 2025");
   });
 });

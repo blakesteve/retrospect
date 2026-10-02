@@ -11,7 +11,7 @@ import {
   type NotChecked,
   type QuestionRecord,
 } from "./engine";
-import { QUESTIONS, type Measure, type Question, type QuestionId } from "./questions";
+import { QUESTIONS, questionById, type Measure, type Question, type QuestionId } from "./questions";
 import { answerWords, likelihoodFor, type AnswerWord } from "./words";
 
 /**
@@ -85,6 +85,9 @@ export interface AnswersPayload {
   questions: QuestionPayload[];
   /** Tonight's one heads-up (8.4), or null. */
   headsUp: { id: QuestionId; line: string } | null;
+  /** The reveal's last card (8.3): its line, and "{n} not checked yet" when
+      any are. */
+  reveal: { line: string; notChecked: string | null };
 }
 
 const DAY = 86_400;
@@ -491,16 +494,17 @@ function earlyReadRow(q: Question, r: EarlyRead, zone: string): string {
   return `${when}: ${what}${r.inProgress ? " (in progress)" : ""}.`;
 }
 
-/** The early reads' rows (6.5). For old favorites (questions 1, 5 and 11),
-    two or more first-year events share one line: the Moon is strong about
-    twice a month, and a history just past a year would list over 25. One
-    keeps its own row. */
+/** The early reads' rows (6.5). For every question with a warm-up (1, 3, 5
+    and 11), two or more first-year events share one line: the Moon is strong
+    about twice a month, and a history just past a year would list over 25.
+    One keeps its own row. */
 function earlyReadRows(q: Question, reads: EarlyRead[], zone: string): string[] {
   const firstYear = reads.filter((r) => r.firstYear);
-  if (q.measure !== "oldfavorites" || firstYear.length < 2) return reads.map((r) => earlyReadRow(q, r, zone));
+  if (firstYear.length < 2) return reads.map((r) => earlyReadRow(q, r, zone));
   const n = firstYear.length;
   const when = dateRange(zone, firstYear[0].start, firstYear[n - 1].end);
-  const line = `${capital(spelled(n))} ${q.eventNoun.many} in your first year, ${when}, came before old favorites count.`;
+  const noun = WARMUP_NOUN[q.measure] ?? TAG_NOUN[q.measure];
+  const line = `${capital(spelled(n))} ${q.eventNoun.many} in your first year, ${when}, came before ${noun} count.`;
   return [line, ...reads.filter((r) => !r.firstYear).map((r) => earlyReadRow(q, r, zone))];
 }
 
@@ -607,6 +611,45 @@ export function computingPayload(): ComputingPayload {
     headsUp: null,
     line: `Checking ${QUESTIONS.length} questions against your sky\u2026 0 of ${QUESTIONS.length}`,
   };
+}
+
+/**
+ * The reveal's last card (8.3), the first line that applies: nothing tested
+ * yet, more than half too early, any Yes, any Maybe, otherwise No. "The first
+ * to arrive" is the earliest warm-up end or next event among the questions
+ * held back only by events or the warm-up; plays have no date to promise.
+ */
+function revealLines(
+  questions: QuestionPayload[],
+  tally: Record<AnswerWord, number>,
+  zone: string,
+  nowUts: number,
+): AnswersPayload["reveal"] {
+  const notChecked = tally["Not checked"] > 0 ? `${capital(spelled(tally["Not checked"]))} not checked yet` : null;
+  const tested = questions.filter((q) => q.status === "tested" && !q.updating);
+  let line: string;
+  if (tested.length === 0) {
+    const arriving = questions
+      .map((q) => ({
+        q,
+        at: q.status === "warming-up" ? q.warmupReadyFrom : q.status === "too-few-events" ? q.nextStart : null,
+      }))
+      .filter((x): x is { q: QuestionPayload; at: number } => x.at !== null && x.at > nowUts)
+      .sort((a, b) => a.at - b.at)[0];
+    line = arriving
+      ? `Too early for all 12. The first to arrive: ${questionById(arriving.q.id).subject}, around ${monthYear(zone, arriving.at)}.`
+      : "Too early for all 12. They arrive as more of your listening falls under each sky.";
+  } else if (tally["Too early"] > questions.length / 2) {
+    const first = questionById(tested[0].id);
+    line = `Too early for most. Here's what ${first.subject} already ${first.plural ? "say" : "says"}.`;
+  } else if (tally.Yes > 0) {
+    line = `${capital(spelled(tally.Yes))} yes. Here's exactly how, and how sure.`;
+  } else if (tally.Maybe > 0) {
+    line = `Mostly no. Here's exactly how, and the ${tally.Maybe === 1 ? "one maybe" : `${spelled(tally.Maybe)} maybes`}.`;
+  } else {
+    line = "No, as far as we can tell. Here's exactly how much.";
+  }
+  return { line, notChecked };
 }
 
 /** A question whose stored numbers measured something else: none of them
@@ -779,6 +822,7 @@ export function answersPayload(
   }
 
   return {
+    reveal: revealLines(questions, tally, zone, nowUts),
     status: tally.Checking > 0 ? "updating" : status,
     done: questions.length - tally.Checking,
     total: questions.length,

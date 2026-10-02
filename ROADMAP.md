@@ -2,7 +2,8 @@
 
 **Index**
 
-- **Done:** Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
+- **Done:** Tonight, the sheets, the landing and the reveal (2 Oct 2026) ·
+  Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
   songs, highlights and genres as facts (1 Oct 2026) ·
   NASA's data, and questions 7 and 8 (1 Oct 2026) · The answers
   engine, and stored answers (1 Oct 2026) · Real time
@@ -13,11 +14,47 @@
   confidence (28 Sept) · A young history gets a real report (28 Sept) · The
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The redesign
-- **Next, quality:** framework error pages a visitor can still reach · the
-  threshold slider is still a native input (see the Roster sweep entry)
+- **Next, product:** The redesign: Every night (3b), Sky (3c), compare
+  and the share cards (3d)
+- **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Tonight, the sheets, the landing and the reveal (2 October 2026)
+
+- **Tonight replaces the report** at `/u/{name}`: tonight's sky as a wheel
+  with dignity halos, the Moon, up to three chips, the questions whose skies
+  are overhead with their short lines and one heads-up, then rows for your
+  songs' skies, wild nights, what's coming up, genres, the 12 questions,
+  compare and your habits, and "Surprise me".
+- **Sheets are URLs**: a song, a night, a question, a planet and sharing open
+  in Roster's `Sheet` from a search parameter, pushed with `pushState`. Back
+  steps one sheet; close closes them all; a deep link closes to the view.
+- **A listener shell** in `app/u/[username]/layout.tsx` holds the sync, the
+  sheet host and the view switcher (Roster's `LiquidNav`, its active ink
+  measured 8.60:1 on the gold pill, up from white's 2.10:1). The reveal shows
+  once per username per browser, then the first-visit guide.
+- **The server words what Tonight shows**: the sky's heading, Moon line,
+  chips and planets on `/api/sky/now`; a planet's sheet on `/api/sky/planet`;
+  wild-night cards and the "Surprise me" pool on `/highlights`; the reveal's
+  last line on `/answers`; the habits' pending sentence on `/profile`.
+- **Deleted**: the report, the sweep, the grip meter, the astrology corner,
+  the timeline, the sky calendar and the old reveal's cards. The threshold
+  slider went with the report, which closes the quality item that it was
+  still a native input.
+- **The landing says what it is.** The wordmark at full size, a plain line
+  about what Retrospect does, then the username, then NASA's EPIC photo of
+  the Apr 8, 2024 eclipse with a caption tying it to the sample, then four
+  working samples, each badged "Sample". The sample listener is a less poppy
+  made-up history, committed to `public/samples/`, with NASA's real photos of
+  Earth and the Sun on its nights and JPL's flybys across its history.
+- **The samples read the same on every Node version.** The Moon's angle (to
+  0.01°) and lit fraction (to the whole percent), and an asteroid's size (to
+  six decimals), are rounded where they're computed: their last digits came
+  from trigonometry and powers that differ between Node versions and
+  platforms, so CI's Node 22 wrote different ones than Node 24. A test reads
+  every sample for longer ones.
+- **Roster 5.1.0**, for `Sheet` and `LiquidNav`.
 
 ### Questions 5 and 6 test their folklore (1 October 2026)
 

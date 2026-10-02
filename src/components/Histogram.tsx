@@ -2,12 +2,27 @@
 
 import { useMemo, useState } from "react";
 
+/** A swing as people read it: "+2%", "-13%", "0%" (9.5: never a ratio). */
+const swing = (index: number) => {
+  const n = Math.round((index - 1) * 100);
+  return `${n > 0 ? "+" : ""}${n}%`;
+};
+
 /**
- * Null-distribution histogram for the skeptic panel. Single series (indigo)
- * with the observed index as an ochre reference line — identity is carried by
- * the direct labels, not color alone.
+ * The shuffles behind a question's p, inside "Show the math" (8.7.3). One
+ * series (indigo) with yours as an ochre line, labeled in percentages: the
+ * ratio itself is never shown (9.5, 9.6). Identity is carried by the direct
+ * labels, not color alone.
  */
-export function Histogram({ samples, observed }: { samples: number[]; observed: number | null }) {
+export function Histogram({
+  samples,
+  observed,
+  iterations = 2000,
+}: {
+  samples: number[];
+  observed: number | null;
+  iterations?: number;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const obs = Number.isFinite(observed) ? (observed as number) : NaN;
 
@@ -30,7 +45,7 @@ export function Histogram({ samples, observed }: { samples: number[]; observed: 
   }, [samples, obs]);
 
   if (bins.length === 0) {
-    return <p className="text-ink-3 text-sm">Not enough data for a null distribution.</p>;
+    return <p className="text-ink-2 text-sm">Too few shuffles to draw.</p>;
   }
 
   const W = 640;
@@ -46,7 +61,9 @@ export function Histogram({ samples, observed }: { samples: number[]; observed: 
       viewBox={`0 0 ${W} ${H}`}
       className="w-full"
       role="img"
-      aria-label={`Histogram of ${samples.length} null-distribution index values${Number.isFinite(obs) ? `; observed value ${obs.toFixed(2)}` : ""}`}
+      aria-label={`Swings in a sample of the ${iterations.toLocaleString("en-US")} shuffled skies${
+        Number.isFinite(obs) ? `; yours is ${Math.abs(Math.round((obs - 1) * 100))}% ${obs >= 1 ? "more" : "less"}` : ""
+      }`}
       onMouseLeave={() => setHover(null)}
     >
       {/* baseline */}
@@ -97,7 +114,7 @@ export function Histogram({ samples, observed }: { samples: number[]; observed: 
             fill="var(--text-primary)"
             fontSize={12}
           >
-            you: {obs.toFixed(2)}&times;
+            you: {swing(obs)}
           </text>
         </>
       )}
@@ -108,21 +125,21 @@ export function Histogram({ samples, observed }: { samples: number[]; observed: 
           x={hover * binW + binW / 2}
           w={W}
           lines={[
-            `${(lo + ((hover + 0.5) / bins.length) * (hi - lo)).toFixed(2)}× index`,
-            `${bins[hover]} of ${samples.length} rotations`,
+            swing(lo + ((hover + 0.5) / bins.length) * (hi - lo)),
+            `${bins[hover]} of the shuffles drawn`,
           ]}
         />
       )}
 
       {/* x axis labels */}
-      <text x={2} y={H - 6} fill="var(--text-muted)" fontSize={11} className="tabular">
-        {lo.toFixed(2)}&times;
+      <text x={2} y={H - 6} fill="var(--text-secondary)" fontSize={11} className="tabular">
+        {swing(lo)}
       </text>
-      <text x={x(1)} y={H - 6} fill="var(--text-muted)" fontSize={11} textAnchor="middle" className="tabular">
-        1.00&times;
+      <text x={x(1)} y={H - 6} fill="var(--text-secondary)" fontSize={11} textAnchor="middle" className="tabular">
+        0%
       </text>
-      <text x={W - 2} y={H - 6} fill="var(--text-muted)" fontSize={11} textAnchor="end" className="tabular">
-        {hi.toFixed(2)}&times;
+      <text x={W - 2} y={H - 6} fill="var(--text-secondary)" fontSize={11} textAnchor="end" className="tabular">
+        {swing(hi)}
       </text>
     </svg>
   );

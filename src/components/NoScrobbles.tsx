@@ -2,7 +2,10 @@
 
 import NextLink from "next/link";
 import { useState } from "react";
-import { Button, Link } from "@blakesteve/roster";
+import { Button } from "@blakesteve/roster";
+import type { Load } from "@/components/listener/Shell";
+import type { SkyNow } from "@/components/listener/api";
+import { SkyWheel } from "@/components/listener/sky";
 import {
   apiError,
   visitorError,
@@ -34,10 +37,13 @@ export function NoScrobbles({
   username,
   onFound,
   onError,
+  sky,
 }: {
   username: string;
   onFound: () => void;
   onError: (code: VisitorErrorCode) => void;
+  /** Tonight's sky, so the page isn't a dead end (8.2). */
+  sky?: Load<SkyNow>;
 }) {
   const [checking, setChecking] = useState(false);
   const [stillEmpty, setStillEmpty] = useState(false);
@@ -73,11 +79,11 @@ export function NoScrobbles({
         <li>
           Connect the app you listen with to Last.fm, so Last.fm can see what you play. Last.fm
           calls this scrobbling, and Spotify and many music apps can do it.{" "}
-          <Link href={HOW_TO_SCROBBLE} underline="always" className="font-normal">
+          {/* A plain link: Roster's Link brings Font Awesome (spec 12). */}
+          <a href={HOW_TO_SCROBBLE} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-gold">
             How to start scrobbling, on Last.fm
-            {/* Roster opens it in a new tab behind an icon screen readers skip. */}
             <span className="sr-only"> (opens in a new tab)</span>
-          </Link>
+          </a>
         </li>
         <li>
           Play a few songs. Last.fm counts a song once you&rsquo;re halfway through it or four
@@ -89,17 +95,26 @@ export function NoScrobbles({
       <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
         {/* No `isLoading`: Roster turns it into `disabled`, and a disabled
             button drops keyboard focus on every press. */}
-        <Button colorScheme="primary" variant="solid" size="sm" onClick={checkAgain}>
+        <Button colorScheme="primary" variant="solid" size="lg" onClick={checkAgain}>
           {checking ? "Checking\u2026" : "Check again"}
         </Button>
-        <Link as={NextLink} href="/" underline="always" className="font-normal">
+        <NextLink href="/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-gold">
           Try another username
-        </Link>
+        </NextLink>
       </div>
 
       <p role="status" aria-live="polite" className="mt-4 text-center text-sm text-ink-3">
         {stillEmpty && "Still nothing yet. If you've just played something, give it a minute and check again."}
       </p>
+
+      {sky?.state === "ready" && (
+        <div className="mt-12 flex flex-col items-center text-center">
+          <p className="font-display text-xl text-ink">The sky doesn&rsquo;t wait. Here&rsquo;s tonight&rsquo;s.</p>
+          <div className="mt-4">
+            <SkyWheel bodies={sky.data.sky.bodies} size={300} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

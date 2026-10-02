@@ -61,6 +61,13 @@ describe("the Moon at 9 p.m.", () => {
     expect(moon.illumination).toBeGreaterThan(0.98);
   });
 
+  it("keeps the angle to 0.01° and the lit fraction to the whole percent, so every Node version writes the same digits", () => {
+    // astronomy-engine gives 186.01034891630906 and 0.9959460870531737 here.
+    expect(moonAt(ninePm(chicago, night("2024-05-23")))).toMatchObject({ phaseAngle: 186.01, illumination: 1 });
+    // Jun 22, 2024: 0.98498 lit, which reads 98%, never 99% by way of 0.985.
+    expect(moonAt(ninePm(chicago, night("2024-06-22"))).illumination).toBe(0.98);
+  });
+
   it("finds 9 p.m. on the night a clock goes back", () => {
     expect(new Date(ninePm(chicago, night("2024-11-03")) * 1000).toISOString()).toBe("2024-11-04T03:00:00.000Z"); // 9 p.m. CST
   });

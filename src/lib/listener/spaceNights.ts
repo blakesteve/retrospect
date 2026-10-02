@@ -19,9 +19,11 @@ const LUNAR_DISTANCE_KM = 384_400;
 export const lunarDistances = (au: number) => (au * AU_KM) / LUNAR_DISTANCE_KM;
 
 /** An asteroid's size from its absolute magnitude, at albedo 0.14 (7.3):
-    D = 1329 / sqrt(0.14) × 10^(−H/5) km. In meters, unrounded; the copy says
-    "about" with two significant figures. */
-export const metersFromH = (h: number) => (1329 / Math.sqrt(0.14)) * 10 ** (-h / 5) * 1000;
+    D = 1329 / sqrt(0.14) × 10^(−H/5) km. In meters to six decimals; the copy
+    says "about" with two significant figures. The power of ten differs in
+    its last digits between Node versions and platforms, and a size travels
+    into stored records and the committed samples, so those digits go here. */
+export const metersFromH = (h: number) => Math.round((1329 / Math.sqrt(0.14)) * 10 ** (-h / 5) * 1e9) / 1e6;
 
 /** A flare class's size, for comparing: "X9.3" is above "M9.9". */
 export function flareSize(cls: string): number {

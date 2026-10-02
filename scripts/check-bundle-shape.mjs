@@ -109,9 +109,21 @@ const PKG = "@blakesteve/roster";
  * client JS rose 55,538 bytes to 1,671,074 and left 22,926 of headroom. The
  * new ceiling restores 4.8% slack (79,926 bytes). The redesign deletes these
  * imports; re-baseline then, per spec 13.
+ *
+ * Re-baselined 2 October 2026, the redesign's one re-baseline (spec 13),
+ * measured on a clean build of phase 3a (branch bb/ui-tonight over 06e4386):
+ *   JS  1,588,671 bytes across 39 files (main at 06e4386: 1,664,232)
+ *   CSS   176,905 bytes across 1 file   (main at 06e4386:   168,187)
+ * JS fell 75,561: the report, its sweep, timeline, sky calendar, astrology
+ * corner and configure panel are gone, and with them the window JSON and
+ * astronomy-engine on `/`. The ceiling comes down to 1,665,000, 4.8% over.
+ * CSS grew 8,718: Roster 5.1.0's stylesheet (Sheet, LiquidNav and the
+ * accessibility fixes) is 3,890 of it, and the redesign's own utilities,
+ * net of the deleted components', the rest. The ceiling goes to 185,000,
+ * 4.6% over, the slack it was set with.
  */
-const CLIENT_JS_CEILING = 1_751_000;
-const CLIENT_CSS_CEILING = 175_000;
+const CLIENT_JS_CEILING = 1_665_000;
+const CLIENT_CSS_CEILING = 185_000;
 
 const problems = [];
 

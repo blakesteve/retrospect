@@ -1,10 +1,29 @@
 import { haloDignity, type SkyAt, type SkyBody } from "@/lib/sky/sky";
+import { nightName, nightWeekday } from "@/lib/zone";
 import type { Chip } from "./highlights";
+import { nightDate } from "./words";
 
 /**
- * The reveal's sentences (spec 8.3), built where the facts are so the client
- * only lays them out (9.2).
+ * The reveal's sentences (spec 8.3), and the wild night cards' (8.4), built
+ * where the facts are so the client only lays them out (9.2).
  */
+
+/** Sunday first, as `nightWeekday` counts. */
+export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** A wild night card's kicker (8.4): "Fri, May 10, 2024". */
+export function kickerDate(night: number): string {
+  return `${WEEKDAYS[nightWeekday(night)].slice(0, 3)}, ${nightDate(nightName(night))}`;
+}
+
+/**
+ * A wild night card's line (8.4): "39 songs · a usual Friday is 50", or
+ * just "39 songs" with no usual for that weekday.
+ */
+export function wildCardLine(plays: number, weekday: string, usual: number | null): string {
+  const songs = `${plays.toLocaleString("en-US")} song${plays === 1 ? "" : "s"}`;
+  return usual === null ? songs : `${songs} · a usual ${weekday} is ${usual.toLocaleString("en-US")}`;
+}
 
 const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
 const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];

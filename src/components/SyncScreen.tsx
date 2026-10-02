@@ -32,7 +32,7 @@ const QUIPS = [
  * a planet to the system on its own elliptical orbit. Planets that collide
  * explode (as requested) and the survivor grows. The wait is the show.
  */
-export function SyncScreen({ username, sync }: { username: string; sync: SyncStatus | null }) {
+export function SyncScreen({ username, sync, checking = false }: { username: string; sync: SyncStatus | null; checking?: boolean }) {
   const progress =
     sync && sync.totalPages > 0 ? Math.min(1, sync.pagesDone / sync.totalPages) : 0;
   const fetched = sync ? Math.min(sync.pagesDone * 200, sync.totalScrobbles) : 0;
@@ -53,8 +53,17 @@ export function SyncScreen({ username, sync }: { username: string; sync: SyncSta
       <PlanetarySystem planetCount={Math.min(yearsLoaded, 22)} />
 
       <h1 className="font-display text-3xl text-gold mb-2 mt-2">
-        Consulting the ephemeris&hellip;
+        {checking ? <>Checking 12 questions against your sky&hellip;</> : <>Reading your sky&hellip;</>}
       </h1>
+      {/* The answers compute in one pass, so this can only say where it
+          starts until they land (8.2). Polite, and it changes once. */}
+      {checking && (
+        <p className="text-ink-2 mb-2 tabular" role="status" aria-live="polite">
+          0 of 12
+        </p>
+      )}
+      {!checking && (
+        <>
       <p className="text-ink-2 mb-2 max-w-md">
         Pulling {username}&rsquo;s listening history from Last.fm; every planet is a
         year of your life we&rsquo;ve recovered so far.
@@ -81,6 +90,8 @@ export function SyncScreen({ username, sync }: { username: string; sync: SyncSta
           )}
         </p>
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -327,14 +338,18 @@ function PlanetarySystem({ planetCount }: { planetCount: number }) {
       raf = requestAnimationFrame(frame);
     };
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, []);
 
   return (
+    // Decorative, and all motion: under reduced motion it isn't drawn at all,
+    // so the page is complete at rest (11).
     <canvas
       ref={canvasRef}
-      style={{ width: 380, height: 380 }}
+      className="motion-reduce:hidden"
+      style={{ width: "min(380px, 100%)", aspectRatio: "1" }}
       aria-label="Your listening history forming a solar system"
       role="img"
     />
