@@ -34,6 +34,12 @@
 - **Reseeded.** The analysis version went to 2, so all 12 drew new shuffles.
   The full null test, run locally on 1,000 synthetic histories: 9.4% got any
   Yes, within the 13% bound (8.0% at version 1).
+- **A changed question is checking, not mislabeled.** Each question stores
+  what it measured. One stored under another measure (version 1's questions
+  5 and 6) reads "Checking" on its own until it's recomputed; the other 10
+  serve exactly as stored.
+- **One line for a first year of Moon visits.** Two or more first-year events
+  for old favorites share one early-read line.
 
 ### Nights, songs, highlights and genres as facts (1 October 2026)
 

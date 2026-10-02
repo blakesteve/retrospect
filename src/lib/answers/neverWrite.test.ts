@@ -130,6 +130,13 @@ const tested = (r: QuestionRecord, p: number, index: number, rangeC: number | nu
   matches: Math.max(0, Math.round(p * 2001) - 1),
 });
 
+/** A question as version 1 stored it, before questions stored a measure. */
+function withoutMeasure(q: QuestionRecord): QuestionRecord {
+  const r = { ...q };
+  delete r.measure;
+  return r;
+}
+
 /** Records that reach what a synthetic history rarely does: Yes, Maybe, the
     ranges that exclude zero, one question tested, and the rarer statuses. */
 function variants(base: AnswerRecord): AnswerRecord[] {
@@ -174,10 +181,24 @@ function variants(base: AnswerRecord): AnswerRecord[] {
           return { ...r, status: "too-few-events", notChecked: null, events: 0, earlyReads: [] };
         case "marswater":
           return tested(r, 0.99, 1.0, 0.2);
+        case "venusrx":
+          return {
+            ...r,
+            status: "too-few-events",
+            notChecked: null,
+            events: 1,
+            earlyReads: [
+              { start: span, end: span + 40 * 86_400, swing: null, inProgress: false, firstYear: true, path: null },
+              { start: span + 300 * 86_400, end: span + 340 * 86_400, swing: null, inProgress: false, firstYear: true, path: null },
+              { start: span + 600 * 86_400, end: span + 640 * 86_400, swing: -0.2, inProgress: false, firstYear: false, path: null },
+            ],
+          };
         default:
           return tested(r, 0.3, 0.95, 0.2);
       }
     }),
+    // Version 1, which stored no measures: questions 5 and 6 are checking.
+    { ...base, version: 1, questions: base.questions.map(withoutMeasure) },
   ];
 }
 
@@ -260,6 +281,8 @@ describe("never write (spec 9.6)", () => {
       /come when the Sun sends them/,
       /The next one begins /,
       /: in your first year, before .* count\.$/,
+      /^\w+ (visits|retrogrades) in your first year, .*, came before old favorites count\.$/,
+      /^Checking this question against your sky\u2026$/,
       /: no plays to compare\.$/,
       /\(in progress\)\.$/,
       /^One ordinary stretch this long/,

@@ -8,7 +8,7 @@ import { zoneClock, type ZoneClock } from "@/lib/zone";
 import type { NasaLog } from "@/lib/space/compact";
 import { selectSongs, songsOf } from "@/lib/listener/songs";
 import { conditionFor, nightsCondition, type Condition, type ConditionWindow } from "./conditions";
-import { QUESTIONS, type Measure, type Question, type QuestionId } from "./questions";
+import { QUESTIONS, questionById, type Measure, type Question, type QuestionId } from "./questions";
 import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
 
 /**
@@ -27,8 +27,9 @@ import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
 export const ANSWERS_VERSION = 2;
 /** The stored record's shape, apart from the analysis: a record in an older
     format is recomputed, with the same seeds (6.6 keeps the analysis version
-    in the seed, and adding pairings changed no answer). 2: pairings. */
-export const RECORD_FORMAT = 2;
+    in the seed, and adding pairings changed no answer). 2: pairings. 3: each
+    question's measure. */
+export const RECORD_FORMAT = 3;
 export const ROTATIONS = 2_000;
 /** At most this many shuffles go to the client, for the histogram. */
 export const MAX_NULL_SAMPLES = 600;
@@ -61,6 +62,9 @@ export interface MergedEvent {
 
 export interface QuestionRecord {
   id: QuestionId;
+  /** What the question measured when it was computed. Missing on a record
+      in format 2 or older; `storedMeasure` reads those from the version. */
+  measure?: Measure;
   /** The test's status, or null when the question wasn't checked. */
   status: VerdictStatus | null;
   notChecked: NotChecked | null;
@@ -116,6 +120,27 @@ export interface AnswerRecord {
   incomplete: boolean;
   questions: QuestionRecord[];
 }
+
+/** Version 1's measures, where they differ from today's, for its records,
+    which didn't store them. */
+const VERSION_1_MEASURES: Partial<Record<QuestionId, Measure>> = {
+  moonstrong: "listening",
+  venusmars: "aftermidnight",
+};
+
+/**
+ * What a stored question measured. One that differs from what the question
+ * measures today answers a different question: it's served as checking on its
+ * own and recomputed, while the rest serve as stored (architect, 1 Oct 2026).
+ */
+export function storedMeasure(record: Pick<AnswerRecord, "version">, q: Pick<QuestionRecord, "id" | "measure">): Measure {
+  if (q.measure) return q.measure;
+  return (record.version === 1 ? VERSION_1_MEASURES[q.id] : undefined) ?? questionById(q.id).measure;
+}
+
+/** Whether a stored question measured what the question measures today. */
+export const measuresToday = (record: Pick<AnswerRecord, "version">, q: Pick<QuestionRecord, "id" | "measure">) =>
+  storedMeasure(record, q) === questionById(q.id).measure;
 
 /** What a history held, for the freshness check (spec 6.6). */
 export const historyStamp = (stored: Scrobble[]) =>
@@ -261,6 +286,7 @@ const fourFigures = (x: number) => Number(x.toPrecision(4));
 
 const blank = (q: Question, rest: Partial<QuestionRecord>): QuestionRecord => ({
   id: q.id,
+  measure: q.measure,
   status: null,
   notChecked: null,
   index: null,

@@ -3,7 +3,9 @@
  * data, so the rule can be tested with whole p vectors.
  */
 
-export type AnswerWord = "Yes" | "Maybe" | "Not clearly" | "No" | "Too early" | "Not checked";
+/** "Checking" is a question being recomputed because its stored numbers
+    measured something else (an older version's measure). */
+export type AnswerWord = "Yes" | "Maybe" | "Not clearly" | "No" | "Too early" | "Not checked" | "Checking";
 
 /** The false-discovery rate a Yes is corrected at. */
 export const FDR = 0.1;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ANSWERS_VERSION, type AnswerRecord, type QuestionRecord } from "./engine";
-import { answersPayload, computingPayload, formatP } from "./payload";
-import { QUESTIONS, type QuestionId } from "./questions";
+import { answersPayload, computingPayload, formatP, type QuestionPayload } from "./payload";
+import { QUESTIONS, questionById, type QuestionId } from "./questions";
 
 /* The sentences are spec 9.2's, written out as literals. Most of the spec's
    examples use Central time and real sky dates (Venus retrograde Mar 1 to Apr
@@ -262,6 +262,225 @@ describe("early reads (6.5, 9.2)", () => {
       "Mar 1 to Apr 12, 2025: in your first year, before old favorites count.",
     ]);
     expect(q.phrases.typicalSwing).toBe("One ordinary stretch this long usually moves less than about 20% either way.");
+  });
+
+  // Architect, 1 Oct 2026: two or more first-year events for old favorites
+  // (questions 1, 5 and 11) share one line; one keeps its own row (above).
+  const read = (start: string, end: string, firstYear: boolean, swing: number | null = null) => ({
+    start: at(start),
+    end: at(end),
+    swing,
+    inProgress: false,
+    firstYear,
+    path: null,
+  });
+
+  it("puts two or more first-year events on one line", () => {
+    const moon = phrasesOf(
+      record("moonstrong", {
+        status: "too-few-events",
+        events: 1,
+        earlyReads: [
+          read("2025-01-07T18:00:00Z", "2025-01-09T18:00:00Z", true),
+          read("2025-01-21T18:00:00Z", "2025-01-23T18:00:00Z", true),
+          read("2025-02-03T18:00:00Z", "2025-02-05T18:00:00Z", true),
+          read("2026-02-01T18:00:00Z", "2026-02-03T18:00:00Z", false, 0.1),
+        ],
+      }),
+      "moonstrong",
+    );
+    expect(moon.phrases.earlyReadRows).toEqual([
+      "Three visits in your first year, Jan 7 to Feb 5, 2025, came before old favorites count.",
+      "Feb 1 to Feb 3, 2026: a 10% bigger share of old favorites.",
+    ]);
+    // Mercury turned retrograde Apr 1 and Aug 5, 2024, direct Apr 25 and Aug 28.
+    const mercury = phrasesOf(
+      record("mercury", {
+        status: "too-few-events",
+        events: 0,
+        earlyReads: [
+          read("2024-04-01T22:14:00Z", "2024-04-25T12:54:00Z", true),
+          read("2024-08-05T04:56:00Z", "2024-08-28T21:14:00Z", true),
+        ],
+      }),
+      "mercury",
+    );
+    expect(mercury.phrases.earlyReadRows).toEqual([
+      "Two retrogrades in your first year, Apr 1 to Aug 28, 2024, came before old favorites count.",
+    ]);
+  });
+
+  it("writes ten or more as numerals, and a first year that crosses New Year in full", () => {
+    // A strong Moon about twice a month, from Jun 3, 2025 to May 28, 2026.
+    const reads = Array.from({ length: 12 }, (_, k) => {
+      const start = at("2025-06-03T18:00:00Z") + k * 30 * 86_400;
+      return { start, end: start + 2 * 86_400, swing: null, inProgress: false, firstYear: true, path: null };
+    });
+    reads[11] = { ...reads[11], start: at("2026-05-26T18:00:00Z"), end: at("2026-05-28T18:00:00Z") };
+    const q = phrasesOf(record("moonstrong", { status: "too-few-events", events: 0, earlyReads: reads }), "moonstrong");
+    expect(q.phrases.earlyReadRows).toEqual(["12 visits in your first year, Jun 3, 2025 to May 28, 2026, came before old favorites count."]);
+  });
+
+  it("keeps first listens' first-year rows apart, as ruled for old favorites only", () => {
+    const q = phrasesOf(
+      record("newmoon", {
+        status: "too-few-events",
+        events: 0,
+        earlyReads: [
+          read("2025-01-29T18:00:00Z", "2025-01-30T18:00:00Z", true),
+          read("2025-02-27T18:00:00Z", "2025-02-28T18:00:00Z", true),
+        ],
+      }),
+      "newmoon",
+    );
+    expect(q.phrases.earlyReadRows).toEqual([
+      "Jan 29 to Jan 30, 2025: in your first year, before first listens count.",
+      "Feb 27 to Feb 28, 2025: in your first year, before first listens count.",
+    ]);
+  });
+});
+
+describe("a question stored under another measure (architect, 1 Oct 2026)", () => {
+  // Version 1 stored no measures. Its question 5 measured how much you listen
+  // (the old report's intensity), and its question 6 after-midnight plays.
+  const tested5 = {
+    status: "tested" as const,
+    p: 0.004,
+    index: 1.23,
+    iterations: 2000,
+    matches: 7,
+    rangeC: 0.05,
+    events: 9,
+    inPlays: 400,
+    warmupReadyFrom: at("2026-01-01T00:00:00Z"),
+    nullSamples: [0.1, -0.2],
+    pairings: ["song-a"],
+  };
+  const current = record("moonstrong", tested5, rest9);
+  const v1: AnswerRecord = {
+    ...current,
+    version: 1,
+    questions: current.questions.map((q) =>
+      q.id !== "venusmars"
+        ? q
+        : {
+            ...q,
+            status: "too-few-events" as const,
+            events: 2,
+            inPlays: 50,
+            matches: 3,
+            iterations: 2000,
+            nullSamples: [0.3],
+            typicalSingleSwing: 0.2,
+            merged: [
+              {
+                start: at("2025-01-23T00:00:00Z"),
+                end: at("2025-05-29T00:00:00Z"),
+                windows: [
+                  { start: at("2025-01-23T00:00:00Z"), end: at("2025-03-01T00:00:00Z"), aspect: 120 as const },
+                  { start: at("2025-04-01T00:00:00Z"), end: at("2025-05-29T00:00:00Z"), aspect: 120 as const },
+                ],
+              },
+            ],
+            earlyReads: [{ start: at("2025-06-01T18:00:00Z"), end: at("2025-06-20T18:00:00Z"), swing: 0.3, inProgress: false, firstYear: false, path: null }],
+          },
+    ),
+  };
+  const CHECKING = "Checking this question against your sky\u2026";
+  const find = (payload: ReturnType<typeof answersPayload>, id: QuestionId) => payload.questions.find((q) => q.id === id)!;
+
+  it("serves it as checking on its own, with none of its stored numbers or sentences", () => {
+    const payload = answersPayload(v1, "ready", NOW);
+    expect(payload).toMatchObject({ status: "updating", done: 10, total: 12 });
+    expect(payload.tally.Checking).toBe(2);
+    for (const id of ["moonstrong", "venusmars"] as const) {
+      const q = find(payload, id);
+      // Everything but who it is and what the sky alone decides.
+      const rest: Partial<QuestionPayload> = { ...q };
+      for (const k of ["id", "number", "question", "story", "shortName", "nextStart", "pairings"] as const) delete rest[k];
+      expect(rest, id).toEqual({
+        status: null,
+        notChecked: null,
+        updating: true,
+        word: "Checking",
+        pct: null,
+        p: null,
+        pAdjusted: null,
+        matches: 0,
+        iterations: 0,
+        range: null,
+        events: 0,
+        eventsNote: null,
+        inPlays: 0,
+        warmupReadyFrom: null,
+        earlyReads: [],
+        typicalSingleSwing: null,
+        nullSamples: [],
+        phrases: {
+          wordLine: CHECKING,
+          tonightLine: CHECKING,
+          likelihood: null,
+          frequency: null,
+          range: null,
+          tooEarly: null,
+          whatHappened: null,
+          warmup: null,
+          pValueNote: null,
+          correctionNote: null,
+          earlyReadRows: [],
+          typicalSwing: null,
+          headsUp: null,
+        },
+      });
+      // What depends only on the sky stays.
+      expect(q.nextStart, id).toBe(find(answersPayload(current, "ready", NOW), id).nextStart);
+      expect(q.pairings, id).toEqual(id === "moonstrong" ? ["song-a"] : []);
+    }
+  });
+
+  it("serves the other 10 exactly as stored, their correction included", () => {
+    const payload = answersPayload(v1, "ready", NOW);
+    // The same record, read as if nothing were checking: what was stored.
+    const stored = answersPayload({ ...v1, version: ANSWERS_VERSION }, "ready", NOW);
+    // Nine were tested when it was stored, question 5 among them (6 was too
+    // few events), and all nine stay in the correction.
+    expect(payload.m).toBe(9);
+    for (const q of QUESTIONS.filter((x) => x.id !== "moonstrong" && x.id !== "venusmars")) {
+      expect(find(payload, q.id), q.id).toEqual(find(stored, q.id));
+    }
+    expect(find(payload, "fullmoon").phrases.wordLine).toBe(
+      "Not clearly. Around full moons, a 1% bigger share of your plays came after midnight, which could be chance.",
+    );
+    expect(find(payload, "fullmoon").phrases.correctionNote).toContain("asking 9 questions at once");
+  });
+
+  it("keeps the heads-up, which comes from the sky alone", () => {
+    // Venus and Mars come into sextile Sept 10, 2025.
+    const now = Date.parse("2025-09-04T17:00:00Z");
+    const stored = answersPayload(current, "ready", now).headsUp;
+    expect(stored?.id).toBe("venusmars");
+    expect(answersPayload(v1, "ready", now).headsUp).toEqual(stored);
+  });
+
+  it("words that heads-up with today's warm-up, not the stored measure's", () => {
+    // Mercury stations retrograde in mid-July 2025. This history starts Jan
+    // 1, 2025, so the one before (Mar 15) fell in its first year, when old
+    // favorites don't count yet. Stored under a measure with no warm-up.
+    const moved = record("mercury", { measure: "listening", warmupReadyFrom: null, status: "tested", p: 0.5, index: 1.01, iterations: 2000, rangeC: 0.2 });
+    const line = answersPayload(moved, "ready", Date.parse("2025-07-13T17:00:00Z")).headsUp?.line;
+    expect(line).toMatch(/^Mercury turns retrograde \w+\. You've lived through one, in your first year, before old favorites count\.$/);
+  });
+
+  it("reads each question's own stored measure, whatever the version", () => {
+    expect(answersPayload(current, "ready", NOW)).toMatchObject({ status: "ready", done: 12 });
+    expect(answersPayload(current, "ready", NOW).questions.every((q) => !q.updating)).toBe(true);
+    const moved = {
+      ...current,
+      questions: current.questions.map((q) => ({ ...q, measure: q.id === "moonstrong" ? ("listening" as const) : questionById(q.id).measure })),
+    };
+    const payload = answersPayload(moved, "ready", NOW);
+    expect(payload.questions.filter((q) => q.updating).map((q) => q.id)).toEqual(["moonstrong"]);
+    expect(payload.status).toBe("updating");
   });
 });
 

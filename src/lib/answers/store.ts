@@ -3,7 +3,7 @@ import type { NasaLog } from "@/lib/space/compact";
 import { takeBackIfRemoved } from "@/lib/removal";
 import { getBlobStore } from "@/lib/store/blob";
 import { userKey } from "@/lib/store/userKeys";
-import { ANSWERS_VERSION, RECORD_FORMAT, computeAnswers, historyStamp, type AnswerRecord } from "./engine";
+import { ANSWERS_VERSION, RECORD_FORMAT, computeAnswers, historyStamp, measuresToday, type AnswerRecord } from "./engine";
 
 /**
  * Stored answers (spec 6.6): one record per listener and zone, holding the
@@ -45,9 +45,9 @@ export const RETRY_INCOMPLETE_MS = 60 * 60 * 1000;
 
 /**
  * Whether a stored record still answers for this history. Behind on the
- * history, the NASA log or the analysis version, or missing a question that
- * threw an hour or more ago: it's served, and recomputed in the background
- * (6.6).
+ * history, the NASA log or the analysis version, holding a question that
+ * measured something else, or missing a question that threw an hour or more
+ * ago: it's served, and recomputed in the background (6.6).
  */
 export function isCurrent(
   record: AnswerRecord,
@@ -60,6 +60,7 @@ export function isCurrent(
     record.format === RECORD_FORMAT &&
     record.stamp === historyStamp(stored) &&
     record.nasaStamp === nasaStamp &&
+    record.questions.every((q) => measuresToday(record, q)) &&
     (!record.incomplete || now - record.computedAt < RETRY_INCOMPLETE_MS)
   );
 }

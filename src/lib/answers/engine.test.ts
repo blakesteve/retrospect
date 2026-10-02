@@ -117,7 +117,9 @@ describe("the 12 on a whole history", () => {
       }
     }
     expect(checked).toBeGreaterThan(30);
-  });
+    // Three 20,000-play histories: about 2.3 s alone, past the 5 s default
+    // beside a running dev server.
+  }, 20_000);
 
   it("takes c from the 100th largest of 2,000 rotations (6.4)", () => {
     const values = Array.from({ length: 2000 }, (_, i) => i + 1); // 1 to 2,000
@@ -197,6 +199,28 @@ describe("a young history (spec 14)", () => {
     expect(moon.warmupReadyFrom).toBe(plays[0].uts + 365 * 86_400);
     // Question 6 needs none: it answers, or says what it lacks, from the start.
     expect(byId(months, "venusmars").status).not.toBe("warming-up");
+  });
+
+  it("ends the warm-up at the first play's anniversary, to the second", () => {
+    // 1 Mar 2024 to 1 Mar 2025 is 365 days: no Feb 29 between them.
+    const ready = at("2025-03-01T12:00:00Z");
+    const plays = (last: number) => [
+      { uts: at("2024-03-01T12:00:00Z"), artist: "Artist", track: "Track" },
+      { uts: at("2024-06-01T12:00:00Z"), artist: "Artist", track: "Track" },
+      { uts: last, artist: "Artist", track: "Track" },
+    ];
+    for (const id of ["mercury", "newmoon", "moonstrong", "venusrx"]) {
+      expect(byId(computeAnswers("boundary", plays(ready - 1), "UTC"), id).status, id).toBe("warming-up");
+      expect(byId(computeAnswers("boundary", plays(ready), "UTC"), id).status, id).toBe("too-few-plays");
+    }
+  });
+
+  it("stores what each question measured, so a later change can tell", () => {
+    const rec = computeAnswers("engine-test", synthHistory(2_000, 5, 2024), "UTC");
+    expect(rec.questions.map((q) => q.measure)).toEqual([
+      "oldfavorites", "aftermidnight", "firstlistens", "listening", "oldfavorites", "listening",
+      "aftermidnight", "listening", "aftermidnight", "listening", "oldfavorites", "listening",
+    ]);
   });
 
   it("calls a first-year retrograde unmeasurable for old favorites", () => {
