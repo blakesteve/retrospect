@@ -2,7 +2,8 @@
 
 **Index**
 
-- **Done:** Nights, songs, highlights and genres as facts (1 Oct 2026) ·
+- **Done:** Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
+  songs, highlights and genres as facts (1 Oct 2026) ·
   NASA's data, and questions 7 and 8 (1 Oct 2026) · The answers
   engine, and stored answers (1 Oct 2026) · Real time
   zones, and nights (30 Sept) · The sky through 2035, and the redesign's sky
@@ -17,6 +18,28 @@
   threshold slider is still a native input (see the Roster sweep entry)
 
 ## Done
+
+### Questions 5 and 6 test their folklore (1 October 2026)
+
+- **What the lore says, measured.** Question 5 (Strong Moon) measures old
+  favorites, the lore's comfort, memory and home, after a year's warm-up;
+  question 6 (Venus and Mars getting along) measures how much you listen.
+  Question 9 keeps after-midnight plays. Eight of the 12 need no warm-up.
+- **Eleven new stories**, from Blake's folklore material, with every claim
+  about people attributed to the lore. Question 3's stays general.
+- **Never write, enforced.** A test reads every kind of sentence the answers
+  endpoint returns, and every story, and fails on a mechanism word or on a
+  clause that opens on a word outside its approved list. Tonight's heads-up
+  no longer says a planet "did" something.
+- **Reseeded.** The analysis version went to 2, so all 12 drew new shuffles.
+  The full null test, run locally on 1,000 synthetic histories: 9.4% got any
+  Yes, within the 13% bound (8.0% at version 1).
+- **A changed question is checking, not mislabeled.** Each question stores
+  what it measured. One stored under another measure (version 1's questions
+  5 and 6) reads "Checking" on its own until it's recomputed; the other 10
+  serve exactly as stored.
+- **One line for a first year of Moon visits.** Two or more first-year events
+  for old favorites share one early-read line.
 
 ### Nights, songs, highlights and genres as facts (1 October 2026)
 

@@ -250,23 +250,43 @@ rotating the sky's windows instead of the plays, which gives identical counts
 cost. Events merge as the spec says: Venus backing out of a sign and returning
 during a retrograde is one stretch, not two.
 
+Each question tests what its folklore says, two-sided. Eight need no warm-up;
+the four measured by old favorites or first listens (1, 3, 5 and 11) wait out
+a history's first year. Each carries a one-line story from the lore, and the
+lore stays lore: any claim about people or feelings is attributed ("the lore
+says", "is said to"). `neverWrite.test.ts` reads every kind of sentence the
+answers endpoint returns, and every story, and fails on any mechanism word
+("energy", "vibrations"). It also fails on any clause that opens on a word
+outside its approved list, so a sentence of advice can't open the copy
+unnoticed: a new opening word has to be added to the list by hand.
+
 The answer word allows for asking several questions at once. A Yes needs the
 question to pass a Benjamini-Hochberg false-discovery correction at 10% across
 every question that was tested, and its own p under 0.05. Below that it's
 Maybe, Not clearly or No by p alone, and a question without enough to test is
 Too early. `npm run null-test` runs the 12 on 1,000 made-up histories with no
 sky in them and fails if more than 13% get any Yes; the suite runs a quick 100.
+Each history is seeded, so a run gives the same result every time.
+
+Below the event floor, each event gets its own early-read row. For old
+favorites (questions 1, 5 and 11), two or more events in a history's first
+year share one line instead ("27 visits in your first year, Jan 7 to Dec 31,
+2025, came before old favorites count."); the Moon is strong about twice a
+month, so a history just past a year would otherwise list over 25.
 
 Answers are stored per listener and time zone, with the history they were
 computed from. A record that's behind (the history grew, the analysis changed)
-is served at once and recomputed in the background. The endpoint returns every
-sentence the page shows, built when it's served, so copy can change without a
-recompute. Questions 7 and 8 (solar storms and flares) test only whole nights
-inside NASA's log: from its first records in April 2010 to the start of the
-day 3 days before its last refresh, since DONKI logs late. They read "Not
-checked yet" until the log is whole. A record counts as behind when what NASA
-logged changes or its coverage reaches a new day, so the log's 3-hourly
-refreshes don't recompute everyone's answers.
+is served at once and recomputed in the background. Each question stores what
+it measured. One stored under another measure reads "Checking" on its own,
+with none of its numbers, until it's recomputed; the rest serve exactly as
+stored, their correction included. The endpoint returns every sentence the
+page shows, built when it's served, so copy can change without a recompute.
+Questions 7 and 8 (solar storms and flares) test only whole nights inside
+NASA's log: from its first records in April 2010 to the start of the day 3
+days before its last refresh, since DONKI logs late. They read "Not checked
+yet" until the log is whole. A record counts as behind when what NASA logged
+changes or its coverage reaches a new day, so the log's 3-hourly refreshes
+don't recompute everyone's answers.
 
 ## NASA's data
 

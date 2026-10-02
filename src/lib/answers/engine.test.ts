@@ -117,7 +117,9 @@ describe("the 12 on a whole history", () => {
       }
     }
     expect(checked).toBeGreaterThan(30);
-  });
+    // Three 20,000-play histories: about 2.3 s alone, past the 5 s default
+    // beside a running dev server.
+  }, 20_000);
 
   it("takes c from the 100th largest of 2,000 rotations (6.4)", () => {
     const values = Array.from({ length: 2000 }, (_, i) => i + 1); // 1 to 2,000
@@ -185,6 +187,40 @@ describe("a young history (spec 14)", () => {
     expect(venus.earlyReads.map((r) => new Date(r.start * 1000).toISOString().slice(0, 10))).toEqual(["2025-03-02"]);
     expect(venus.earlyReads[0].path).toMatch(/^from \d+°\d\d′ Aries back to \d+°\d\d′ Pisces$/);
     expect(venus.typicalSingleSwing).toBeGreaterThan(0);
+  });
+
+  it("warms up question 5 for a year: the Moon's old favorites need one", () => {
+    // From 1 Jan 2026 to 30 Sept 2026: under a year.
+    const plays = synthHistory(20_000, 606, 2026);
+    const months = computeAnswers("engine-test", plays, "UTC");
+    const moon = byId(months, "moonstrong");
+    expect(moon.status).toBe("warming-up");
+    // A year from the first play, not from anything the engine works out.
+    expect(moon.warmupReadyFrom).toBe(plays[0].uts + 365 * 86_400);
+    // Question 6 needs none: it answers, or says what it lacks, from the start.
+    expect(byId(months, "venusmars").status).not.toBe("warming-up");
+  });
+
+  it("ends the warm-up at the first play's anniversary, to the second", () => {
+    // 1 Mar 2024 to 1 Mar 2025 is 365 days: no Feb 29 between them.
+    const ready = at("2025-03-01T12:00:00Z");
+    const plays = (last: number) => [
+      { uts: at("2024-03-01T12:00:00Z"), artist: "Artist", track: "Track" },
+      { uts: at("2024-06-01T12:00:00Z"), artist: "Artist", track: "Track" },
+      { uts: last, artist: "Artist", track: "Track" },
+    ];
+    for (const id of ["mercury", "newmoon", "moonstrong", "venusrx"]) {
+      expect(byId(computeAnswers("boundary", plays(ready - 1), "UTC"), id).status, id).toBe("warming-up");
+      expect(byId(computeAnswers("boundary", plays(ready), "UTC"), id).status, id).toBe("too-few-plays");
+    }
+  });
+
+  it("stores what each question measured, so a later change can tell", () => {
+    const rec = computeAnswers("engine-test", synthHistory(2_000, 5, 2024), "UTC");
+    expect(rec.questions.map((q) => q.measure)).toEqual([
+      "oldfavorites", "aftermidnight", "firstlistens", "listening", "oldfavorites", "listening",
+      "aftermidnight", "listening", "aftermidnight", "listening", "oldfavorites", "listening",
+    ]);
   });
 
   it("calls a first-year retrograde unmeasurable for old favorites", () => {
@@ -276,9 +312,10 @@ describe("early reads (6.5)", () => {
 
 describe("the seed (6.6)", () => {
   it("is FNV-1a of the lowercased username, the question and the version", () => {
-    // Written out independently: 32-bit FNV-1a of "engine-test|mercury|1".
+    // Written out independently: 32-bit FNV-1a of "engine-test|mercury|2",
+    // version 2 since questions 5 and 6 changed measures (1 Oct 2026).
     let h = 2166136261;
-    for (const ch of "engine-test|mercury|1") {
+    for (const ch of "engine-test|mercury|2") {
       h ^= ch.charCodeAt(0);
       h = Math.imul(h, 16777619) >>> 0;
     }
@@ -289,10 +326,15 @@ describe("the seed (6.6)", () => {
 describe("a single play", () => {
   it("is too few plays for the questions with no warm-up, and says how many", () => {
     const rec = computeAnswers("engine-test", [{ uts: at("2026-01-10T03:00:00Z"), artist: "Artist", track: "Track" }], "UTC");
-    for (const id of ["fullmoon", "venushome", "moonstrong", "venusmars", "marswater", "venusdet", "marsrx"]) {
+    // Eight need no warm-up: these six, and storms and flares, which need
+    // NASA's log and aren't checked here. Question 5 has needed a year since
+    // 1 Oct 2026.
+    for (const id of ["fullmoon", "venushome", "venusmars", "marswater", "venusdet", "marsrx"]) {
       expect(byId(rec, id).status, id).toBe("too-few-plays");
     }
-    expect(byId(rec, "mercury").status).toBe("warming-up");
+    for (const id of ["mercury", "newmoon", "moonstrong", "venusrx"]) {
+      expect(byId(rec, id).status, id).toBe("warming-up");
+    }
   });
 });
 

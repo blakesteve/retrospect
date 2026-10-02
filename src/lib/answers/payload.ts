@@ -2,7 +2,15 @@ import { MIN_EVENTS, MIN_RETRO_N, type VerdictStatus } from "@/lib/analysis/conf
 import { isRetrograde, longitude, signOf, type SkyBody } from "@/lib/sky/sky";
 import { zoneClock } from "@/lib/zone";
 import { conditionFor } from "./conditions";
-import { ANSWERS_VERSION, type AnswerRecord, type EarlyRead, type MergedEvent, type NotChecked, type QuestionRecord } from "./engine";
+import {
+  ANSWERS_VERSION,
+  measuresToday,
+  type AnswerRecord,
+  type EarlyRead,
+  type MergedEvent,
+  type NotChecked,
+  type QuestionRecord,
+} from "./engine";
 import { QUESTIONS, type Measure, type Question, type QuestionId } from "./questions";
 import { answerWords, likelihoodFor, type AnswerWord } from "./words";
 
@@ -38,6 +46,9 @@ export interface QuestionPayload {
   shortName: string;
   status: VerdictStatus | null;
   notChecked: NotChecked | null;
+  /** Stored under another measure, and being recomputed: no numbers, and
+      left out of the correction until it's back. */
+  updating: boolean;
   word: AnswerWord;
   /** The swing, in percent (23 is 23% more). */
   pct: number | null;
@@ -480,6 +491,22 @@ function earlyReadRow(q: Question, r: EarlyRead, zone: string): string {
   return `${when}: ${what}${r.inProgress ? " (in progress)" : ""}.`;
 }
 
+/** The early reads' rows (6.5). For old favorites (questions 1, 5 and 11),
+    two or more first-year events share one line: the Moon is strong about
+    twice a month, and a history just past a year would list over 25. One
+    keeps its own row. */
+function earlyReadRows(q: Question, reads: EarlyRead[], zone: string): string[] {
+  const firstYear = reads.filter((r) => r.firstYear);
+  if (q.measure !== "oldfavorites" || firstYear.length < 2) return reads.map((r) => earlyReadRow(q, r, zone));
+  const n = firstYear.length;
+  const when = dateRange(zone, firstYear[0].start, firstYear[n - 1].end);
+  const line = `${capital(spelled(n))} ${q.eventNoun.many} in your first year, ${when}, came before old favorites count.`;
+  return [line, ...reads.filter((r) => !r.firstYear).map((r) => earlyReadRow(q, r, zone))];
+}
+
+/** A question stored under another measure, while it's recomputed. */
+const CHECKING = "Checking this question against your sky\u2026";
+
 /** "about 20%": whole percents under 10, then in fives, rounded up so the
     line never understates what chance does on its own. */
 function typicalSwing(fraction: number): string {
@@ -492,7 +519,9 @@ const STATIONS: QuestionId[] = ["mercury", "venusrx", "marsrx"];
 const SIGN_CHANGES: QuestionId[] = ["venushome", "marswater", "venusdet"];
 const ASPECTS: QuestionId[] = ["venusmars"];
 
-/** "Venus turns retrograde Saturday. You've lived through one; see what it did." */
+/** "Venus turns retrograde Saturday. You've lived through one; see how your
+    listening went." Never "see what it did": that says Venus did something
+    to the listener (9.6). */
 function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: string, nowUts: number): string | null {
   if (![...STATIONS, ...SIGN_CHANGES, ...ASPECTS].includes(q.id)) return null;
   const next = nextStartOf(q.id, nowUts);
@@ -523,7 +552,7 @@ function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: s
       ? "It'll be your first."
       : firstYearOnly
         ? `You've lived through one, in your first year, before ${WARMUP_NOUN[q.measure]} count.`
-        : `You've lived through ${spelled(n)}; see what ${n === 1 ? "it" : "they"} did.`;
+        : `You've lived through ${spelled(n)}; see how your listening went.`;
   return `${opening[q.id]} ${when}. ${second}`;
 }
 
@@ -580,9 +609,59 @@ export function computingPayload(): ComputingPayload {
   };
 }
 
+/** A question whose stored numbers measured something else: none of them
+    are shown, and no sentence is built from them. What depends only on the
+    sky stays: the next start, the songs first played under it, and the
+    heads-up, with today's warm-up in place of the stored one. */
+function checking(q: Question, rec: QuestionRecord, record: AnswerRecord, nowUts: number): QuestionPayload {
+  const warmupReadyFrom = q.warmupDays > 0 ? record.historyStart + q.warmupDays * DAY : null;
+  return {
+    id: q.id,
+    number: q.number,
+    question: q.question,
+    story: q.story,
+    shortName: q.shortName,
+    status: null,
+    notChecked: null,
+    updating: true,
+    word: "Checking",
+    pct: null,
+    p: null,
+    pAdjusted: null,
+    matches: 0,
+    iterations: 0,
+    range: null,
+    events: 0,
+    eventsNote: null,
+    inPlays: 0,
+    warmupReadyFrom: null,
+    earlyReads: [],
+    typicalSingleSwing: null,
+    nextStart: q.nasa ? null : (nextStartOf(q.id, nowUts)?.start ?? null),
+    pairings: rec.pairings ?? [],
+    nullSamples: [],
+    phrases: {
+      wordLine: CHECKING,
+      tonightLine: CHECKING,
+      likelihood: null,
+      frequency: null,
+      range: null,
+      tooEarly: null,
+      whatHappened: null,
+      warmup: null,
+      pValueNote: null,
+      correctionNote: null,
+      earlyReadRows: [],
+      typicalSwing: null,
+      headsUp: headsUp(q, { ...rec, warmupReadyFrom }, record, record.zone, nowUts),
+    },
+  };
+}
+
 /**
  * The payload for a stored record. `status` is "updating" when the record is
- * being refreshed in the background (6.6).
+ * being refreshed in the background (6.6), and always when a question is
+ * checking: `done` leaves those out.
  */
 export function answersPayload(
   record: AnswerRecord,
@@ -594,10 +673,18 @@ export function answersPayload(
   // By id, not position, so a reordered or older record can't mislabel one.
   const byId = new Map(record.questions.map((r) => [r.id, r]));
   const recs = QUESTIONS.map((q) => byId.get(q.id) ?? { ...emptyRecord, id: q.id, notChecked: "error" as const });
+  /* A question stored under another measure (an older version's) answers a
+     different question: it's served as checking on its own until it's
+     recomputed, and the rest serve exactly as stored (architect, 1 Oct 2026).
+     So the correction still counts its stored test: leaving it out would
+     re-correct the others with a smaller m, and could turn a Maybe into a Yes
+     that no data supports. */
+  const stale = recs.map((r) => !measuresToday(record, r));
   const { m, words, pAdjusted } = answerWords(recs.map((r) => (r.status === "tested" ? r.p : null)));
 
   const questions = QUESTIONS.map((q, i): QuestionPayload => {
     const rec = recs[i];
+    if (stale[i]) return checking(q, rec, record, nowUts);
     const tested = rec.status === "tested";
     const word: AnswerWord = rec.notChecked ? "Not checked" : tested ? words[i]! : "Too early";
     const swing = rec.index === null ? 0 : rec.index - 1;
@@ -638,7 +725,7 @@ export function answersPayload(
           : `Retrospect allows for asking ${questionsAtOnce(m)} at once with a false-discovery correction ` +
             `(Benjamini-Hochberg at 10%). A Yes needs this question's adjusted p at most 0.10 and its own p ` +
             `under 0.05. Adjusted p here: ${formatP(pAdjusted[i]!, "up")}.`,
-      earlyReadRows: early ? rec.earlyReads.map((r) => earlyReadRow(q, r, zone)) : [],
+      earlyReadRows: early ? earlyReadRows(q, rec.earlyReads, zone) : [],
       typicalSwing: early && rec.typicalSingleSwing !== null ? typicalSwing(rec.typicalSingleSwing) : null,
       headsUp: rec.notChecked ? null : headsUp(q, rec, record, zone, nowUts),
     };
@@ -650,6 +737,7 @@ export function answersPayload(
       shortName: q.shortName,
       status: rec.status,
       notChecked: rec.notChecked,
+      updating: false,
       word,
       // The swing and p of a test that ran; an untested question has neither to show.
       pct: tested && rec.index !== null ? Math.round(swing * 1000) / 10 : null,
@@ -671,7 +759,10 @@ export function answersPayload(
     };
   });
 
-  const tally = { Yes: 0, Maybe: 0, "Not clearly": 0, No: 0, "Too early": 0, "Not checked": 0 } as Record<AnswerWord, number>;
+  const tally = { Yes: 0, Maybe: 0, "Not clearly": 0, No: 0, "Too early": 0, "Not checked": 0, Checking: 0 } as Record<
+    AnswerWord,
+    number
+  >;
   for (const q of questions) tally[q.word]++;
 
   // One heads-up for Tonight (8.4): stations first, then sign changes, then
@@ -688,8 +779,8 @@ export function answersPayload(
   }
 
   return {
-    status,
-    done: questions.length,
+    status: tally.Checking > 0 ? "updating" : status,
+    done: questions.length - tally.Checking,
     total: questions.length,
     stamp: record.stamp,
     nasaStamp: record.nasaStamp,

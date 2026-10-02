@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
+import { MemoryBlobStore, getBlobStore, setBlobStore } from "@/lib/store/blob";
+import { userKey } from "@/lib/store/userKeys";
+import { QUESTIONS } from "./questions";
 import { getStore } from "@/lib/store/jsonStore";
 import { requestRemoval } from "@/lib/removal";
 import { synthHistory } from "./synthHistory";
@@ -101,6 +103,48 @@ describe("the answers route", () => {
       `${plays.length + 1}|${plays[0].uts}|${more[0].uts}`,
     );
     expect((await ask("grows")).body.status).toBe("ready");
+  });
+
+  it("serves a version-1 record's questions 5 and 6 as checking, the rest as stored, then recomputes", async () => {
+    await seed("olden");
+    // Version 1, as stored: no measures, question 5 how much you listen.
+    const fresh = computeAnswers("olden", plays, "America/Chicago");
+    const v1 = {
+      ...fresh,
+      version: 1,
+      format: 2,
+      questions: fresh.questions.map((stored) => {
+        const q = { ...stored };
+        delete q.measure;
+        return q.id === "moonstrong" ? { ...q, status: "tested" as const, p: 0.004, index: 1.4 } : q;
+      }),
+    };
+    await getBlobStore().put(userKey("answers", "olden"), Buffer.from(JSON.stringify({ records: [v1] })));
+    const { body } = await ask("olden");
+    expect(body).toMatchObject({ status: "updating", done: 10, version: 1 });
+    const byId = (b: typeof body, id: string) => b.questions.find((q: { id: string }) => q.id === id);
+    expect(byId(body, "moonstrong")).toMatchObject({ updating: true, word: "Checking", p: null });
+    expect(byId(body, "venusmars")).toMatchObject({ updating: true, word: "Checking" });
+    expect(byId(body, "mercury")).toMatchObject({ updating: false, p: v1.questions[0].p, status: v1.questions[0].status });
+    await Promise.all(background.splice(0));
+    const stored = await readAnswers("olden", "America/Chicago");
+    expect(stored).toMatchObject({ version: ANSWERS_VERSION });
+    expect(stored!.questions.map((q) => q.measure)).toEqual(QUESTIONS.map((q) => q.measure));
+    const after = (await ask("olden")).body;
+    expect(after).toMatchObject({ status: "ready", done: 12 });
+    expect(byId(after, "moonstrong").updating).toBe(false);
+  });
+
+  it("recomputes a record whose version is current but whose stored measure isn't", async () => {
+    await seed("moved");
+    const fresh = computeAnswers("moved", plays, "America/Chicago");
+    const moved = { ...fresh, questions: fresh.questions.map((q) => (q.id === "moonstrong" ? { ...q, measure: "listening" as const } : q)) };
+    await getBlobStore().put(userKey("answers", "moved"), Buffer.from(JSON.stringify({ records: [moved] })));
+    expect((await ask("moved")).body).toMatchObject({ status: "updating", done: 11, version: ANSWERS_VERSION });
+    await Promise.all(background.splice(0));
+    const stored = await readAnswers("moved", "America/Chicago");
+    expect(stored!.questions.find((q) => q.id === "moonstrong")!.measure).toBe("oldfavorites");
+    expect((await ask("moved")).body).toMatchObject({ status: "ready", done: 12 });
   });
 
   it("refreshes NASA's log after the response while it's missing or over 3 hours old", async () => {
@@ -250,6 +294,11 @@ describe("the answers store", () => {
     expect(isCurrent({ ...record, format: undefined }, plays, null, 2_000)).toBe(false);
     expect(isCurrent(record, plays.slice(1), null, 2_000)).toBe(false);
     expect(isCurrent(record, plays, "2026-10-01", 2_000)).toBe(false);
+    // A record from before each question stored its measure.
+    expect(isCurrent({ ...record, format: 2 }, plays, null, 2_000)).toBe(false);
+    // A question stored under another measure, whatever the version says.
+    const moved = { ...record, questions: record.questions.map((q) => (q.id === "moonstrong" ? { ...q, measure: "listening" as const } : q)) };
+    expect(isCurrent(moved, plays, null, 2_000)).toBe(false);
     // A question that threw is retried, but at most once an hour.
     const incomplete = { ...record, incomplete: true };
     expect(isCurrent(incomplete, plays, null, 1_000 + RETRY_INCOMPLETE_MS - 1)).toBe(true);
