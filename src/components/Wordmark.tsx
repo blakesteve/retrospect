@@ -6,7 +6,7 @@ export function Wordmark() {
   return (
     <Link
       href="/"
-      className="inline-flex items-center gap-2.5 text-ink-3 hover:text-gold transition-colors text-sm tracking-[0.2em] uppercase"
+      className="inline-flex min-h-11 items-center gap-2.5 text-ink-2 hover:text-gold transition-colors text-sm tracking-[0.2em] uppercase"
     >
       <Image
         src="/retrospect-logo-tp.PNG"

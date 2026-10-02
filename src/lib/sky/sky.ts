@@ -108,6 +108,10 @@ const PRONOUN: Record<SkyBody, "her" | "his" | "its"> = {
   Sun: "his", Moon: "her", Mercury: "its", Venus: "her", Mars: "his", Jupiter: "his", Saturn: "his",
 };
 
+/** "her" for Venus and the Moon, "his" for the Sun, Mars, Jupiter and Saturn,
+    "its" for Mercury (spec 9.3). */
+export const pronounOf = (body: SkyBody): "her" | "his" | "its" => PRONOUN[body];
+
 /**
  * The words for a body's standing in a sign (spec 9.3): "at home", "exalted",
  * "in her detriment", "in his fall", "in its detriment and fall", "a neutral
@@ -122,6 +126,57 @@ export function dignityPhrase(body: SkyBody, sign: Sign): string {
   const parts: string[] = [...good];
   if (bad.length > 0) parts.push(`in ${PRONOUN[body]} ${bad.join(" and ")}`);
   return parts.join(" and ");
+}
+
+/* ---------------------------------------------------------------------- */
+/* A body's words, built with the sky so every endpoint serving it         */
+/* carries them and the client only lays them out (spec 9)                 */
+/* ---------------------------------------------------------------------- */
+
+/** The practitioner's name for each standing, second in a line (spec 9). */
+const DIGNITY_TERM: Record<Dignity, string> = {
+  home: "domicile",
+  exalted: "exaltation",
+  detriment: "detriment",
+  fall: "fall",
+};
+
+/** "8°06′": whole degrees into the sign, then minutes, always two digits. */
+export const degreeText = (degree: number, minute: number): string =>
+  `${degree}°${String(minute).padStart(2, "0")}′`;
+
+export interface BodyWords {
+  /** "8°06′" */
+  degreeText: string;
+  /** Spec 9.3: "Venus in Scorpio · in her detriment", "Mercury in Libra · a
+      neutral sign". */
+  line: string;
+  /** Spec 8.7.1 item 3, plain words first, the practitioner's term second:
+      "Venus at home · domicile in Taurus, 14°21′", "Saturn in his fall · fall
+      in Aries, 11°43′, retrograde", "Mercury in a neutral sign · Libra,
+      28°09′". */
+  detail: string;
+  /** The accessible name: "Venus in Scorpio, in her detriment", "Saturn in
+      Aries, in his fall, retrograde". */
+  name: string;
+}
+
+/** The words for a body in a sign at a degree, retrograde or not. */
+export function bodyWords(b: { body: SkyBody; sign: Sign; degree: number; minute: number; retrograde: boolean }): BodyWords {
+  const standing = dignityPhrase(b.body, b.sign);
+  const deg = degreeText(b.degree, b.minute);
+  const rx = b.retrograde ? ", retrograde" : "";
+  const all = dignitiesOf(b.body, b.sign);
+  const detail =
+    all.length === 0
+      ? `${b.body} in a neutral sign · ${b.sign}, ${deg}${rx}`
+      : `${b.body} ${standing} · ${all.map((d) => DIGNITY_TERM[d]).join(" and ")} in ${b.sign}, ${deg}${rx}`;
+  return {
+    degreeText: deg,
+    line: `${b.body} in ${b.sign} · ${standing}`,
+    detail,
+    name: `${b.body} in ${b.sign}, ${standing}${rx}`,
+  };
 }
 
 /* ---------------------------------------------------------------------- */
@@ -244,12 +299,21 @@ export interface SkyAt {
   conditions: SkyConditionId[];
 }
 
+/** A body as `skyAt` gives it: its place and its words. */
+export type BodyAtWithWords = BodyAt & BodyWords;
+
+/** The sky as `skyAt` gives it, every body with its words. Anything typed as
+    `SkyAt` takes it as is. */
+export interface SkyAtWithWords extends SkyAt {
+  bodies: BodyAtWithWords[];
+}
+
 /** Everything spec 7.2 lists for one instant. A pure function of the time. */
-export function skyAt(date: Date): SkyAt {
-  const bodies: BodyAt[] = BODIES.map((body) => {
+export function skyAt(date: Date): SkyAtWithWords {
+  const bodies: BodyAtWithWords[] = BODIES.map((body) => {
     const lon = longitude(body, date);
     const sign = signOf(lon);
-    return {
+    const at: BodyAt = {
       body,
       longitude: lon,
       sign,
@@ -258,8 +322,9 @@ export function skyAt(date: Date): SkyAt {
       dignityPhrase: dignityPhrase(body, sign),
       retrograde: isRetrograde(body, date),
     };
+    return { ...at, ...bodyWords(at) };
   });
-  const byBody = Object.fromEntries(bodies.map((b) => [b.body, b])) as Record<SkyBody, BodyAt>;
+  const byBody = Object.fromEntries(bodies.map((b) => [b.body, b])) as Record<SkyBody, BodyAtWithWords>;
 
   const aspects: SkyAt["aspects"] = [];
   for (let i = 0; i < bodies.length; i++) {

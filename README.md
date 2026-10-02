@@ -19,31 +19,31 @@ statistics is the answer.
 
 ## What it does
 
-- **Five skies on trial**: Mercury/Venus/Mars retrograde, full moons, eclipses,
-  with real ephemeris windows and zodiac signs computed to the minute.
-- **Five measures**, freely mixable: Nostalgia (old favorites), Old Flames
-  (artist reunions), Intensity (listening volume), Night Owl (after-midnight
-  plays), Discovery (first listens).
-- **Plain-English verdicts**: "Does a full moon keep you up past midnight?
-  No, just +2%." Every result says how likely it is to be chance, in words and
-  as a plain frequency ("could easily be chance: shuffle the sky and a swing
-  this big turns up about 5 times in 10"), with a grip meter. P-values are off
-  by default; a toggle in the skeptic's panel adds them beside the plain
-  sentence, each with what it means.
-- **The 25-trial sweep**: scan every sky × measure combination and surface
-  only convictions and leads.
-- **Genres, as facts**: your top artists' Last.fm tags become your genres,
-  each with its share of your listening, its top artists, whether it's
-  rising and its biggest night. Nothing links a genre to the sky.
-- **Listener fingerprints**: archetypes, golden hour, streaks, and rhythms
-  computed from your data, interesting even when the sky is innocent. Habits
-  that need more history wait until there's enough, and say when they'll start.
-- **Birth charts, in-browser**: sun, moon, and rising sign (ascendant validated
-  against sunrise) computed client-side; birth data never touches a server.
-- **Head-to-head**: two usernames, whose sky is stronger.
-- Wrapped-style reveal, share cards, a link to NASA's Astronomy Picture of the
-  Day for your most nostalgic date, and a planetary loading screen where
-  colliding planets explode.
+- **Tonight**: tonight's real sky as a wheel, each planet at its longitude
+  with a halo for its dignity, the Moon with its phase, up to three chips for
+  what's happening (a station, a sign change, a planet at home or in
+  detriment), and which of the 12 questions' skies are overhead, with what
+  each one said about you.
+- **The 12 questions**: fixed, the same for everyone, each answered Yes,
+  Maybe, Not clearly, No or Too early, in plain words, with how likely it is
+  to be chance. The math is there for anyone who opens "Show the math".
+- **The sky of your songs**: each song's sky the minute you first played it,
+  the night it belongs to, and NASA's facts for that night.
+- **Your wildest nights**, **what's coming up in your sky**, **your genres**
+  (Last.fm's tags as facts, never linked to the sky) and **your habits**.
+- **Every sheet is a link**: a song, a night, a question or a planet opens in
+  a sheet with its own URL, so a shared link lands on it, in the sharer's
+  time zone.
+- **A reveal and a guide**: four cards the first time on a browser, then three
+  tips; "Replay the reveal" in the footer shows the cards again.
+- **Head-to-head**: two usernames side by side (rewritten in a later step).
+- **The landing** says what Retrospect does and asks for a username first,
+  then shows NASA's photo of Earth during the Apr 8, 2024 eclipse as an
+  example, then four working samples. The samples are a made-up listener run
+  through the real routes and committed to `public/samples/`; regenerate them
+  with `WRITE_SAMPLES=1 npx vitest run src/lib/samples.test.ts` after any
+  change to what the routes say (without the variable, the test fails when
+  the committed files are stale).
 
 ## Run it locally
 
@@ -73,9 +73,12 @@ them on the way in.
 
 ### A note on form controls
 
-Controls come from Roster, not hand-rolled markup. One does not, and the reason
-is written at the usage rather than here: the threshold slider has no Roster
-equivalent.
+Controls come from Roster, not hand-rolled markup: sheets are Roster's
+`Sheet`, the view switcher its `LiquidNav`, and fields, buttons, pills,
+switches and disclosures its own. What Roster has nothing for is the app's own,
+in `src/components/listener/`: the sky wheel, the Moon, the jar, the meters'
+labels and the icon set. The threshold slider that used to be the exception is
+gone with the report.
 
 The UTC-offset field used to be the second exception, on the grounds that
 Roster's menu had no scroll. That was wrong — Headless UI caps and scrolls the
@@ -268,11 +271,11 @@ Too early. `npm run null-test` runs the 12 on 1,000 made-up histories with no
 sky in them and fails if more than 13% get any Yes; the suite runs a quick 100.
 Each history is seeded, so a run gives the same result every time.
 
-Below the event floor, each event gets its own early-read row. For old
-favorites (questions 1, 5 and 11), two or more events in a history's first
-year share one line instead ("27 visits in your first year, Jan 7 to Dec 31,
-2025, came before old favorites count."); the Moon is strong about twice a
-month, so a history just past a year would otherwise list over 25.
+Below the event floor, each event gets its own early-read row. For the
+questions with a warm-up (1, 3, 5 and 11), two or more events in a history's
+first year share one line instead ("27 visits in your first year, Jan 7 to
+Dec 31, 2025, came before old favorites count."); the Moon is strong about
+twice a month, so a history just past a year would otherwise list over 25.
 
 Answers are stored per listener and time zone, with the history they were
 computed from. A record that's behind (the history grew, the analysis changed)
@@ -357,10 +360,12 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 |---|---|
 | `/api/user/{name}/nights?from=YYYY-MM&to=YYYY-MM` | Every night of up to a year: plays against a usual night of that weekday, after-midnight plays, songs first heard (with pairings), the Moon at 9 p.m., the questions whose condition held, the filters it lights, its wild title, its genre mix, and NASA's facts with its photos. Plus each filter's count over the whole history. |
 | `/api/user/{name}/songs` | Your 12 most-played songs with 5 plays or more first played after your first 90 days, plus your first scrobble; "See all" lists 50. Each with its genre, first play, highlight chip and pairing sentence. |
-| `/api/user/{name}/highlights` | The reveal: how long, the count-ups, the wildest nights with their titles and lines, and the song with the strangest sky. |
+| `/api/user/{name}/highlights` | The reveal: how long, the count-ups, the wildest nights as cards (plays against a usual night, the night's photo) and the song with the strangest sky. Plus the "Surprise me" pool: song skies with a chip, wild nights, and dated facts. |
+| `/api/user/{name}/profile` | Your habits, with the sentence for the ones still waiting built on the server, so no page imports the sky's windows. Noise is always left out. |
 | `/api/user/{name}/genres` | Up to 12 genres with 50 plays or more: share, top artists, "rising" and biggest night. "building" while the tags are fetched. |
 | `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
-| `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days. |
+| `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days. Plus Tonight's words: the heading by local time, the Moon's line ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), up to three chips, every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the line for a night with no question's sky overhead. |
+| `/api/sky/planet?body=&from=&to=` | A planet's sheet: tonight's sign and dignity, its dignity in every sign, its path through a history as a strip (the Moon's as a letter per night), its next station and sign change, and the questions about it. Jupiter and Saturn to the day, the others to the minute. |
 
 A night runs 4 a.m. to 4 a.m. local. A question's condition holds on every
 night its window touches, but the full- and new-moon filters light only the
@@ -391,7 +396,7 @@ windows over the rate outside. Significance comes from rotating the event
 calendar to thousands of random offsets, which preserves both the calendar's
 structure and your listening's autocorrelation, and asking how often chance
 beats you. Rare-event measures get a "lead" tier for effects that are large
-but unconfirmed. Sleep-noise artists (rain sounds, ASMR) can be excluded so
+but unconfirmed. Sleep-noise artists (rain sounds, ASMR) are always left out, so
 eight hours of Rolling Thunder doesn't drown your actual taste.
 
 The p-value is (matches + 1) / (shuffles + 1): the real calendar counts as one

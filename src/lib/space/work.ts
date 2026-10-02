@@ -117,6 +117,9 @@ export async function runSpaceWork(opts: WorkOptions): Promise<WorkSummary> {
   running = p.finally(() => {
     running = null;
   });
+  // The caller handles `p`. This derived promise rejects with it, and with no
+  // handler a failed pass (the store down) would be an unhandled rejection.
+  running.catch(() => undefined);
   return p;
 }
 

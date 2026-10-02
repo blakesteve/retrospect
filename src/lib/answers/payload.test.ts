@@ -264,8 +264,8 @@ describe("early reads (6.5, 9.2)", () => {
     expect(q.phrases.typicalSwing).toBe("One ordinary stretch this long usually moves less than about 20% either way.");
   });
 
-  // Architect, 1 Oct 2026: two or more first-year events for old favorites
-  // (questions 1, 5 and 11) share one line; one keeps its own row (above).
+  // Architect, 1 Oct 2026: two or more first-year events for a question with
+  // a warm-up (1, 3, 5 and 11) share one line; one keeps its own row (above).
   const read = (start: string, end: string, firstYear: boolean, swing: number | null = null) => ({
     start: at(start),
     end: at(end),
@@ -321,7 +321,7 @@ describe("early reads (6.5, 9.2)", () => {
     expect(q.phrases.earlyReadRows).toEqual(["12 visits in your first year, Jun 3, 2025 to May 28, 2026, came before old favorites count."]);
   });
 
-  it("keeps first listens' first-year rows apart, as ruled for old favorites only", () => {
+  it("collapses first listens' first-year rows too (6.5, corrected 1 Oct)", () => {
     const q = phrasesOf(
       record("newmoon", {
         status: "too-few-events",
@@ -333,10 +333,7 @@ describe("early reads (6.5, 9.2)", () => {
       }),
       "newmoon",
     );
-    expect(q.phrases.earlyReadRows).toEqual([
-      "Jan 29 to Jan 30, 2025: in your first year, before first listens count.",
-      "Feb 27 to Feb 28, 2025: in your first year, before first listens count.",
-    ]);
+    expect(q.phrases.earlyReadRows).toEqual(["Two new moons in your first year, Jan 29 to Feb 28, 2025, came before first listens count."]);
   });
 });
 
@@ -581,6 +578,71 @@ describe("fixes from review", () => {
     expect(forward.questions.find((q) => q.id === "venusrx")).toMatchObject({ pct: null, p: null });
     const reversed = answersPayload({ ...rec, questions: [...rec.questions].reverse() }, "ready", NOW);
     expect(reversed.questions).toEqual(forward.questions);
+  });
+});
+
+describe("the reveal's last card (8.3)", () => {
+  const reveal = (rec: AnswerRecord) => answersPayload(rec, "ready", NOW).reveal;
+  const tested = (p: number) => ({ status: "tested" as const, p, index: 1.1, iterations: 2000, rangeC: 0.2, events: 9 });
+
+  it("leads with the Yes count, then the maybes, then No", () => {
+    expect(reveal(record("fullmoon", tested(0.004), rest9)).line).toBe("One yes. Here's exactly how, and how sure.");
+    expect(reveal(record("fullmoon", tested(0.04), rest9)).line).toBe("Mostly no. Here's exactly how, and the one maybe.");
+    expect(reveal(record("fullmoon", tested(0.07), [0.06, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.96, 0.97])).line).toBe(
+      "Mostly no. Here's exactly how, and the two maybes.",
+    );
+    expect(reveal(record("fullmoon", tested(0.5), rest9)).line).toBe("No, as far as we can tell. Here's exactly how much.");
+  });
+
+  it("says when most are too early, and what the first tested one already says", () => {
+    // Questions 1 and 2 tested; 3 to 12 too early or not checked.
+    expect(reveal(record("fullmoon", tested(0.5), [0.6])).line).toBe("Too early for most. Here's what Mercury retrograde already says.");
+  });
+
+  it("names the first to arrive, or says plays are what's missing, when nothing is tested", () => {
+    const warming = record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-01-15T12:00:00Z") });
+    expect(reveal(warming).line).toBe("Too early for all 12. The first to arrive: Mercury retrograde, around January 2027.");
+    expect(reveal(record("mercury", {})).line).toBe("Too early for all 12. They arrive as more of your listening falls under each sky.");
+  });
+
+  it("puts Yes first when there's a Yes and a Maybe", () => {
+    expect(reveal(record("fullmoon", tested(0.004), [0.06, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.96, 0.97])).line).toBe("One yes. Here's exactly how, and how sure.");
+  });
+
+  it("calls six of 12 too early not yet most, and seven most", () => {
+    // Tested: 1 to 6. Too early: 9 to 12. Not checked: 7 and 8. So 4 too early.
+    expect(reveal(record("fullmoon", tested(0.5), [0.6, 0.6, 0.6, 0.6, 0.6])).line).toBe("No, as far as we can tell. Here's exactly how much.");
+    // Two tested, 7 to 8 not checked, eight too early: more than half.
+    const most = record("fullmoon", tested(0.5), [0.6]);
+    expect(reveal(most).line).toMatch(/^Too early for most\./);
+    // Exactly six too early (half), four tested and two not checked: not "most".
+    const six = { ...most, questions: most.questions.map((q) => (q.id === "newmoon" || q.id === "venushome" ? { ...q, status: "tested" as const, p: 0.6, index: 1.01, iterations: 2000, rangeC: 0.2, events: 9 } : q)) };
+    expect(answersPayload(six, "ready", NOW).tally["Too early"]).toBe(6);
+    expect(reveal(six).line).toBe("No, as far as we can tell. Here's exactly how much.");
+  });
+
+  it("agrees with a plural subject", () => {
+    // Solar storms tested first: questions 1 to 6 too early.
+    const storms = record("storms", { ...tested(0.5), notChecked: null });
+    expect(reveal(storms).line).toBe("Too early for most. Here's what solar storms already say.");
+  });
+
+  it("names the earliest of several to arrive, counting the next event as well as a warm-up", () => {
+    const two = record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-06-15T12:00:00Z") });
+    const both = { ...two, questions: two.questions.map((q) => (q.id === "venusrx" ? { ...q, status: "warming-up" as const, warmupReadyFrom: at("2027-01-15T12:00:00Z") } : q)) };
+    expect(reveal(both).line).toBe("Too early for all 12. The first to arrive: Venus retrograde, around January 2027.");
+    // A question short of events arrives at its next event: Venus turns
+    // retrograde Oct 3, 2026 (Central), before either warm-up ends.
+    const events = { ...both, questions: both.questions.map((q) => (q.id === "marsrx" ? q : q.id === "venusrx" ? { ...q, status: "too-few-events" as const, warmupReadyFrom: null, events: 2 } : q)) };
+    expect(reveal(events).line).toBe("Too early for all 12. The first to arrive: Venus retrograde, around October 2026.");
+  });
+
+  it("counts the questions not checked yet", () => {
+    // record() leaves NASA's two not checked.
+    expect(reveal(record("fullmoon", tested(0.5), rest9)).notChecked).toBe("Two not checked yet");
+    const all = record("fullmoon", tested(0.5), rest9);
+    const checked = { ...all, questions: all.questions.map((q) => (q.notChecked ? { ...q, notChecked: null, status: "too-few-plays" as const } : q)) };
+    expect(reveal(checked).notChecked).toBeNull();
   });
 });
 

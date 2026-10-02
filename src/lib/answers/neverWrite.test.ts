@@ -30,6 +30,8 @@ const OPENERS = new Set([
   // Answer words, and the likelihood and correction phrases (6.3, 9.1).
   "yes", "maybe", "no", "not", "too", "could", "unlikely", "very", "under", "only", "adjusted", "p", "retrospect",
   "less", // "…barely moved: less than 1% either way"
+  // The reveal's last card (8.3): "Mostly no. Here's exactly how, and the one maybe."
+  "mostly", "here's",
   // Articles, pronouns and the like.
   "a", "an", "the", "this", "it", "it'll", "there's", "they", "she", "he", "you've", "something", "nothing",
   // Where and when: "Around full moons, …", "If Mercury retrograde moves you at all, …".
@@ -197,6 +199,24 @@ function variants(base: AnswerRecord): AnswerRecord[] {
           return tested(r, 0.3, 0.95, 0.2);
       }
     }),
+    // Nothing tested yet, one held back by its warm-up (the reveal, 8.3).
+    each((r, i) =>
+      i === 0
+        ? { ...r, status: "warming-up", notChecked: null, warmupReadyFrom: Date.UTC(2030, 0, 15) / 1000 }
+        : { ...r, status: r.notChecked ? null : "too-few-plays", inPlays: 40 },
+    ),
+    // Question 3's first year, on one line (6.5).
+    each((r, i) =>
+      QUESTIONS[i].id !== "newmoon"
+        ? r
+        : {
+            ...r,
+            status: "too-few-events",
+            notChecked: null,
+            events: 0,
+            earlyReads: [0, 30].map((d) => ({ start: span + d * 86_400, end: span + (d + 1) * 86_400, swing: null, inProgress: false, firstYear: true, path: null })),
+          },
+    ),
     // Version 1, which stored no measures: questions 5 and 6 are checking.
     { ...base, version: 1, questions: base.questions.map(withoutMeasure) },
   ];
@@ -282,7 +302,15 @@ describe("never write (spec 9.6)", () => {
       /The next one begins /,
       /: in your first year, before .* count\.$/,
       /^\w+ (visits|retrogrades) in your first year, .*, came before old favorites count\.$/,
+      /^\w+ new moons in your first year, .*, came before first listens count\.$/,
       /^Checking this question against your sky\u2026$/,
+      /^\w+ yes\. Here's exactly how, and how sure\.$/,
+      /^Mostly no\. Here's exactly how, and the (one maybe|\w+ maybes)\.$/,
+      /^No, as far as we can tell\. Here's exactly how much\.$/,
+      /^Too early for most\. Here's what .* already says\.$/,
+      /^Too early for all 12\. The first to arrive: .*, around \w+ \d{4}\.$/,
+      /^Too early for all 12\. They arrive as more of your listening falls under each sky\.$/,
+      /^\w+ not checked yet$/,
       /: no plays to compare\.$/,
       /\(in progress\)\.$/,
       /^One ordinary stretch this long/,

@@ -1,111 +1,117 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ListeningProfile as ProfileData } from "@/lib/profile";
-import { pendingHabitsSentence } from "@/lib/readiness";
+import { Card } from "@blakesteve/roster";
+import type { ProfileResponse } from "@/lib/profile";
+import { Row, RowFailed } from "./listener/pieces";
+
+/* Tonight's "Your habits" row (spec 8.4): when you listen, how much and what
+   you reach for, read from every play with noise excluded. The server writes
+   every sentence that depends on the history, the pending one included, so
+   this file imports none of the modules that reach the window JSON (13.5).
+   The heading and the failed line are the shared row's, so this row reads
+   like its neighbors. */
+
+const HEADING = "Your habits";
+const LINE = "Not the sky: when you listen, how much, and what you reach for, from every play.";
+/** Today's tiny-history sentence (8.4), under 500 plays. */
+const tooFewLine = (needed: number, have: number) =>
+  `Your listening fingerprints (when you listen, how much, and what you reach for) show up once there are ${needed.toLocaleString("en-US")} of your plays to read. So far there are ${have.toLocaleString("en-US")}.`;
+
+type Result =
+  | { kind: "ready"; profile: ProfileResponse }
+  | { kind: "too-few"; have: number; needed: number }
+  | { kind: "failed" };
+
+/** What a response means for the row. Anything unexpected is a failure. */
+async function readResponse(res: Response): Promise<Result> {
+  const data = await res.json().catch(() => null);
+  if (!data || typeof data !== "object") return { kind: "failed" };
+  if (res.ok && Array.isArray(data.hourShares)) return { kind: "ready", profile: data as ProfileResponse };
+  if (
+    res.status === 404 &&
+    data.code === "too-few-plays" &&
+    typeof data.have === "number" &&
+    typeof data.needed === "number"
+  ) {
+    return { kind: "too-few", have: data.have, needed: data.needed };
+  }
+  return { kind: "failed" };
+}
 
 const fmtHour = (h: number) => {
   const hr = h % 12 === 0 ? 12 : h % 12;
   return `${hr}${h < 12 ? "am" : "pm"}`;
 };
 
-/**
- * "What actually runs your listening" — the guaranteed payoff. Sky or no
- * sky, these are real fingerprints from real data, always interesting even
- * (especially) when every celestial trial comes back innocent.
- */
-export function ListeningProfile({
-  username,
-  excludeNoise,
-}: {
-  username: string;
-  excludeNoise: boolean;
-}) {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  /* Set when the history is too small for a profile at all. Without it the
-     panel just didn't appear, and a brand-new visitor had no way to know it
-     was coming. */
-  const [tooFew, setTooFew] = useState<{ have: number; needed: number } | null>(null);
-  // Read once: whether a pending habit's start date is still ahead.
-  const [now] = useState(() => Date.now());
+export function ListeningProfile({ username, zone }: { username: string; zone: string }) {
+  const query = zone ? `?${new URLSearchParams({ tz: zone })}` : "";
+  const url = `/api/user/${encodeURIComponent(username)}/profile${query}`;
+  /* Keyed by the URL it answers, so a new username or zone shows the
+     skeleton again instead of the last listener's habits. */
+  const [loaded, setLoaded] = useState<{ url: string; result: Result } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    // The browser's IANA zone: the server reads every play with its real offsets.
-    const params = new URLSearchParams();
-    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (zone) params.set("tz", zone);
-    if (excludeNoise) params.set("noise", "exclude");
-    /* Every answer replaces both, failures included, so toggling the noise
-       filter can't leave the last setting's panel up under the new one. */
-    const clear = () => {
-      if (cancelled) return;
-      setProfile(null);
-      setTooFew(null);
+    const settle = (result: Result) => {
+      if (!cancelled) setLoaded({ url, result });
     };
-    fetch(`/api/user/${encodeURIComponent(username)}/profile?${params}`)
-      .then((res) => res.json().catch(() => null))
-      .then((data) => {
-        if (cancelled) return;
-        if (!data) return clear();
-        const few =
-          data.error && typeof data.have === "number" && typeof data.needed === "number"
-            ? { have: data.have, needed: data.needed }
-            : null;
-        setProfile(data.error ? null : data);
-        setTooFew(few);
-      })
-      .catch(clear);
+    fetch(url)
+      .then(readResponse)
+      .then(settle, () => settle({ kind: "failed" }));
     return () => {
       cancelled = true;
     };
-  }, [username, excludeNoise]);
+  }, [url]);
 
-  if (!profile) {
-    if (!tooFew) return null;
+  const result = loaded?.url === url ? loaded.result : null;
+
+  // A row that failed is one line, and the rest of the page stands (8.4).
+  if (result?.kind === "failed") {
     return (
-      <div className="rounded-lg bg-surface-1 border border-[var(--hairline)] p-5">
-        <h3 className="text-ink text-sm font-medium mb-1">
-          Sky aside: what actually runs your listening
-        </h3>
-        <p className="text-ink-3 text-xs max-w-xl leading-relaxed">
-          Your listening fingerprints (when you listen, how much, and what you reach
-          for) show up once there are {tooFew.needed.toLocaleString()} of your plays
-          to read. So far there are {tooFew.have.toLocaleString()}.
-        </p>
-      </div>
+      <section aria-label={HEADING} className="mt-10">
+        <RowFailed name={HEADING} />
+      </section>
     );
   }
-  const p = profile;
-  const maxShare = Math.max(...p.hourShares);
-  const pending = pendingHabitsSentence(p.pending, now);
-
+  if (result?.kind === "too-few") {
+    return (
+      <Row id="your-habits" title={HEADING}>
+        <p className="text-ink-2 text-sm max-w-xl leading-relaxed">{tooFewLine(result.needed, result.have)}</p>
+      </Row>
+    );
+  }
   return (
-    <div className="rounded-lg bg-surface-1 border border-[var(--hairline)] p-5">
-      <h3 className="text-ink text-sm font-medium mb-1">
-        Sky aside: what actually runs your listening
-      </h3>
-      <p className="text-ink-3 text-xs mb-4 max-w-xl leading-relaxed">
-        The planets may plead innocent, but your habits leave fingerprints. These are
-        yours, computed from every play, no horoscope required.
-      </p>
+    <Row id="your-habits" title={HEADING} sub={LINE}>
+      {result ? <Habits p={result.profile} /> : <HabitsSkeleton />}
+    </Row>
+  );
+}
 
+/* The app's panel look on Roster's Card (outline: no shadow of its own).
+   Border colors are set per use, never twice on one element. */
+const PANEL = "rounded-lg bg-surface-1 border-[var(--hairline)] text-ink";
+const TILE = "rounded-md bg-surface-2 text-ink p-3";
+
+function Habits({ p }: { p: ProfileResponse }) {
+  const maxShare = Math.max(...p.hourShares);
+  return (
+    <Card variant="outline" padding="none" className={`${PANEL} p-5`}>
       {p.archetypes.length > 0 && (
-        <div className="grid sm:grid-cols-3 gap-3 mb-5">
+        <ul className="grid sm:grid-cols-3 gap-3 mb-5">
           {p.archetypes.map((a) => (
-            <div
-              key={a.label}
-              className="rounded-md bg-surface-2 border border-gold/30 p-3"
-            >
-              <p className="text-gold text-sm font-medium">
-                {a.emoji} {a.label}
-              </p>
-              <p className="text-ink-3 text-xs mt-1.5 leading-relaxed">{a.why}</p>
-            </div>
+            <li key={a.label}>
+              <Card variant="outline" padding="none" className={`${TILE} h-full border-gold/30`}>
+                <p className="text-gold text-sm font-medium">{a.label}</p>
+                <p className="text-ink-2 text-xs mt-1.5 leading-relaxed">{a.why}</p>
+              </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-      {pending && <p className="text-ink-3 text-xs mb-5 max-w-xl leading-relaxed">{pending}</p>}
+      {p.pendingSentence && (
+        <p className="text-ink-2 text-xs mb-5 max-w-xl leading-relaxed">{p.pendingSentence}</p>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-center">
         <MiniTile
@@ -150,23 +156,38 @@ export function ListeningProfile({
           );
         })}
       </div>
-      <div className="flex justify-between text-[10px] text-ink-3 tabular mt-1">
+      <div className="flex justify-between text-[10px] text-ink-2 tabular mt-1" aria-hidden="true">
         <span>midnight</span>
         <span>6am</span>
         <span>noon</span>
         <span>6pm</span>
         <span>11pm</span>
       </div>
-    </div>
+    </Card>
   );
 }
 
 function MiniTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-md bg-surface-2 border border-[var(--hairline)] p-3">
-      <p className="text-ink-3 text-[10px] uppercase tracking-[0.15em]">{label}</p>
+    <Card variant="outline" padding="none" className={`${TILE} border-[var(--hairline)]`}>
+      <p className="text-ink-2 text-[10px] uppercase tracking-[0.15em]">{label}</p>
       <p className="font-display text-lg text-ink mt-1">{value}</p>
-      <p className="text-ink-3 text-[11px] mt-0.5">{sub}</p>
+      <p className="text-ink-2 text-[11px] mt-0.5">{sub}</p>
+    </Card>
+  );
+}
+
+/** Blocks the size of the panel while it loads; never a spinner over content. */
+function HabitsSkeleton() {
+  return (
+    <div aria-hidden="true" className={`${PANEL} border p-5`}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-[92px] rounded-md bg-surface-2 motion-safe:animate-pulse" />
+        ))}
+      </div>
+      <div className="h-14 rounded-md bg-surface-2 motion-safe:animate-pulse" />
+      <div className="h-[15px] mt-1" />
     </div>
   );
 }

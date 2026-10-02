@@ -218,3 +218,115 @@ body {
   background-color: var(--roster-primary-500);
 }
 
+
+/* ===========================================================================
+   The redesign (phase 3): Tonight, the sheets, the landing.
+   Colors from the prototypes (spec 8.9), checked against spec 11's 4.5:1 for
+   text. `--text-muted` is 4.78:1 on the sky but 4.25:1 on a card, so card text
+   uses `--text-secondary`.
+   ======================================================================== */
+:root {
+  /* Dignity halos (8.9): at home gold, exalted sea green, detriment plum,
+     fall rust. Never the only signal: the words always say it (11). */
+  --home: #d4af37;
+  --exalt: #7fb3a5;
+  --detr: #a8617f;
+  --fall: #c86a4a;
+  /* Answer words, as solid pills with sky ink (5.8 to 10.1:1). */
+  --word-yes: #e0806a;
+  --word-maybe: #d9a441;
+  --word-notclearly: #9fc6bb;
+  --word-no: #7fb3a5;
+  --word-early: #8e8bb5;
+  --word-quiet: #b9b6ab; /* Not checked and Checking: not answers */
+  /* Space weather */
+  --aurora: #5de2b0;
+  --flare: #ffb347;
+  --indigo: #7487ea;
+  --moonlight: #ece6cf;
+  /* Lines and glass */
+  --line: rgba(242, 239, 230, 0.09);
+  --line-2: rgba(242, 239, 230, 0.16);
+  --deep: #070a1c;
+  --font-glyph: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", serif;
+
+  /* LiquidNav's active label on the gold pill. Roster 5.1.0 reads it from
+     `--roster-primary-500-ink`, which this app already sets to deep indigo;
+     named here so the view switcher doesn't depend on that coincidence
+     (ClickUp 86e3h9mca: white measured 2.1:1). */
+  --roster-lt-text-active: var(--roster-gray-950);
+}
+.dark {
+  --roster-lt-text-active: var(--roster-gray-950);
+}
+
+/* Spec 11: a 2px ring in the sky color inside a 2px gold ring, on every
+   focusable element, so it shows on gold buttons and on the sky alike.
+   Headings that only take focus so it lands somewhere sensible (a reveal
+   card, a closed deep-linked sheet) aren't controls, and get no ring. */
+:focus-visible:not([tabindex="-1"]) {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--sky);
+}
+
+/* "Surprise me" floats over the bottom of the page: a focused element
+   scrolls clear of it (11: a dock must not cover the focused element). */
+html {
+  scroll-padding-bottom: 96px;
+}
+
+.font-glyph {
+  font-family: var(--font-glyph);
+  font-variant-emoji: text;
+}
+
+/* A row you swipe (10): scrolls sideways inside itself, never the page. */
+.rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 16px;
+  padding: 4px 16px 14px;
+  margin: 0 -16px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+.rail > * {
+  scroll-snap-align: start;
+  flex: none;
+}
+
+.sky-card {
+  background: linear-gradient(180deg, rgba(23, 28, 61, 0.92), rgba(16, 20, 46, 0.92));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 1px 0 rgba(242, 239, 230, 0.05) inset, 0 10px 30px rgba(2, 4, 14, 0.45);
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+.skeleton {
+  background: rgba(242, 239, 230, 0.06);
+  border-radius: 14px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
