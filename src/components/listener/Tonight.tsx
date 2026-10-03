@@ -533,7 +533,7 @@ function ComingUpRow({ onShow }: { onShow: (c: ComingUpItem, button: HTMLElement
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">{date}</p>
               <p className="mt-2 font-display text-[18px] leading-snug text-ink">{c.text}</p>
               <p className="mt-1 text-[12px] text-ink-2">{c.at}</p>
-              <Button size="lg" variant="outline" className="mt-3 self-start !px-4" aria-label={`Show ${date}, ${c.text}, on the wheel`} onClick={(e) => onShow(c, e.currentTarget)}>
+              <Button size="lg" variant="outline" className="mt-3 self-start !px-4" aria-label={`Show on the wheel: ${date}, ${c.text}`} onClick={(e) => onShow(c, e.currentTarget)}>
                 Show on the wheel
               </Button>
               {q && meta && (
@@ -808,14 +808,16 @@ function CompareCard() {
   );
 }
 
-/** "Surprise me" (8.4 item 7, 8.11 item 5): from 640px a labeled button from
-    the start; under 640px a 56px round one that fades in once "Tonight, for
-    you" has scrolled above it, so it never sits on a "for you" row. From
-    1124px it sits in the margin beside the column, where it covers nothing. */
+/** "Surprise me" (8.4 item 7, 8.11 item 5): under 640px a 56px round button,
+    from 640px a labeled one. Up to 1123px it sits over the column, so it
+    fades in only once "Tonight, for you" has scrolled above it and never
+    covers a "for you" row (ruling, 3 Oct 2026). From 1124px it sits in the
+    margin beside the column, where it covers nothing, from the start. */
 function Surprise({ after }: { after: RefObject<HTMLDivElement | null> }) {
   const L = useListener();
   const last = useRef<string | null>(null);
   const phone = useMedia("(max-width: 639.98px)");
+  const overColumn = useMedia("(max-width: 1123.98px)");
   const [past, setPast] = useState(false);
   const pool = L.highlights.state === "ready" ? (L.highlights.data.surprise ?? []) : [];
   useEffect(() => {
@@ -837,7 +839,7 @@ function Surprise({ after }: { after: RefObject<HTMLDivElement | null> }) {
     if (item.kind === "song" && item.songId) L.open({ kind: "song", value: item.songId });
     else if (item.date) L.open({ kind: "night", value: item.date }, item.kind === "fact" ? item.text : undefined);
   };
-  const shown = !phone || past;
+  const shown = !overColumn || past;
   return (
     <div
       className={`fixed bottom-[calc(16px+env(safe-area-inset-bottom))] right-4 z-40 transition-[opacity,transform] duration-200 motion-reduce:transition-none sm:right-[max(16px,calc((100vw-720px)/2+16px))] min-[1124px]:left-[calc(50%+376px)] min-[1124px]:right-auto ${

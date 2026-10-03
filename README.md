@@ -406,13 +406,17 @@ listener's zone, then G5 and G4 storms, then the eclipses the zone didn't
 see, then flares of X5 or more and asteroids of about 50 m closer than the
 Moon; a curated title (`src/data/space-events.json`) heads a night when one
 matches, and the log's words otherwise. "Seen" means at least 10% of the Sun
-covered with the Sun up, or the Moon up at a lunar eclipse's greatest moment,
-at the zone's principal city from IANA's `zone1970.tab`, old names included
-through its `backward` links (tzdata 2026b, from github.com/eggert/tz at tag
-2026b, committed at `src/data/tz/`; `node scripts/zone-cities.mjs` turns them
-into `cities.json`). UTC and Etc zones see every eclipse. It's a ranking rule
-only, and no copy names the city. A storm that runs past 4 a.m. is one card,
-on the night of its higher reading, though both nights stay wild. Pairings are facts with a time and a
+covered with the Sun up at the local peak, or the Moon up at a lunar
+eclipse's greatest moment, at the zone's principal city: from IANA's
+`zone.tab` first (one zone per country, each its own city), then
+`zone1970.tab` (which merges zones, so Reykjavik there is Abidjan's), old
+names included through `backward`'s links (tzdata 2026b, from
+github.com/eggert/tz at tag 2026b, committed at `src/data/tz/`;
+`node scripts/zone-cities.mjs` turns them into `cities.json`). UTC and Etc
+zones see every eclipse. It's a ranking rule only, and no copy names the
+city. A storm that runs past 4 a.m. is one card, on the night of its higher
+reading, though both nights stay wild; a night whose storm card goes next
+door keeps a card for its other event, if it has one. Pairings are facts with a time and a
 date ("You first played Apple at 7:18 a.m. CDT on Oct 3, 2024, the minute an
 X9.0 flare peaked."), never a cause, and the answers carry each question's
 pairings.

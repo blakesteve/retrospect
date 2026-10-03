@@ -15,7 +15,7 @@ import { cityOf, eclipseView, eclipseVisible, findCity } from "./visibility";
 const at = (iso: string) => Date.parse(iso) / 1000;
 const DIR = path.resolve(__dirname, "../../data/tz");
 
-describe("each zone's principal city (zone1970.tab, tzdata 2026b)", () => {
+describe("each zone's principal city (zone.tab, then zone1970.tab, tzdata 2026b)", () => {
   it("reads ISO 6709, with and without seconds", () => {
     expect(parseCoordinates("+415100-0873900")).toEqual([41.85, -87.65]); // Chicago
     expect(parseCoordinates("+2232+08822")).toEqual([22.5333, 88.3667]); // Kolkata
@@ -25,6 +25,15 @@ describe("each zone's principal city (zone1970.tab, tzdata 2026b)", () => {
 
   it("finds Chicago for America/Chicago", () => {
     expect(cityOf("America/Chicago")).toEqual({ lat: 41.85, lon: -87.65 });
+  });
+
+  it("finds a zone's own city where zone1970.tab merged it into another country's (ruling, 3 Oct 2026)", () => {
+    // zone1970.tab has no Reykjavik, Oslo or Nassau: backward links them to
+    // Abidjan, Berlin and Toronto. zone.tab lists each with its own.
+    expect(cityOf("Atlantic/Reykjavik")).toEqual({ lat: 64.15, lon: -21.85 });
+    expect(cityOf("Europe/Oslo")).toEqual({ lat: 59.9167, lon: 10.75 });
+    expect(cityOf("America/Nassau")).toEqual({ lat: 25.0833, lon: -77.35 });
+    expect(cities.links["Atlantic/Reykjavik"]).toBe("Africa/Abidjan");
   });
 
   it("finds a zone under its old name too, both ways round", () => {
@@ -50,6 +59,8 @@ describe("each zone's principal city (zone1970.tab, tzdata 2026b)", () => {
   });
 
   it("is the committed tables, as scripts/zone-cities.mjs wrote them", () => {
+    expect(cities.byCountry).toEqual(parseZoneTab(readFileSync(path.join(DIR, "zone.tab"), "utf8")));
+    expect(Object.keys(cities.byCountry).length).toBeGreaterThan(400);
     expect(cities.cities).toEqual(parseZoneTab(readFileSync(path.join(DIR, "zone1970.tab"), "utf8")));
     expect(cities.links).toEqual(parseLinks(readFileSync(path.join(DIR, "backward"), "utf8")));
     // Reach: the whole table and its links were read.
@@ -75,6 +86,14 @@ describe("whether an eclipse was seen from the zone (7.5)", () => {
     // Not reaching Chicago at all: the local search finds a later eclipse.
     expect(eclipseView(CHICAGO, "annular solar", at("2024-10-02T18:44:56Z"))).toEqual({ obscuration: 0, altitude: null, visible: false });
     expect(eclipseView(CHICAGO, "annular solar", at("2026-02-17T12:11:54Z"))).toEqual({ obscuration: 0, altitude: null, visible: false });
+  });
+
+  it("sees Aug 12, 2026 from Reykjavik, where it was total (ruling, 3 Oct 2026)", () => {
+    const reykjavik = eclipseView("Atlantic/Reykjavik", "total solar", at("2026-08-12T17:45:47Z"));
+    expect(reykjavik.obscuration!).toBeGreaterThan(0.99);
+    expect(reykjavik.altitude!).toBeCloseTo(24.5, 0);
+    expect(reykjavik.visible).toBe(true);
+    expect(eclipseVisible("Atlantic/Reykjavik", "total solar", at("2026-08-12T17:45:47Z"))).toBe(true);
   });
 
   it("sees from another zone what Chicago didn't", () => {

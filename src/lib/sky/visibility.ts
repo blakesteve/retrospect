@@ -6,13 +6,15 @@ import tz from "@/data/tz/cities.json";
  * changed 2 Oct 2026): a ranking rule for the wild nights only. No copy ever
  * names the city, which isn't the listener's. SERVER ONLY.
  *
- * The zone's principal city is IANA's, from `zone1970.tab` (tzdata 2026b,
- * github.com/eggert/tz at tag 2026b), looked up under the zone's own name and
- * through `backward`'s links both ways: V8 reports old names (Asia/Calcutta,
- * Europe/Kiev, Asia/Saigon) that the table lists under their new ones.
- * `scripts/zone-cities.mjs` turns the two committed files into
- * `src/data/tz/cities.json`. A zone with no city (UTC, Etc/*) sees every
- * eclipse.
+ * The zone's principal city is IANA's (tzdata 2026b, github.com/eggert/tz
+ * at tag 2026b): from `zone.tab` first, one zone per country with its own
+ * city, then `zone1970.tab`, which merges zones that have kept the same clocks
+ * since 1970 (so Atlantic/Reykjavik there is Abidjan's; ruling, 3 Oct 2026).
+ * Each is looked up under the zone's own name and through `backward`'s links
+ * both ways: V8 reports old names (Asia/Calcutta, Europe/Kiev, Asia/Saigon)
+ * that the tables list under their new ones. `scripts/zone-cities.mjs` turns
+ * the three committed files into `src/data/tz/cities.json`. A zone with no
+ * city (UTC, Etc/*) sees every eclipse.
  *
  * Visible means a solar eclipse covering at least 10% of the Sun at its
  * local peak with the Sun up there, or the Moon up at a lunar eclipse's
@@ -20,6 +22,7 @@ import tz from "@/data/tz/cities.json";
  * they're kept in memory.
  */
 
+const BY_COUNTRY = tz.byCountry as unknown as Record<string, [number, number]>;
 const CITIES = tz.cities as unknown as Record<string, [number, number]>;
 const LINKS = tz.links as Record<string, string>;
 
@@ -42,10 +45,10 @@ export function findCity(
   return hit ? { lat: hit[0], lon: hit[1] } : null;
 }
 
-/** The zone's principal city (zone1970.tab), or null for a zone with none
-    (UTC, Etc/*). */
+/** The zone's principal city, from zone.tab, else zone1970.tab, or null for
+    a zone with none (UTC, Etc/*). */
 export function cityOf(zone: string): { lat: number; lon: number } | null {
-  if (!cities.has(zone)) cities.set(zone, findCity(zone));
+  if (!cities.has(zone)) cities.set(zone, findCity(zone, BY_COUNTRY) ?? findCity(zone, CITIES));
   return cities.get(zone)!;
 }
 
