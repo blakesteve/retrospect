@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyCompact, nasaLogFrom, patchFlares, patchStorms } from "./compact";
 import { synthCompact } from "./synthLog";
-import { sdoDays } from "./work";
+import { sdoMoments } from "./work";
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 const READ = "2026-10-01T12:00:00.000Z";
@@ -147,9 +147,9 @@ describe("the compact storm and flare log", () => {
   });
 });
 
-describe("the days that need a picture of the Sun", () => {
-  it("aims at the middle of the day's strongest reading, or an X flare's peak", () => {
-    const days = sdoDays(
+describe("the moments that need a picture of the Sun (architect, 2 Oct 2026)", () => {
+  it("aims at every Kp reading's middle and every X flare's peak, by UTC day", () => {
+    const days = sdoMoments(
       synthCompact("2026-10-01T12:00:00Z", {
         kp: [
           ["2024-05-10T18:00:00Z", 8.33],
@@ -162,10 +162,10 @@ describe("the days that need a picture of the Sun", () => {
       }),
     );
     expect(Object.fromEntries(days)).toEqual({
-      "2024-05-10": "2024-05-10T19:30:00.000Z",
-      "2023-04-23": "2023-04-23T23:30:00.000Z",
-      // The flare wins its day over a stronger storm.
-      "2024-10-10": "2024-10-10T03:30:00.000Z",
+      "2023-04-23": ["2023-04-23T23:30:00.000Z"],
+      "2024-05-10": ["2024-05-10T16:30:00.000Z", "2024-05-10T19:30:00.000Z"],
+      // A flare and a storm the same day: a moment each.
+      "2024-10-10": ["2024-10-10T03:30:00.000Z", "2024-10-10T19:30:00.000Z"],
     });
   });
 });

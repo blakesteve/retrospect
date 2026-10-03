@@ -52,10 +52,15 @@ export interface EpicDay {
   images: { name: string; time: string; lat: number; lon: number }[];
 }
 
-/** The Sun on a storm or X-flare day: the AIA 171 image nearest the event,
-    or null when SDO has none that day. */
+/** The Sun at an event moment (architect, 2 Oct 2026): the AIA 171 image
+    nearest an X flare's peak or a Kp reading's middle, or null when SDO has
+    none that day. A day can hold several; a night shows the one nearest its
+    biggest event (`sunsByNight`). Records stored before moments carry no
+    `at` and are dropped when their month is next written. */
 export interface SdoDay {
   date: string;
+  /** The moment aimed at, ISO. */
+  at: string;
   time: string;
   url: string | null;
 }
@@ -93,6 +98,9 @@ export interface SpaceMonth<S extends SpaceSource> {
 export const SPACE_PREFIX = SHARED_PREFIXES[0];
 
 export const monthKey = (source: SpaceSource, month: string) => `${SPACE_PREFIX}${source}/${month}.json`;
+
+/** Each full fill pass's calls, writes and what's left (`work.ts`), for `/api/space/progress`. */
+export const PROGRESS_KEY = `${SPACE_PREFIX}fill-progress.json`;
 
 export async function readMonth<S extends SpaceSource>(source: S, month: string): Promise<SpaceMonth<S> | null> {
   const raw = await getBlobStore().get(monthKey(source, month));

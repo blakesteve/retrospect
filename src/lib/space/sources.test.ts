@@ -10,7 +10,7 @@ import {
   fetchApproaches,
   fetchFireballs,
   fetchFlares,
-  fetchSdoNearest,
+  fetchSdoDay,
   fetchStorms,
   plainText,
 } from "./sources";
@@ -228,7 +228,7 @@ describe("SDO", () => {
   const listing = (names: string[]) =>
     new Response(`<html><body>${names.map((n) => `<a href="${n}">${n}</a>`).join("\n")}</body></html>`);
 
-  it("picks the day's AIA 171 image nearest the event", async () => {
+  it("picks the day's AIA 171 image nearest each moment, from one read of its folder", async () => {
     const asked = nasa(() =>
       listing([
         "20240510_183000_1024_0171.jpg",
@@ -238,22 +238,32 @@ describe("SDO", () => {
         "20240510_203000_1024_0171.jpg",
       ]),
     );
-    expect(await fetchSdoNearest("2024-05-10", "2024-05-10T19:40:00Z")).toEqual({
-      date: "2024-05-10",
-      time: "2024-05-10T19:30:00Z",
-      url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/20240510_193000_1024_0171.jpg",
-    });
+    expect(await fetchSdoDay("2024-05-10", ["2024-05-10T19:40:00Z", "2024-05-10T21:00:00Z"])).toEqual([
+      {
+        date: "2024-05-10",
+        at: "2024-05-10T19:40:00Z",
+        time: "2024-05-10T19:30:00Z",
+        url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/20240510_193000_1024_0171.jpg",
+      },
+      {
+        date: "2024-05-10",
+        at: "2024-05-10T21:00:00Z",
+        time: "2024-05-10T20:30:00Z",
+        url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/20240510_203000_1024_0171.jpg",
+      },
+    ]);
     expect(asked).toEqual(["https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/"]);
   });
 
   it("finds none on a day without one, or without a folder", async () => {
     nasa(() => listing(["20240510_193000_1024_0193.jpg"]));
-    expect(await fetchSdoNearest("2024-05-10", "2024-05-10T19:40:00Z")).toBeNull();
+    const none = (date: string, at: string) => [{ date, at, time: at, url: null }];
+    expect(await fetchSdoDay("2024-05-10", ["2024-05-10T19:40:00Z"])).toEqual(none("2024-05-10", "2024-05-10T19:40:00Z"));
     nasa(() => new Response("Not Found", { status: 404 }));
-    expect(await fetchSdoNearest("2012-03-09", "2012-03-09T12:00:00Z")).toBeNull();
+    expect(await fetchSdoDay("2012-03-09", ["2012-03-09T12:00:00Z"])).toEqual(none("2012-03-09", "2012-03-09T12:00:00Z"));
     // A failure is still a failure, to be tried again.
     nasa(() => new Response("", { status: 503 }));
-    await expect(fetchSdoNearest("2012-03-09", "2012-03-09T12:00:00Z")).rejects.toThrow(/^503 /);
+    await expect(fetchSdoDay("2012-03-09", ["2012-03-09T12:00:00Z"])).rejects.toThrow(/^503 /);
     // EPIC: a day without a folder is a day without photos.
     nasa(() => new Response("{}", { status: 404 }));
     expect(await fetchEpicDay("2015-06-20")).toEqual({ date: "2015-06-20", images: [] });
@@ -324,7 +334,7 @@ describe("every source", () => {
     await fetchFlares("2024-05");
     await fetchApproaches("2024-05-01", "2024-05-31");
     await fetchFireballs("2024-05-01", "2024-05-31");
-    await fetchSdoNearest("2024-05-10", "2024-05-10T12:00:00Z");
+    await fetchSdoDay("2024-05-10", ["2024-05-10T12:00:00Z"]);
     await fetchApodPage(1);
     expect(asked).toHaveLength(6);
     for (const url of asked) expect(url).not.toMatch(/api_key|DEMO_KEY|api\.nasa\.gov/);

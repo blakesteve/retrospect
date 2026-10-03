@@ -7,6 +7,7 @@ import { sunMonths, sunsByNight } from "@/lib/listener/tonightCards";
 import { aboutMeters, dateIn, lunarDistanceWords, timeIn } from "@/lib/listener/words";
 import { type FilterId } from "@/lib/listener/record";
 import { kpLabel } from "@/lib/space/kp";
+import { FIRST_DATES } from "@/lib/space/sources";
 import { SPACE_PHOTOS } from "@/lib/space/curated";
 import { monthsBetween, readMonths } from "@/lib/space/store";
 import { nightName, nightWeekday, zoneClock } from "@/lib/zone";
@@ -157,6 +158,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
           fireballs: s.fireballs.map((f) => ({ ...f, at: timeIn(zone, f.time) })),
           epic: s.epic,
           photos,
+          // SDO's coverage (7.3; architect, 2 Oct 2026): before its browse
+          // archive, a storm or flare night says why there's no Sun; after
+          // it, a night without one shows none and says nothing. Dec 31,
+          // 2015's storm night west of Greenwich has one anyway, taken just
+          // after midnight UTC, and needs no note.
+          sunNote:
+            date < FIRST_DATES.sdo && (s.kp !== null || s.xFlare) && !photos.some((p) => p.kind === "sdo")
+              ? "NASA's daily Sun photos start in 2016."
+              : null,
         },
       });
     }

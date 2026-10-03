@@ -49,13 +49,12 @@ export function sunMonths(clock: ZoneClock, first: number, last: number): string
 
 /**
  * SDO's Sun for each night, by the listener's clock (8.7.1, 7.3; ClickUp
- * 86e3jdkeg). The fill files a picture under the UTC day of the event it
- * aims at, an X flare's peak or the day's strongest Kp reading, so the UTC
- * date can name the wrong night: Chicago's May 10, 2024 storm night has the
- * X5.8 picture filed under May 11. Each picture goes to the night it was
- * taken in. Two in one night: the one nearer that night's biggest X flare,
- * or its strongest Kp reading, as the fill itself prefers; the earlier with
- * no log.
+ * 86e3jdkeg). The fill keeps a picture for every X flare's peak and every
+ * Kp reading's middle, filed under its UTC day, so the UTC date can name
+ * the wrong night: Chicago's May 10, 2024 storm night has the X5.8 picture
+ * filed under May 11. Each picture goes to the night it was taken in, and a
+ * night shows the one nearest its biggest X flare, else its strongest Kp
+ * reading; the earlier with no log.
  */
 export function sunsByNight(files: Iterable<SpaceMonth<"sdo">>, clock: ZoneClock, nasa: NasaLog | null): Map<number, SunPhoto> {
   const byNight = new Map<number, SunPhoto[]>();

@@ -7,8 +7,9 @@
  *   the committed nights, and the months of its wild nights. Each day keeps
  *   only the frame facing the sample's zone (Chicago, 90° west, as the
  *   routes pick it), so the file stays small.
- * - SDO's Sun on every storm or X-flare day in those months, and the UTC day
- *   either side, since the routes match a picture to the night it was taken in.
+ * - SDO's Sun at every X flare and Kp reading in those months, and the UTC
+ *   day either side, as the fill reads it (`sdoMoments`): the routes match a
+ *   picture to the night it was taken in.
  * - JPL's close approaches and fireballs for the whole history, a year per
  *   call, so the reveal's flyby count covers all of it.
  *
@@ -53,9 +54,9 @@ await build({
   },
 });
 const sources = await import(pathToFileURL(path.join(outDir, "sources.mjs")).href);
-const { sdoDays } = await import(pathToFileURL(path.join(outDir, "work.mjs")).href);
+const { sdoMoments } = await import(pathToFileURL(path.join(outDir, "work.mjs")).href);
 const { zoneClock } = await import(pathToFileURL(path.join(outDir, "zone.mjs")).href);
-const { FIRST_DATES, fetchEpicDates, fetchEpicDay, fetchSdoNearest, fetchApproaches, fetchFireballs } = sources;
+const { FIRST_DATES, fetchEpicDates, fetchEpicDay, fetchSdoDay, fetchApproaches, fetchFireballs } = sources;
 
 const json = (name) => JSON.parse(readFileSync(path.join(SAMPLES, name), "utf8"));
 const status = json("status.json");
@@ -106,14 +107,14 @@ const days = await each(listed, async (date) => {
 for (const m of months) files.push(file("epic", m, days.filter((d) => d.date.startsWith(m))));
 console.log(`EPIC: ${listed.length} days.`);
 
-// SDO: the Sun on each storm or X-flare day in the shown months, and the UTC
-// day either side: a night's picture can be filed under the next day's date.
+// SDO: the Sun at every X flare and Kp reading in the shown months, and the
+// UTC day either side: a night's picture can be filed under the next day's date.
 const donki = JSON.parse(readFileSync(path.join(root, "src/lib/answers/testdata/donki-compact.json"), "utf8"));
 const near = (d) => [-1, 0, 1].some((k) => months.includes(new Date(Date.parse(`${d}T12:00:00Z`) + k * 86_400_000).toISOString().slice(0, 7)));
-const sunDays = [...sdoDays({ kp: {}, xflares: {}, ...donki })].filter(([d]) => near(d) && d >= FIRST_DATES.sdo).sort();
-const suns = await each(sunDays, async ([day, at]) => (await fetchSdoNearest(day, at)) ?? { date: day, time: at, url: null });
+const sunDays = [...sdoMoments({ kp: {}, xflares: {}, ...donki })].filter(([d]) => near(d) && d >= FIRST_DATES.sdo).sort();
+const suns = (await each(sunDays, ([day, ats]) => fetchSdoDay(day, ats))).flat();
 for (const m of [...new Set(suns.map((s) => s.date.slice(0, 7)))].sort()) files.push(file("sdo", m, suns.filter((s) => s.date.startsWith(m))));
-console.log(`SDO: ${suns.length} days, ${suns.filter((s) => s.url).length} with a picture.`);
+console.log(`SDO: ${suns.length} moments over ${sunDays.length} days, ${suns.filter((s) => s.url).length} with a picture.`);
 
 /** The sample's night for a moment, by the routes' own clock: 4 a.m. to
     4 a.m. in Chicago (7.1), daylight saving included. */

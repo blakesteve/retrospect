@@ -1,16 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
-import { writeMonth } from "./store";
+import { PROGRESS_KEY, writeMonth, writeSpaceJson } from "./store";
 import { runSpaceWork } from "./work";
 
 vi.mock("./work", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./work")>()),
-  runSpaceWork: vi.fn(async () => ({ skipped: false, ms: 5, fetches: 3, wrote: ["apod/2026-10"], failed: [], done: false })),
+  runSpaceWork: vi.fn(async () => ({ skipped: false, ms: 5, fetches: 3, wrote: ["apod/2026-10"], failed: [], done: false, left: { epic: 4000, sdo: 12 } })),
 }));
 const pass = vi.mocked(runSpaceWork);
 
 const { GET: apodRoute } = await import("@/app/api/apod/route");
-const { GET: spaceCron } = await import("@/app/api/cron/space/route");
+const spaceCronModule = await import("@/app/api/cron/space/route");
+const { GET: spaceCron } = spaceCronModule;
+const { GET: progressRoute } = await import("@/app/api/space/progress/route");
 
 let asked: string[];
 beforeEach(() => {
@@ -123,12 +125,41 @@ describe("the space cron route", () => {
     expect(pass).not.toHaveBeenCalled();
   });
 
-  it("runs one pass of everything inside the route's time, and reports it", async () => {
+  it("runs one pass of everything inside the route's time, and reports it with what's left", async () => {
     vi.stubEnv("CRON_SECRET", "s3cret-value-for-tests");
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const res = await call("Bearer s3cret-value-for-tests");
     expect(res.status).toBe(200);
-    // It waits for a DONKI pass running here, inside the same 35 seconds.
-    expect(pass).toHaveBeenCalledWith({ budgetMs: 35_000, wait: true });
-    expect(await res.json()).toMatchObject({ fetches: 3, done: false });
+    // Hobby's 300 s with Fluid compute; it waits for a DONKI pass running
+    // here inside the same 270, leaving 30 for a fetch that times out.
+    expect(spaceCronModule.maxDuration).toBe(300);
+    expect(pass).toHaveBeenCalledWith({ budgetMs: 270_000, wait: true });
+    expect(await res.json()).toMatchObject({ fetches: 3, done: false, left: { epic: 4000 } });
+    // Every source by name: one the pass didn't reach isn't read as nothing left.
+    expect(log.mock.calls.flat().join(" ")).toMatch(
+      /left: donki-gst not reached, donki-flr not reached, jpl-cad not reached, jpl-fireball not reached, apod not reached, sdo 12, epic 4000, epic-priority not reached$/,
+    );
+    log.mockRestore();
+  });
+
+  it("says so when another pass holds the fill", async () => {
+    vi.stubEnv("CRON_SECRET", "s3cret-value-for-tests");
+    pass.mockResolvedValueOnce({ skipped: true, ms: 0, fetches: 0, wrote: [], failed: [], done: false, left: {}, heldUntil: "2026-10-03T09:36:00.000Z" });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const res = await call("Bearer s3cret-value-for-tests");
+    expect(await res.json()).toMatchObject({ skipped: true, heldUntil: "2026-10-03T09:36:00.000Z" });
+    expect(log.mock.calls.flat().join(" ")).toBe("[retrospect] space pass skipped: another pass holds the fill until 2026-10-03T09:36:00.000Z");
+    log.mockRestore();
+  });
+});
+
+describe("the fill's progress (architect, 2 Oct 2026)", () => {
+  it("shows what full passes wrote, readable in a browser, and says so when none has run", async () => {
+    const empty = await progressRoute();
+    expect(empty.headers.get("cache-control")).toBe("no-store");
+    expect(await empty.json()).toEqual({ updatedAt: null, left: {}, passes: [] });
+    const p = { updatedAt: "2026-10-03T09:30:00.000Z", left: { epic: { count: 3800, at: "2026-10-03T09:30:00.000Z" } }, passes: [] };
+    await writeSpaceJson(PROGRESS_KEY, p);
+    expect(await (await progressRoute()).json()).toEqual(p);
   });
 });

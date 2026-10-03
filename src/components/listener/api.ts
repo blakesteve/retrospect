@@ -126,6 +126,8 @@ export interface NightSpace {
   fireballs: { time: number; kt: number | null; at: string }[];
   epic: { url: string; time: string; credit: string } | "none" | "unknown";
   photos: { kind: "curated" | "sdo"; url: string; page: string; caption: string; credit: string }[];
+  /** Why a storm or flare night before 2016 has no Sun, or null (7.3). */
+  sunNote: string | null;
 }
 
 export interface Night {

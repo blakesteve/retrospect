@@ -2,7 +2,8 @@
 
 **Index**
 
-- **Done:** Tonight's follow-ups (2 Oct 2026) · Tonight, the sheets, the
+- **Done:** NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+  (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
   songs, highlights and genres as facts (1 Oct 2026) ·
@@ -21,6 +22,23 @@
 
 ## Done
 
+### NASA's fill, by priority (2 October 2026)
+
+- **A longer pass.** The space cron gets Vercel Hobby's 300 seconds (with
+  Fluid compute, on by default) and fetches for 270, up from 35.
+- **The wanted days first.** EPIC fills the days around storms, X flares,
+  eclipses and asteroids of about 50 m closer than the Moon, and the last 12
+  months, before everything else, each newest first.
+- **Readable progress.** Each full pass records its calls, writes and what's
+  left by source at `/api/space/progress`, and the cron's log line says what's
+  left too.
+- **The Sun per event moment.** SDO keeps the picture nearest every X flare's
+  peak and every Kp reading's middle, not one per UTC day, so a night shows
+  the one nearest its own biggest event: Chicago's May 11, 2024 now shows the
+  X1.5. SDO's backfill starts again under a new index.
+- **Coverage words.** A storm or flare night before 2016 says "NASA's daily
+  Sun photos start in 2016."; after that, a night without a Sun says nothing.
+
 ### Tonight's follow-ups (2 October 2026)
 
 - **The Sun on the right night.** SDO files a picture under the UTC day of
@@ -28,9 +46,10 @@
   the listener's clock (ClickUp 86e3jdkeg): Chicago's May 10, 2024 shows the
   X5.8 at 8:26 p.m., and May 11 no longer shows it. Two in one night: the one
   nearer that night's biggest X flare, or strongest storm reading. The
-  landing's May 10 sample shows the X5.8 too. A storm night no stored picture
-  was taken in now shows no Sun (Chicago's May 11, 2024): the fill keeps one
-  picture per UTC day.
+  landing's May 10 sample shows the X5.8 too. ~~A storm night no stored
+  picture was taken in now shows no Sun (Chicago's May 11, 2024): the fill
+  keeps one picture per UTC day.~~ Superseded the same day by a picture per
+  event moment (NASA's fill, by priority, above).
 - **Wild cards keep their photos.** One night's facts that won't read cost
   only that card's photo, and EPIC's index is read once per request.
 - **The reveal never says "Too early for all 12"** while some questions are
