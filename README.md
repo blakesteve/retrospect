@@ -305,7 +305,7 @@ first date and its last refresh:
 | DONKI storms and flares ([CCMC](https://ccmc.gsfc.nasa.gov/tools/DONKI/)) | each storm's Kp readings; each flare's class and peak | storm and X-flare nights, questions 7 and 8 |
 | JPL close approaches and fireballs | approaches within 0.05 AU; fireballs with their energy | a night's asteroid and fireballs |
 | EPIC | each day's photos of Earth from DSCOVR, with where each faces | Earth that day |
-| SDO | the Sun's AIA 171 image nearest each storm or X-flare day's event, from 2016, where its browse archive starts | the Sun on those nights, each picture on the night it was taken in, by the listener's clock |
+| SDO | the Sun's AIA 171 image nearest every X flare's peak and every Kp reading's middle, from 2016, where its browse archive starts | the Sun on those nights: each night shows the picture nearest its own biggest event, by the listener's clock; a storm or flare night before 2016 says "NASA's daily Sun photos start in 2016." |
 | APOD | each day's title, credit and page, never the picture | the APOD link |
 
 Storm and flare times are kept in UTC, plus a compact list of every Kp reading
@@ -315,8 +315,16 @@ them since 2014, but never time before its storm began: up to mid-2013 a
 storm's first reading is the moment it began, often off the 3-hour grid.
 
 Nobody runs a backfill by hand. The daily cron (`/api/cron/space`) runs a
-35-second pass, most needed first: DONKI, then the day's refreshes, then the
-rest of the backfill. The answers route also runs a DONKI-only pass after its
+270-second pass inside Vercel Hobby's 300-second limit (`vercel.json` sets
+Fluid compute, which that limit needs), most needed first: DONKI, then the
+day's refreshes, then the backfill's wanted part (JPL's years, SDO's
+moments, APOD's last year, and EPIC's days around storms, X flares, eclipses
+and close asteroids and its last year), then the rest of APOD and EPIC, each
+newest first. Vercel's "Run" button on the cron job starts a pass by hand;
+a full pass holds a lease in the bucket while it runs, so a second press
+during one skips rather than writing over it. `/api/space/progress` shows
+each full pass's calls, writes and what's left by source, in a browser: wait
+for its `updatedAt` to change before pressing Run again. The answers route also runs a DONKI-only pass after its
 response when the log is missing or over 3 hours old, at most once per 5
 minutes per instance; the cron waits for one running on its instance rather
 than skip the day. CCMC limits DONKI to about 100 calls at once, refilled at
@@ -332,9 +340,9 @@ day's refresh counts as due after 20 hours, since Vercel fires a daily cron
 anywhere in its hour. A unit that fails is skipped and asked for again next
 pass; a rate limit, a timeout or three failures in a row end that source's
 turn. A row that won't read is left out and logged. SDO and EPIC keep an
-index of the days they've finished, so a pass doesn't read every month to
-find what's left, and EPIC reads its last 3 days again daily, since it posts
-late.
+index of what they've finished (SDO's event moments, EPIC's days), so a pass
+doesn't read every month to find what's left, and EPIC reads its last 3 days
+again daily, since it posts late.
 
 APOD's new source can't say which pictures are public domain, so Retrospect
 never shows one: `/api/apod` returns the day's title, credit and a link.

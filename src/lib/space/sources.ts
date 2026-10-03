@@ -237,31 +237,28 @@ export async function fetchEpicDay(date: string): Promise<EpicDay> {
 
 /* ---- SDO ------------------------------------------------------------------ */
 
-/** The day's AIA 171 browse image nearest `at` (an ISO time on that day), or
-    null when SDO has none that day, or no folder for it. */
-export async function fetchSdoNearest(date: string, at: string): Promise<SdoDay | null> {
+/** For each moment `ats` (ISO times on `date`), the day's AIA 171 browse
+    image nearest it, from one read of the day's folder; `url` null when SDO
+    has none that day, or no folder for it. */
+export async function fetchSdoDay(date: string, ats: string[]): Promise<SdoDay[]> {
   const [y, m, d] = date.split("-");
   const dir = `${SDO}/${y}/${m}/${d}/`;
-  let html: string;
+  let html = "";
   try {
     html = await getText(dir);
   } catch (err) {
-    if (notFound(err)) return null;
-    throw err;
+    if (!notFound(err)) throw err;
   }
   const stamp = `${y}${m}${d}`;
-  const target = Date.parse(at);
-  let best: SdoDay | null = null;
-  let bestGap = Infinity;
-  for (const [, hh, mm, ss] of html.matchAll(new RegExp(`${stamp}_(\\d{2})(\\d{2})(\\d{2})_1024_0171\\.jpg`, "g"))) {
-    const time = `${date}T${hh}:${mm}:${ss}Z`;
-    const gap = Math.abs(Date.parse(time) - target);
-    if (gap < bestGap) {
-      bestGap = gap;
-      best = { date, time, url: `${dir}${stamp}_${hh}${mm}${ss}_1024_0171.jpg` };
-    }
-  }
-  return best;
+  const frames = [...html.matchAll(new RegExp(`${stamp}_(\\d{2})(\\d{2})(\\d{2})_1024_0171\\.jpg`, "g"))].map(([, hh, mm, ss]) => ({
+    time: `${date}T${hh}:${mm}:${ss}Z`,
+    url: `${dir}${stamp}_${hh}${mm}${ss}_1024_0171.jpg`,
+  }));
+  return ats.map((at) => {
+    let best: (typeof frames)[number] | null = null;
+    for (const f of frames) if (!best || Math.abs(Date.parse(f.time) - Date.parse(at)) < Math.abs(Date.parse(best.time) - Date.parse(at))) best = f;
+    return best ? { date, at, time: best.time, url: best.url } : { date, at, time: at, url: null };
+  });
 }
 
 /* ---- APOD ----------------------------------------------------------------- */

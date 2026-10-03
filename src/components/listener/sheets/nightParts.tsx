@@ -86,25 +86,29 @@ export function Gallery({ night }: { night: Night }) {
       <div className="-mx-5 flex flex-col items-center bg-[var(--deep)] py-6">
         <MoonDrawing phaseAngle={night.moon.phaseAngle} size={96} />
         {coverage && <p className="mt-3 text-[13px] text-ink-2">{coverage}</p>}
+        {night.space.sunNote && <p className="mt-1 text-[13px] text-ink-2">{night.space.sunNote}</p>}
         <Terms names={["DSCOVR"]} />
       </div>
     );
   }
   return (
-    <ul className="rail -mx-5 px-5" aria-label="Photos of that night">
-      {photos.map((p) => (
-        <li key={p.url} className="w-[85%] max-w-[420px]">
-          <figure>
-            {/* eslint-disable-next-line @next/next/no-img-element -- NASA's own CDN, credited */}
-            <img src={p.url} alt={p.caption} loading="lazy" className="aspect-square w-full rounded-2xl bg-[var(--deep)] object-contain" />
-            <figcaption className="mt-2 text-[12px] leading-snug text-ink-2">
-              {p.caption}
-              {p.credit ? ` · ${p.credit}` : ""}
-            </figcaption>
-          </figure>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="rail -mx-5 px-5" aria-label="Photos of that night">
+        {photos.map((p) => (
+          <li key={p.url} className="w-[85%] max-w-[420px]">
+            <figure>
+              {/* eslint-disable-next-line @next/next/no-img-element -- NASA's own CDN, credited */}
+              <img src={p.url} alt={p.caption} loading="lazy" className="aspect-square w-full rounded-2xl bg-[var(--deep)] object-contain" />
+              <figcaption className="mt-2 text-[12px] leading-snug text-ink-2">
+                {p.caption}
+                {p.credit ? ` · ${p.credit}` : ""}
+              </figcaption>
+            </figure>
+          </li>
+        ))}
+      </ul>
+      {night.space.sunNote && <p className="mt-2 text-[13px] text-ink-2">{night.space.sunNote}</p>}
+    </>
   );
 }
 

@@ -30,7 +30,7 @@ const ECLIPSE_RANK: Record<string, number> = { "total solar": 0, "annular solar"
 /** A flare this big or bigger makes a night wild, and scores. */
 const BIG_FLARE = flareSize("X5");
 /** An asteroid about this big or bigger, closer than the Moon, makes a night wild. */
-const WILD_ASTEROID_METERS = 50;
+export const WILD_ASTEROID_METERS = 50;
 
 export interface WildNight {
   night: number;

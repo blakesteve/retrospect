@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "fluid": true,
   "crons": [
     { "path": "/api/cron/expire", "schedule": "0 9 * * *" },
     { "path": "/api/cron/space", "schedule": "30 9 * * *" }

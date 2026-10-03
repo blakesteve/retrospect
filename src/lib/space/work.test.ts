@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
 import { COMPACT_KEY, nasaLogFrom, readCompact, writeCompact } from "./compact";
 import { resetDonkiAllowance } from "./sources";
-import { monthsBetween, readMonth, storedMonths } from "./store";
+import { PROGRESS_KEY, monthsBetween, readMonth, storedMonths, writeMonth, writeSpaceJson } from "./store";
 import { synthCompact } from "./synthLog";
 import { resetSpaceWork, runSpaceWork } from "./work";
 
@@ -204,6 +204,8 @@ describe("DONKI", () => {
     const first = await donki();
     expect(first.failed).toEqual(["donki-gst 2015-06: 500 from ccmc.gsfc.nasa.gov/DONKI-API/get/GST"]);
     expect(first.done).toBe(false);
+    // The failed month is still to fetch; a failure never counts down.
+    expect(first.left).toEqual({ "donki-gst": 1, "donki-flr": 0 });
     const gst = await storedMonths("donki-gst");
     expect([gst.has("2015-05"), gst.has("2015-06"), gst.has("2015-07")]).toEqual([true, false, true]);
     // Stamped, but not a log: a hole would read as quiet.
@@ -216,6 +218,7 @@ describe("DONKI", () => {
     const second = await donki();
     expect(startDates()).toEqual(["GST 2015-06-01"]);
     expect(second.done).toBe(true);
+    expect(second.left).toEqual({ "donki-gst": 0, "donki-flr": 0 });
     expect(await log()).not.toBeNull();
   });
 
@@ -371,10 +374,14 @@ describe("the daily sources and the backfill", () => {
     const first = await apod();
     expect(first.fetches).toBe(20);
     expect(first.done).toBe(false);
+    // About 363 pages of 25 days back to 2002 (an estimate); 19 read, the next is page 20.
+    expect(first.left.apod).toBe(363 - 20 + 1);
     // A new day arrives at the top between passes, moving every page down
     // one: the backfill reads a day twice, never skips one.
     fake.apod.unshift("2026-10-12");
-    for (let i = 0; i < 100; i++) if ((await apod()).done) break;
+    let last = first;
+    for (let i = 0; i < 100; i++) if ((last = await apod()).done) break;
+    expect(last.left.apod).toBe(0);
 
     const months = await storedMonths("apod");
     expect([...months.keys()].sort()[0]).toBe("2002-01");
@@ -425,6 +432,14 @@ describe("the daily sources and the backfill", () => {
     expect((await runSpaceWork({ budgetMs: 60_000, only: ["jpl-cad", "jpl-fireball"] })).fetches).toBe(2);
   });
 
+  it("counts a JPL year that fails as still to fetch, with this month's daily read", async () => {
+    fake.status = (u) => (u.includes("cad.api") && u.includes("date-min=2010-01-01") ? 500 : null);
+    const s = await runSpaceWork({ budgetMs: 60_000, only: ["jpl-cad", "jpl-fireball"] });
+    expect(s.left).toEqual({ "jpl-cad": 1, "jpl-fireball": 0 });
+    fake.status = () => null;
+    expect((await runSpaceWork({ budgetMs: 60_000, only: ["jpl-cad"] })).left).toEqual({ "jpl-cad": 0 });
+  });
+
   it("reads last month's fireballs again after it ends, so a late one isn't lost", async () => {
     const jpl = () => runSpaceWork({ budgetMs: 60_000, only: ["jpl-fireball"] });
     setNow("2026-10-31T09:30:00Z");
@@ -437,45 +452,65 @@ describe("the daily sources and the backfill", () => {
     expect(asked.map((u) => new URL(u).searchParams.get("date-min")).sort()).toEqual(["2026-10-01", "2026-11-01"]);
   });
 
-  it("finds the Sun on each storm or X-flare day once, from SDO's start, without rereading finished months", async () => {
+  it("finds the Sun at each storm reading and X flare once, a day's folder read once, from SDO's start", async () => {
     await writeCompact(
       synthCompact("2026-10-12T12:00:00Z", {
         kp: [
           ["2015-12-31T12:00:00Z", 7], // before SDO's browse archive: never asked
           ["2017-03-09T12:00:00Z", 7], // SDO has no folder that day
+          ["2024-05-10T18:00:00Z", 8.33],
           ["2024-05-10T21:00:00Z", 9],
           ["2024-05-11T03:00:00Z", 8.67],
         ],
         xflares: [["2024-05-14T16:51:00Z", "X8.7"]],
       }),
     );
-    fake.sdo["2024-05-10"] = ["20240510_190000_1024_0171.jpg", "20240510_200000_1024_0171.jpg"];
+    // A month stored before moments: its record has no moment, and goes.
+    await writeMonth({ source: "sdo", month: "2024-05", firstDate: "2016-01-01", refreshedAt: NOW, records: [{ date: "2024-05-10", time: "2024-05-10T19:00:00Z", url: "old" } as never] });
+    fake.sdo["2024-05-10"] = ["20240510_160000_1024_0171.jpg", "20240510_190000_1024_0171.jpg", "20240510_200000_1024_0171.jpg"];
     fake.sdo["2024-05-14"] = ["20240514_165000_1024_0171.jpg"];
     fake.status = (u) => (u.includes("/browse/2017/03/09/") ? 404 : null);
     const s = await runSpaceWork({ budgetMs: 60_000, only: ["sdo"] });
+    // Four days, five moments: May 10's two share one read of its folder.
     expect(s.fetches).toBe(4);
+    expect(s.left.sdo).toBe(0);
     expect(asked.some((u) => u.includes("/browse/2015/"))).toBe(false);
     expect(s.failed).toEqual([]);
+    const url = (stamp: string) => `https://sdo.gsfc.nasa.gov/assets/img/browse/${stamp.slice(0, 4)}/${stamp.slice(4, 6)}/${stamp.slice(6, 8)}/${stamp}_1024_0171.jpg`;
     expect((await readMonth("sdo", "2024-05"))!.records).toEqual([
-      {
-        date: "2024-05-10",
-        time: "2024-05-10T19:00:00Z",
-        url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/20240510_190000_1024_0171.jpg",
-      },
+      { date: "2024-05-10", at: "2024-05-10T16:30:00.000Z", time: "2024-05-10T16:00:00Z", url: url("20240510_160000") },
+      { date: "2024-05-10", at: "2024-05-10T19:30:00.000Z", time: "2024-05-10T19:00:00Z", url: url("20240510_190000") },
       // No image that day: kept as none, so it isn't asked again.
-      { date: "2024-05-11", time: "2024-05-11T01:30:00.000Z", url: null },
-      {
-        date: "2024-05-14",
-        time: "2024-05-14T16:50:00Z",
-        url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/14/20240514_165000_1024_0171.jpg",
-      },
+      { date: "2024-05-11", at: "2024-05-11T01:30:00.000Z", time: "2024-05-11T01:30:00.000Z", url: null },
+      { date: "2024-05-14", at: "2024-05-14T16:51:00.000Z", time: "2024-05-14T16:50:00Z", url: url("20240514_165000") },
     ]);
-    expect((await readMonth("sdo", "2017-03"))!.records).toEqual([{ date: "2017-03-09", time: "2017-03-09T10:30:00.000Z", url: null }]);
+    expect((await readMonth("sdo", "2017-03"))!.records).toEqual([
+      { date: "2017-03-09", at: "2017-03-09T10:30:00.000Z", time: "2017-03-09T10:30:00.000Z", url: null },
+    ]);
     expect(await readMonth("sdo", "2015-12")).toBeNull();
 
     const reads = vi.spyOn(blobs, "get");
     expect((await runSpaceWork({ budgetMs: 60_000, only: ["sdo"] })).fetches).toBe(0);
     expect(reads.mock.calls.map(([key]) => key).filter((key) => key.startsWith("space/sdo/"))).toEqual([]);
+
+    // A reading DONKI logs later, on a day already read: only its moment is asked for.
+    await writeCompact(
+      synthCompact("2026-10-12T12:00:00Z", {
+        kp: [
+          ["2017-03-09T12:00:00Z", 7],
+          ["2024-05-10T18:00:00Z", 8.33],
+          ["2024-05-10T21:00:00Z", 9],
+          ["2024-05-10T24:00:00Z", 8],
+          ["2024-05-11T03:00:00Z", 8.67],
+        ],
+        xflares: [["2024-05-14T16:51:00Z", "X8.7"]],
+      }),
+    );
+    asked = [];
+    const late = await runSpaceWork({ budgetMs: 60_000, only: ["sdo"] });
+    expect(asked).toEqual(["https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/"]);
+    expect(late.left.sdo).toBe(0);
+    expect((await readMonth("sdo", "2024-05"))!.records.map((r) => r.at)).toContain("2024-05-10T22:30:00.000Z");
   });
 
   it("keeps going past a day that fails, and asks for it again next pass", async () => {
@@ -531,5 +566,128 @@ describe("the daily sources and the backfill", () => {
     asked = [];
     await epic();
     expect(asked.map((u) => u.split("/api/natural/")[1])).toEqual(["available"]);
+  });
+
+  it("reads EPIC's most wanted days first: around storms, X flares, eclipses, close asteroids and the last year", async () => {
+    await writeCompact(
+      synthCompact("2026-10-12T12:00:00Z", { kp: [["2020-05-11T12:00:00Z", 7]], xflares: [["2017-09-06T12:02:00Z", "X9.3"]] }),
+    );
+    // A 140 m asteroid 0.39 lunar distances out on Jan 2, 2018, and one 2 out on Mar 10, 2018.
+    const cad = (time: string, au: number) => ({ name: "x", time, au, h: 22 });
+    await writeMonth({ source: "jpl-cad", month: "2018-01", firstDate: "1900-01-01", refreshedAt: NOW, records: [cad("2018-01-02T05:00:00Z", 0.001)] });
+    await writeMonth({ source: "jpl-cad", month: "2018-03", firstDate: "1900-01-01", refreshedAt: NOW, records: [cad("2018-03-10T05:00:00Z", 0.0051)] });
+    fake.epicDates = [
+      ...days("2016-03-01", "2016-03-02"), // nothing: last
+      "2017-09-06", // the X9.3 flare alone
+      ...days("2018-01-01", "2018-01-02"), // the close asteroid
+      "2018-03-10", // an asteroid 2 lunar distances out: not close enough
+      ...days("2019-07-01", "2019-07-03"), // the total solar eclipse of Jul 2, 2019
+      ...days("2020-05-10", "2020-05-12"), // the storm reading on May 11
+      "2020-05-20", // nothing: last
+      "2025-09-12", // 13 months back: last
+      "2025-11-12", // 11 months back: the last year
+      ...days("2026-09-28", "2026-09-29"),
+    ].sort();
+    fake.msPerFetch = 1_000;
+    const cut = await runSpaceWork({ budgetMs: 4_000, only: ["epic"] });
+    // 17 days to read, 12 of them wanted first; three read before the budget ran out.
+    expect(cut.left).toEqual({ epic: 17 - 3, "epic-priority": 12 - 3 });
+    fake.msPerFetch = 0;
+    await runSpaceWork({ budgetMs: 60_000, only: ["epic"] });
+    const order = asked.filter((u) => u.includes("/api/natural/date/")).map((u) => u.slice(-10));
+    expect(order).toEqual([
+      "2026-09-29",
+      "2026-09-28",
+      "2025-11-12",
+      "2020-05-12",
+      "2020-05-11",
+      "2020-05-10",
+      "2019-07-03",
+      "2019-07-02",
+      "2019-07-01",
+      "2018-01-02",
+      "2018-01-01",
+      "2017-09-06",
+      // Then the rest, newest first.
+      "2025-09-12",
+      "2020-05-20",
+      "2018-03-10",
+      "2016-03-02",
+      "2016-03-01",
+    ]);
+  });
+
+  it("puts every source's wanted part before any source's rest: APOD's last year, then EPIC's, then the rest of each", async () => {
+    fake.apod = days("2024-01-01", "2026-10-11"); // 1,015 days: 41 pages
+    fake.epicDates = ["2016-03-01", "2026-09-29"];
+    await runSpaceWork({ budgetMs: 600_000, only: ["apod", "epic"] });
+    const at = (needle: string) => asked.findIndex((u) => u.includes(needle));
+    const page = (n: number) => at(`apod-basic?per_page=25&page=${n}`);
+    // Page 15 reaches back past Oct 12, 2025: the last year, read first.
+    expect(page(15)).toBeLessThan(at("date/2026-09-29"));
+    expect(at("date/2026-09-29")).toBeLessThan(page(16));
+    expect(page(41)).toBeLessThan(at("date/2016-03-01"));
+  });
+
+  it("lets one full pass run at a time across instances, by a lease in the bucket", async () => {
+    fake.epicDates = ["2026-10-01"];
+    // Another instance's pass holds the fill until a minute from now.
+    await writeSpaceJson("space/fill-lease.json", { until: Date.now() + 60_000, by: "elsewhere" });
+    const held = await runSpaceWork({ budgetMs: 60_000 });
+    expect(held).toMatchObject({ skipped: true, fetches: 0, heldUntil: new Date(Date.now() + 60_000).toISOString() });
+    expect(asked).toEqual([]);
+    // DONKI-only passes don't ask for it.
+    resetSpaceWork();
+    expect((await runSpaceWork({ budgetMs: 60_000, only: ["donki-gst"] })).skipped).toBe(false);
+    // Once it lapses, a full pass takes it, and lets it go when done.
+    later(61_000);
+    resetSpaceWork();
+    const ran = await runSpaceWork({ budgetMs: 60_000 });
+    expect(ran.skipped).toBe(false);
+    expect(JSON.parse((await blobs.get("space/fill-lease.json"))!.toString("utf8")).until).toBe(0);
+  });
+
+  it("keeps an SDO record from before moments until its own day is read again", async () => {
+    await writeCompact(synthCompact("2026-10-12T12:00:00Z", { kp: [["2024-05-10T21:00:00Z", 9]], xflares: [["2024-05-14T16:51:00Z", "X8.7"]] }));
+    const old = (date: string) => ({ date, time: `${date}T12:00:00Z`, url: `old ${date}` }) as never;
+    await writeMonth({ source: "sdo", month: "2024-05", firstDate: "2016-01-01", refreshedAt: NOW, records: [old("2024-05-10"), old("2024-05-14")] });
+    fake.sdo["2024-05-14"] = ["20240514_165000_1024_0171.jpg"];
+    fake.msPerFetch = 1_000;
+    // Out of time after May 14, the newest: May 10's old picture stays.
+    await runSpaceWork({ budgetMs: 1_000, only: ["sdo"] });
+    const urls = (await readMonth("sdo", "2024-05"))!.records.map((r) => r.url);
+    expect(urls).toContain("old 2024-05-10");
+    expect(urls).not.toContain("old 2024-05-14");
+  });
+
+  it("leaves a readable trail of full passes, and none of DONKI-only ones", async () => {
+    fake.epicDates = days("2026-10-01", "2026-10-03");
+    await runSpaceWork({ budgetMs: 60_000, only: ["donki-gst", "donki-flr"] });
+    expect(await blobs.get(PROGRESS_KEY)).toBeNull();
+    resetSpaceWork();
+    const s = await runSpaceWork({ budgetMs: 600_000 });
+    const progress = JSON.parse((await blobs.get(PROGRESS_KEY))!.toString("utf8"));
+    expect(progress.updatedAt).toBe(new Date(Date.parse(NOW)).toISOString());
+    expect(progress.passes).toEqual([{ at: progress.updatedAt, ms: s.ms, fetches: s.fetches, wrote: s.wrote.length, failed: s.failed.length, done: s.done }]);
+    expect(progress.left.epic).toEqual({ count: 0, at: progress.updatedAt });
+    expect(Object.keys(progress.left).sort()).toEqual(["apod", "donki-flr", "donki-gst", "epic", "epic-priority", "jpl-cad", "jpl-fireball", "sdo"]);
+  });
+
+  it("keeps the latest 30 passes, and the last count of a source a pass didn't reach", async () => {
+    const before = {
+      updatedAt: "2026-10-11T09:30:00.000Z",
+      left: { epic: { count: 3800, at: "2026-10-11T09:30:00.000Z" } },
+      passes: Array.from({ length: 30 }, (_, i) => ({ at: `2026-09-${String(30 - i).padStart(2, "0")}T09:30:00.000Z`, ms: 1, fetches: 1, wrote: 1, failed: 0, done: false })),
+    };
+    await writeSpaceJson(PROGRESS_KEY, before);
+    // Out of time in DONKI: EPIC isn't reached.
+    fake.msPerFetch = 1_000;
+    await runSpaceWork({ budgetMs: 3_000 });
+    const p = JSON.parse((await blobs.get(PROGRESS_KEY))!.toString("utf8"));
+    expect(p.passes).toHaveLength(30);
+    expect(p.passes[0].at).toBe(p.updatedAt);
+    expect(p.passes[1]).toEqual(before.passes[0]);
+    expect(p.left.epic).toEqual({ count: 3800, at: "2026-10-11T09:30:00.000Z" });
+    expect(p.left["donki-gst"].at).toBe(p.updatedAt);
   });
 });

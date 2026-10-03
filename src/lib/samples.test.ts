@@ -89,6 +89,7 @@ interface NightOut {
   wild: { title: string } | null;
   space: {
     kp: number | null;
+    xFlare: boolean | string | null;
     biggestFlare: string | null;
     epic: { url: string; credit: string } | "none" | "unknown";
     photos: { kind?: string; caption?: string }[];
@@ -259,10 +260,14 @@ describe("the sample opens what the landing promises (8.1)", () => {
     expect(nights.filter((n) => n.space.epic === "unknown")).toEqual([]);
     expect(nights.filter((n) => n.space.photos.some((p) => p.kind === "sdo")).length).toBeGreaterThan(20);
     expect(json<{ counts: { flybys: number } }>("highlights.json").counts.flybys).toBeGreaterThan(1000);
-    // The May 10 storm night's Sun is the X5.8's, filed under May 11 UTC (ClickUp 86e3jdkeg).
-    expect(night("2024-05-10")!.space.photos.find((p) => p.kind === "sdo")?.caption).toBe(
-      "The Sun at 8:26 p.m. CDT on May 10, 2024, from NASA's Solar Dynamics Observatory.",
-    );
+    // Each storm night shows its own Sun, a picture per event moment (architect, 2 Oct 2026):
+    // May 10's is the X5.8, filed under May 11 UTC; May 11's the X1.5 at 11:44 UTC.
+    const sun = (date: string) => night(date)!.space.photos.find((p) => p.kind === "sdo")?.caption;
+    expect(sun("2024-05-10")).toBe("The Sun at 8:26 p.m. CDT on May 10, 2024, from NASA's Solar Dynamics Observatory.");
+    expect(sun("2024-05-11")).toBe("The Sun at 6:46 a.m. CDT on May 11, 2024, from NASA's Solar Dynamics Observatory.");
+    const stormy = nights.filter((n) => n.space.kp !== null || n.space.xFlare);
+    expect(stormy.length).toBeGreaterThan(20);
+    expect(stormy.filter((n) => !n.space.photos.some((p) => p.kind === "sdo")).map((n) => n.date)).toEqual([]);
   });
 
   it("has every selected song's night, so a song sheet always finds it", () => {

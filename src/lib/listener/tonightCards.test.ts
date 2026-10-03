@@ -150,12 +150,12 @@ async function writeSpace() {
   );
   await writeMonth(
     month("sdo", "2024-05", [
-      { date: "2024-05-10", time: "2024-05-10T22:00:00Z", url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/20240510_220000_1024_0171.jpg" },
+      { date: "2024-05-10", at: "2024-05-10T22:00:00Z", time: "2024-05-10T22:00:00Z", url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/05/10/20240510_220000_1024_0171.jpg" },
     ]),
   );
   await writeMonth(
     month("sdo", "2024-10", [
-      { date: "2024-10-03", time: "2024-10-03T12:18:00Z", url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/10/03/20241003_121800_1024_0171.jpg" },
+      { date: "2024-10-03", at: "2024-10-03T12:18:00Z", time: "2024-10-03T12:18:00Z", url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/10/03/20241003_121800_1024_0171.jpg" },
     ]),
   );
 }
@@ -318,11 +318,11 @@ describe("a night's photo gallery (spec 8.7.1)", () => {
 });
 
 describe("SDO's Sun, by the listener's night (8.7.1, ClickUp 86e3jdkeg)", () => {
-  /* SDO's pictures as the fill stored them (read from NASA, 2 Oct 2026): one
-     per UTC day, aimed at that day's first X flare. */
+  /* SDO's pictures as the fill stored them before event moments (read from
+     NASA, 2 Oct 2026): one per UTC day, aimed at that day's first X flare. */
   const sdo = (time: string) => {
     const [d, hms] = time.slice(0, 19).split("T");
-    return { date: d, time, url: `https://sdo.gsfc.nasa.gov/assets/img/browse/${d.replaceAll("-", "/")}/${d.replaceAll("-", "")}_${hms.replaceAll(":", "")}_1024_0171.jpg` };
+    return { date: d, at: time, time, url: `https://sdo.gsfc.nasa.gov/assets/img/browse/${d.replaceAll("-", "/")}/${d.replaceAll("-", "")}_${hms.replaceAll(":", "")}_1024_0171.jpg` };
   };
   const files = [
     month("sdo", "2024-05", ["2024-05-09T09:17:10Z", "2024-05-10T06:56:46Z", "2024-05-11T01:26:34Z", "2024-05-12T16:26:22Z"].map(sdo)),
@@ -363,6 +363,13 @@ describe("SDO's Sun, by the listener's night (8.7.1, ClickUp 86e3jdkeg)", () => 
     expect(taken(chicago, "2024-10-02")).toBeNull();
   });
 
+  it("gives Chicago's May 11 its own X1.5 once there's a picture per event moment", () => {
+    // The fill now keeps a picture for every X flare and Kp reading (architect, 2 Oct 2026).
+    const moments = [month("sdo", "2024-05", ["2024-05-11T01:26:34Z", "2024-05-11T10:26:22Z", "2024-05-11T11:46:22Z"].map(sdo))];
+    const n = sunsByNight(moments, chicago, log).get(night("2024-05-11"));
+    expect(n && new Date(n.time * 1000).toISOString()).toBe("2024-05-11T11:46:22.000Z"); // nearest the X1.5 at 11:44
+  });
+
   it("picks the picture nearest a night's biggest X flare when two fall in it, and the earlier with no log", () => {
     // Chicago's May 9 night (4 a.m. May 9 to 4 a.m. May 10) holds May 9's X2.2 and May 10's X3.9.
     expect(taken(chicago, "2024-05-09")).toBe("2024-05-10T06:56:46.000Z");
@@ -383,6 +390,44 @@ describe("SDO's Sun, by the listener's night (8.7.1, ClickUp 86e3jdkeg)", () => 
     const sunOf = (d: string) => body.nights.find((n: { date: string }) => n.date === d).space.photos.find((p: { kind: string }) => p.kind === "sdo");
     expect(sunOf("2024-05-10").caption).toBe("The Sun at 8:26 p.m. CDT on May 10, 2024, from NASA's Solar Dynamics Observatory.");
     expect(sunOf("2024-05-11")).toBeUndefined();
+  });
+});
+
+describe("SDO's coverage (7.3; architect, 2 Oct 2026)", () => {
+  it("says why a storm or flare night before 2016 has no Sun, by the night's own date, and says nothing after", async () => {
+    await writeCompact(
+      synthCompact(new Date(Date.now() - 3_600_000).toISOString(), {
+        kp: [
+          ["2015-03-18T00:00:00Z", 8], // St. Patrick's Day, 2015: Mar 17's night in Chicago
+          ["2015-10-08T00:00:00Z", 7], // Oct 7's night, 2015: after EPIC began, before SDO's archive
+          ["2016-01-01T03:00:00Z", 6], // 00:00 to 03:00 UTC Jan 1, 2016: Dec 31's night in Chicago
+          ["2016-01-21T00:00:00Z", 5], // Jan 20's night, 2016: no Sun stored
+        ],
+        xflares: [["2015-03-11T16:22:00Z", "X2.1"]], // a flare alone, Mar 11's night
+      }),
+    );
+    // SDO's picture for Jan 1's 01:30 UTC reading: taken in Chicago's Dec 31 night.
+    await writeMonth(
+      month("sdo", "2016-01", [{ date: "2016-01-01", at: "2016-01-01T01:30:00.000Z", time: "2016-01-01T01:26:10Z", url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2016/01/01/20160101_012610_1024_0171.jpg" }]),
+    );
+    await seed("coverage", ["2015-03-11", "2015-03-17", "2015-03-20", "2015-10-07", "2015-12-31", "2016-01-20"].flatMap((d) => evening(d, 2)));
+    const notes = async (from: string, to: string) =>
+      Object.fromEntries(
+        (await call(nightsRoute, "coverage", `tz=America/Chicago&from=${from}&to=${to}`)).body.nights.map(
+          (n: { date: string; space: { sunNote: string | null; photos: { kind: string }[] } }) => [n.date, { note: n.space.sunNote, sun: n.space.photos.some((p) => p.kind === "sdo") }],
+        ),
+      );
+    const NOTE = "NASA's daily Sun photos start in 2016.";
+    const march = await notes("2015-03", "2015-03");
+    expect(march["2015-03-17"]).toEqual({ note: NOTE, sun: false });
+    expect(march["2015-03-11"]).toEqual({ note: NOTE, sun: false }); // the flare alone
+    expect(march["2015-03-20"]).toEqual({ note: null, sun: false }); // a quiet night: nothing to explain
+    expect((await notes("2015-10", "2015-10"))["2015-10-07"]).toEqual({ note: NOTE, sun: false });
+    const turn = await notes("2015-12", "2016-01");
+    // A 2015 night by its own date, with a Sun taken after midnight UTC: no note.
+    expect(turn["2015-12-31"]).toEqual({ note: null, sun: true });
+    // 2016: a storm night without a Sun shows none, and says nothing.
+    expect(turn["2016-01-20"]).toEqual({ note: null, sun: false });
   });
 });
 
