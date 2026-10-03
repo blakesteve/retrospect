@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BODIES, type SkyAt, type SkyBody, type Sign } from "@/lib/sky/sky";
-import { kickerDate, lengthWords, skyLine, strangestLine, wildCardLine, wildLine } from "./sentences";
+import { kickerDate, lengthWords, longNightDate, skyLine, strangestLine, wildCardLine, wildLine } from "./sentences";
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 function sky(signs: Partial<Record<SkyBody, Sign>>, conditions: SkyAt["conditions"] = []): SkyAt {
@@ -36,10 +36,19 @@ describe("the reveal's sentences (spec 8.3)", () => {
   });
 
   it("writes the wildest night's line as the spec does", () => {
-    expect(wildLine("The strongest geomagnetic storm in about 20 years", 39, "Friday", 50, "Good Luck, Babe!")).toBe(
-      "The strongest geomagnetic storm in about 20 years. You played 39 songs (a usual Friday is 50) and first heard Good Luck, Babe!",
+    // 8.3, changed 2 Oct 2026: "that night", and the song with its artist.
+    expect(wildLine("The strongest geomagnetic storm in about 20 years", 39, "Friday", 46, "Good Luck, Babe! by Chappell Roan")).toBe(
+      "The strongest geomagnetic storm in about 20 years. You played 39 songs that night (a usual Friday is 46) and first heard Good Luck, Babe! by Chappell Roan.",
     );
-    expect(wildLine("A G4 storm, Kp 8+", 1, "Tuesday", null, null)).toBe("A G4 storm, Kp 8+. You played 1 song.");
+    expect(wildLine("A G4 storm, Kp 8+", 1, "Tuesday", null, null)).toBe("A G4 storm, Kp 8+. You played 1 song that night.");
+    // A title that is a whole sentence already, and a song that ends one.
+    expect(wildLine("A blood moon.", 2, "Friday", 3, "Help!")).toBe("A blood moon. You played 2 songs that night (a usual Friday is 3) and first heard Help!");
+  });
+
+  it("dates the wildest night in full, for the card's eyebrow (8.3)", () => {
+    // Night 19,853 is May 10, 2024, a Friday; 20,724 is Sept 28, 2026, a Monday.
+    expect(longNightDate(19_853)).toBe("Friday, May 10, 2024");
+    expect(longNightDate(20_724)).toBe("Monday, Sept 28, 2026");
   });
 
   it("names Venus, Mars and the Moon in 9.3's words", () => {

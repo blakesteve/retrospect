@@ -16,6 +16,13 @@ export function kickerDate(night: number): string {
   return `${WEEKDAYS[nightWeekday(night)].slice(0, 3)}, ${nightDate(nightName(night))}`;
 }
 
+/** The reveal's eyebrow for its wildest night (8.3, card 2): "Friday, May 10,
+    2024", the weekday whole and the month as every date in the app writes
+    it ("Monday, Sept 28, 2026"), as the night sheet's title does. */
+export function longNightDate(night: number): string {
+  return `${WEEKDAYS[nightWeekday(night)]}, ${nightDate(nightName(night))}`;
+}
+
 /**
  * A wild night card's line (8.4): "39 songs · a usual Friday is 50", or
  * just "39 songs" with no usual for that weekday.
@@ -45,9 +52,11 @@ export function lengthWords(first: number, last: number): string {
 }
 
 /**
- * The wildest night's line (8.3, card 2): "The strongest geomagnetic storm in
- * about 20 years. You played 39 songs (a usual Friday is 50) and first heard
- * Good Luck, Babe!"
+ * The wildest night's line (8.3, card 2, changed 2 Oct 2026), which says
+ * "that night" so the listening reads as the night's, not the wild part:
+ * "The strongest geomagnetic storm in about 20 years. You played 39 songs
+ * that night (a usual Friday is 46) and first heard Good Luck, Babe! by
+ * Chappell Roan." `firstHeard` is "{track} by {artist}".
  */
 export function wildLine(
   title: string,
@@ -56,7 +65,7 @@ export function wildLine(
   usual: number | null,
   firstHeard: string | null,
 ): string {
-  const played = `You played ${plays.toLocaleString("en-US")} song${plays === 1 ? "" : "s"}${
+  const played = `You played ${plays.toLocaleString("en-US")} song${plays === 1 ? "" : "s"} that night${
     usual === null ? "" : ` (a usual ${weekday} is ${usual.toLocaleString("en-US")})`
   }`;
   const line = `${title.replace(/\.$/, "")}. ${played}${firstHeard ? ` and first heard ${firstHeard}` : ""}`;

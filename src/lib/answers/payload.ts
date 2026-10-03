@@ -1,7 +1,8 @@
 import { MIN_EVENTS, MIN_RETRO_N, type VerdictStatus } from "@/lib/analysis/confidence";
-import { isRetrograde, longitude, signOf, type SkyBody } from "@/lib/sky/sky";
+import { dignityPhrase, harmonyAt, isRetrograde, longitude, signOf, type Sign, type SkyBody } from "@/lib/sky/sky";
 import { startsWhen } from "@/lib/listener/when";
 import { historySpan } from "@/lib/listener/words";
+import { kpLabel } from "@/lib/space/kp";
 import { zoneClock } from "@/lib/zone";
 import { conditionFor } from "./conditions";
 import {
@@ -11,6 +12,7 @@ import {
   type EarlyRead,
   type MergedEvent,
   type NotChecked,
+  type PairingFact,
   type QuestionRecord,
 } from "./engine";
 import { QUESTIONS, questionById, type Measure, type Question, type QuestionId } from "./questions";
@@ -37,7 +39,18 @@ export interface QuestionPhrases {
   correctionNote: string | null;
   earlyReadRows: string[];
   typicalSwing: string | null;
-  headsUp: string | null;
+  /** This question's heads-up (8.4), when its condition starts within a
+      week: the sky ("Venus turns retrograde tomorrow") and the line under
+      it. Tonight shows one, the payload's own `headsUp`. */
+  headsUp: { skyLine: string; line: string } | null;
+}
+
+/** A song first played under this question's sky, with the chip naming the
+    condition at that first play (8.7.3): "Venus in Aries · in her
+    detriment", "Full moon", "Kp 7 storm night". */
+export interface PairingPayload {
+  songId: string;
+  conditionText: string;
 }
 
 export interface QuestionPayload {
@@ -46,6 +59,9 @@ export interface QuestionPayload {
   question: string;
   story: string;
   shortName: string;
+  /** Spec 9.2's subject, for "Question 1, on Mercury retrograde": "Mercury
+      retrograde", "a full moon". */
+  subject: string;
   status: VerdictStatus | null;
   notChecked: NotChecked | null;
   /** Stored under another measure, and being recomputed: no numbers, and
@@ -68,8 +84,9 @@ export interface QuestionPayload {
   typicalSingleSwing: number | null;
   /** Unix seconds of the condition's next start, or null (questions 7 and 8). */
   nextStart: number | null;
-  /** Songs first played while the condition held (7.4), as song ids. */
-  pairings: string[];
+  /** Songs first played while the condition held (7.4), in the songs row's
+      order, each with its chip's words. */
+  pairings: PairingPayload[];
   nullSamples: number[];
   phrases: QuestionPhrases;
 }
@@ -85,8 +102,10 @@ export interface AnswersPayload {
   m: number;
   tally: Record<AnswerWord, number>;
   questions: QuestionPayload[];
-  /** Tonight's one heads-up (8.4), or null. */
-  headsUp: { id: QuestionId; line: string } | null;
+  /** Tonight's one heads-up (8.4), or null: the question, its sky relative
+      to the listener's date ("Venus turns retrograde tomorrow"), and the
+      line under it. */
+  headsUp: { id: QuestionId; skyLine: string; line: string } | null;
   /** The reveal's last card (8.3): its line, and "{n} not checked yet" when
       any are. */
   reveal: { line: string; notChecked: string | null };
@@ -174,13 +193,17 @@ const TAG_NOUN: Record<Measure, string> = {
 /** Under half a percent either way reads "barely moved" (9.2). */
 const barely = (swing: number) => Math.abs(swing) < 0.005;
 
+/** The measure in its own words (6.5, 9.2), for what moves or swings. */
+const MEASURE_WORDS: Record<Measure, { now: string; then: string }> = {
+  oldfavorites: { now: "your share of old favorites", then: "your share of old favorites" },
+  aftermidnight: { now: "your after-midnight share", then: "your after-midnight share" },
+  firstlistens: { now: "your share of first listens", then: "your share of first listens" },
+  listening: { now: "how much you listen", then: "how much you listened" },
+};
+
 /** "a 23% bigger share of your plays came after midnight", "you listened 5% more". */
 function swingLong(measure: Measure, swing: number): string {
-  if (barely(swing)) {
-    return measure === "listening"
-      ? "how much you listened barely moved: less than 1% either way"
-      : `your share of ${TAG_NOUN[measure]} barely moved: less than 1% either way`;
-  }
+  if (barely(swing)) return `${MEASURE_WORDS[measure].then} barely moved: less than 1% either way`;
   const n = pctOf(swing);
   const up = swing > 0;
   switch (measure) {
@@ -244,19 +267,28 @@ function wordLine(q: Question, word: AnswerWord, swing: number, p: number, m: nu
   }
 }
 
+/**
+ * Tonight's line (9.2, changed 2 Oct 2026): the row's pill shows the word, so
+ * the line leaves it out and says when the swing was measured, the word
+ * line's first sentence without its leading word, then the likelihood.
+ */
 function tonightLine(q: Question, word: AnswerWord, swing: number, p: number, m: number): string {
-  const short = swingShort(q.measure, swing);
+  const lead = `${capital(q.when)}, ${swingLong(q.measure, swing)}`;
+  const chance = likelihoodFor(p).replace(/\.$/, "");
   switch (word) {
     case "Yes":
-      return m === 1 ? `Yes: ${short}.` : `Yes: ${short}, even allowing for ${questionsAtOnce(m)}.`;
+      // With one question tested there's nothing to allow for.
+      return m === 1
+        ? `${lead}: ${chance.charAt(0).toLowerCase()}${chance.slice(1)}.`
+        : `${lead}: ${chance.charAt(0).toLowerCase()}${chance.slice(1)}, even allowing for ${questionsAtOnce(m)}.`;
     case "Maybe":
       return p < 0.05
-        ? `Maybe: ${short}, unlikely on its own but not after allowing for ${questionsAtOnce(m)}.`
-        : `Maybe: ${short}, which could be chance.`;
+        ? `${lead}: ${p < 0.01 ? "very unlikely" : "unlikely"} to be chance on its own, but not after allowing for ${questionsAtOnce(m)}.`
+        : `${lead}, which could be chance.`;
     case "Not clearly":
-      return `Not clearly: ${short}, which could be chance.`;
+      return `${lead}, which could be chance.`;
     default:
-      return `No: ${short}, which could easily be chance.`;
+      return `${lead}, which could easily be chance.`;
   }
 }
 
@@ -359,7 +391,8 @@ function tooEarly(q: Question, rec: QuestionRecord, zone: string, nowUts: number
     case "too-few-events": {
       const n = rec.events;
       let s = `Too early. ${count(n)} of the ${MIN_EVENTS} ${q.eventNoun.many} a verdict needs.`;
-      if (n === 1) s += ` One ${q.eventNoun.one} can't show a pattern.`;
+      // An early read's last line already says one can't show a pattern (9.2, 2 Oct 2026).
+      if (n === 1 && rec.typicalSingleSwing === null) s += ` One ${q.eventNoun.one} can't show a pattern.`;
       else if (n > 1) s += ` ${capital(spelled(n))} ${q.eventNoun.many} can't show a pattern yet.`;
       if (q.nasa) {
         s += ` ${q.id === "flares" ? "Flares" : "Storms"} come when the Sun sends them, so the next one can't be predicted far ahead.`;
@@ -390,22 +423,30 @@ function tooEarly(q: Question, rec: QuestionRecord, zone: string, nowUts: number
   }
 }
 
+/** Tonight's line for a question that's too early (9.2): the question
+    sheet's first sentence without "Too early.". */
 function tooEarlyShort(q: Question, rec: QuestionRecord, zone: string): string {
   switch (rec.status) {
     case "too-few-events":
-      return `Too early: ${count(rec.events)} of the ${MIN_EVENTS} ${q.eventNoun.many} a verdict needs.`;
+      return `${count(rec.events)} of the ${MIN_EVENTS} ${q.eventNoun.many} a verdict needs.`;
     case "too-few-plays":
-      return `Too early: ${count(rec.inPlays)} of the ${count(MIN_RETRO_N)} plays a verdict needs.`;
+      return `${count(rec.inPlays)} of the ${count(MIN_RETRO_N)} plays a verdict needs ${q.when}.`;
     case "warming-up": {
-      const noun = WARMUP_NOUN[q.measure] ?? TAG_NOUN[q.measure];
+      const noun = capital(WARMUP_NOUN[q.measure] ?? TAG_NOUN[q.measure]);
       return rec.warmupReadyFrom
-        ? `Too early: ${noun} start counting in ${monthYear(zone, rec.warmupReadyFrom)}.`
-        : `Too early: ${noun} start counting after your first year.`;
+        ? `${noun} start counting in ${monthYear(zone, rec.warmupReadyFrom)}.`
+        : `${noun} start counting a year after your history starts.`;
     }
     default:
-      return "Too early: nothing to compare yet.";
+      return "Nothing to compare yet.";
   }
 }
+
+/** Tonight's line for a question that couldn't be checked (6.6). */
+const NOT_CHECKED_SHORT: Record<NotChecked, string> = {
+  nasa: "NASA's log didn't load.",
+  error: "Something went wrong on our side.",
+};
 
 /** "in your three years", "in your 20 years", "in your 18 months": whole
     years from 2, months under, always rounded down (`historySpan`). */
@@ -416,12 +457,11 @@ function spanWords(start: number, end: number): string {
   return `in your ${spelled(months)} month${months === 1 ? "" : "s"}`;
 }
 
-function whatHappened(q: Question, rec: QuestionRecord, swing: number): string {
-  const long = swingLong(q.measure, swing);
-  // "You listened 1% more than usual"; a share's "bigger" already compares.
-  const thanUsual = barely(swing) || q.measure !== "listening" ? "" : " than usual";
+/** "What happened" (8.7.3, changed 2 Oct 2026): only the count, since the
+    word line above it already says the swing. */
+function whatHappened(q: Question, rec: QuestionRecord): string {
   const noun = rec.events === 1 ? q.eventNoun.one : q.eventNoun.many;
-  return `${capital(q.when)}, ${long}${thanUsual}, across ${count(rec.events)} ${noun} ${spanWords(rec.spanStart, rec.spanEnd)}.`;
+  return `Counted across ${count(rec.events)} ${noun} ${spanWords(rec.spanStart, rec.spanEnd)}.`;
 }
 
 const PRONOUN: Partial<Record<SkyBody, { she: string; her: string }>> = {
@@ -492,22 +532,43 @@ function earlyReadRows(q: Question, reads: EarlyRead[], zone: string): string[] 
 /** A question stored under another measure, while it's recomputed. */
 const CHECKING = "Checking this question against your sky\u2026";
 
-/** "about 20%": whole percents under 10, then in fives, rounded up so the
+/** How much one stretch swings on its own (6.5, changed 2 Oct 2026), the
+    measure in its own words and the question's event noun: "At an ordinary
+    time, a stretch this long usually swings your share of old favorites by
+    up to about 20% either way, so one retrograde can't show a pattern."
+    "about 20%": whole percents under 10, then in fives, rounded up so the
     line never understates what chance does on its own. */
-function typicalSwing(fraction: number): string {
+function typicalSwing(q: Question, fraction: number): string {
   const pct = fraction * 100;
   const n = pct < 10 ? Math.max(1, Math.ceil(pct - 1e-9)) : Math.ceil(pct / 5 - 1e-9) * 5;
-  return `One ordinary stretch this long usually moves less than about ${count(n)}% either way.`;
+  return (
+    `At an ordinary time, a stretch this long usually swings ${MEASURE_WORDS[q.measure].now} by up to about ${count(n)}% ` +
+    `either way, so one ${q.eventNoun.one} can't show a pattern.`
+  );
 }
 
 const STATIONS: QuestionId[] = ["mercury", "venusrx", "marsrx"];
 const SIGN_CHANGES: QuestionId[] = ["venushome", "marswater", "venusdet"];
 const ASPECTS: QuestionId[] = ["venusmars"];
 
-/** "Venus turns retrograde Saturday. You've lived through one; see how your
-    listening went." Never "see what it did": that says Venus did something
-    to the listener (9.6). */
-function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: string, nowUts: number): string | null {
+/**
+ * A question's heads-up (8.4): its condition's next start within a week, the
+ * sky relative to the listener's date ("Venus turns retrograde Saturday"),
+ * then the line under it: Tonight's line when the question is tested ("While
+ * Venus was retrograde, …"); otherwise what the listener has lived through,
+ * "You've lived through one. See how your listening went.", "It'll be your
+ * first.", or, when the only one fell before the measure counts, "You've
+ * lived through one, in your first year, before old favorites count." Never
+ * "see what it did": that says Venus did something to the listener (9.6).
+ */
+function headsUp(
+  q: Question,
+  rec: QuestionRecord,
+  record: AnswerRecord,
+  zone: string,
+  nowUts: number,
+  testedLine: string | null,
+): { skyLine: string; line: string } | null {
   if (![...STATIONS, ...SIGN_CHANGES, ...ASPECTS].includes(q.id)) return null;
   const next = nextStartOf(q.id, nowUts);
   const c = conditionFor(q.id);
@@ -523,6 +584,8 @@ function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: s
     venusdet: `Venus enters ${w.sign}, her detriment,`,
     venusmars: `Venus and Mars come into ${w.aspect === 120 ? "trine" : "sextile"}`,
   };
+  const skyLine = `${opening[q.id]} ${when}`;
+  if (testedLine) return { skyLine, line: testedLine };
   // The events lived through so far, the first year included.
   const lived = new Set(
     c.windows.filter((x) => x.end >= record.historyStart && x.start <= Math.min(record.historyEnd, nowUts)).map((x) => x.event),
@@ -532,13 +595,51 @@ function headsUp(q: Question, rec: QuestionRecord, record: AnswerRecord, zone: s
     rec.warmupReadyFrom !== null &&
     n === 1 &&
     c.windows.filter((x) => lived.has(x.event)).every((x) => x.end < rec.warmupReadyFrom!);
-  const second =
+  const line =
     n === 0
       ? "It'll be your first."
       : firstYearOnly
         ? `You've lived through one, in your first year, before ${WARMUP_NOUN[q.measure]} count.`
-        : `You've lived through ${spelled(n)}; see how your listening went.`;
-  return `${opening[q.id]} ${when}. ${second}`;
+        : `You've lived through ${spelled(n)}. See how your listening went.`;
+  return { skyLine, line };
+}
+
+/* ---- Pairings (8.7.3) ------------------------------------------------------ */
+
+const RETROGRADE_OF: Partial<Record<QuestionId, SkyBody>> = { mercury: "Mercury", venusrx: "Venus", marsrx: "Mars" };
+const SIGN_BODY: Partial<Record<QuestionId, SkyBody>> = { venushome: "Venus", venusdet: "Venus", moonstrong: "Moon", marswater: "Mars" };
+
+/**
+ * The chip on a pairing's card (8.7.3, 7.4): this question's condition at
+ * that song's first play, in 9.3's words. "Venus in Aries · in her
+ * detriment", "Moon in Taurus · exalted", "Full moon", "Mercury retrograde",
+ * "Venus and Mars in trine", "Kp 7 storm night", "X5.8 flare night". Mars in
+ * a water sign says the element it tests: "Mars in Pisces · a water sign".
+ * The sign and the aspect are the window's own, the one that put the song
+ * here.
+ */
+function conditionText(id: QuestionId, f: PairingFact): string {
+  const rx = RETROGRADE_OF[id];
+  if (rx) return `${rx} retrograde`;
+  if (id === "fullmoon") return "Full moon";
+  if (id === "newmoon") return "New moon";
+  if (id === "storms") return f.kp === undefined ? "Storm night" : `${kpLabel(f.kp)} storm night`;
+  if (id === "flares") return f.flare ? `${f.flare} flare night` : "X-flare night";
+  const w = conditionFor(id)?.windows.find((x) => f.at >= x.start && f.at <= x.end);
+  const date = new Date(f.at * 1000);
+  if (id === "venusmars") {
+    const aspect = w?.aspect ?? harmonyAt(date)?.aspect ?? 60;
+    return `Venus and Mars in ${aspect === 120 ? "trine" : "sextile"}`;
+  }
+  const body = SIGN_BODY[id]!;
+  const sign: Sign = w?.sign ?? signOf(longitude(body, date));
+  return `${body} in ${sign} · ${id === "marswater" ? "a water sign" : dignityPhrase(body, sign)}`;
+}
+
+/** A record before format 4 kept bare song ids, with no first-play time to
+    word a chip from: those wait for the recompute its format asks for. */
+function pairingsOf(id: QuestionId, stored: QuestionRecord["pairings"] | undefined): PairingPayload[] {
+  return (stored ?? []).flatMap((p) => (typeof p === "string" ? [] : [{ songId: p.songId, conditionText: conditionText(id, p) }]));
 }
 
 const emptyRecord: QuestionRecord = {
@@ -630,7 +731,7 @@ function revealLines(
       .filter((x): x is { q: QuestionPayload; at: number } => x.at !== null && x.at > nowUts)
       .sort((a, b) => a.at - b.at)[0];
     line = arriving
-      ? `Too early for all 12. The first to arrive: ${questionById(arriving.q.id).subject}, around ${monthYear(zone, arriving.at)}.`
+      ? `Too early for all 12. The first to arrive: Question ${arriving.q.number}: ${arriving.q.shortName}, around ${monthYear(zone, arriving.at)}.`
       : "Too early for all 12. They arrive as more of your listening falls under each sky.";
   } else if (tally["Too early"] > questions.length / 2) {
     const first = questionById(tested[0].id);
@@ -657,6 +758,7 @@ function checking(q: Question, rec: QuestionRecord, record: AnswerRecord, nowUts
     question: q.question,
     story: q.story,
     shortName: q.shortName,
+    subject: q.subject,
     status: null,
     notChecked: null,
     updating: true,
@@ -674,7 +776,7 @@ function checking(q: Question, rec: QuestionRecord, record: AnswerRecord, nowUts
     earlyReads: [],
     typicalSingleSwing: null,
     nextStart: q.nasa ? null : (nextStartOf(q.id, nowUts)?.start ?? null),
-    pairings: rec.pairings ?? [],
+    pairings: pairingsOf(q.id, rec.pairings),
     nullSamples: [],
     phrases: {
       wordLine: CHECKING,
@@ -689,7 +791,7 @@ function checking(q: Question, rec: QuestionRecord, record: AnswerRecord, nowUts
       correctionNote: null,
       earlyReadRows: [],
       typicalSwing: null,
-      headsUp: headsUp(q, { ...rec, warmupReadyFrom }, record, record.zone, nowUts),
+      headsUp: headsUp(q, { ...rec, warmupReadyFrom }, record, record.zone, nowUts, null),
     },
   };
 }
@@ -727,22 +829,23 @@ export function answersPayload(
     const next = q.nasa ? null : (nextStartOf(q.id, nowUts)?.start ?? null);
     const range = tested && rec.index !== null ? rangeSentence(q, word, rec.index, rec.rangeC) : null;
     const early = rec.status === "too-few-events";
+    const tonight = rec.notChecked
+      ? NOT_CHECKED_SHORT[rec.notChecked]
+      : tested
+        ? tonightLine(q, word, swing, rec.p!, m)
+        : tooEarlyShort(q, rec, zone);
     const phrases: QuestionPhrases = {
       wordLine: rec.notChecked
         ? NOT_CHECKED[rec.notChecked]
         : tested
           ? wordLine(q, word, swing, rec.p!, m)
           : tooEarly(q, rec, zone, nowUts, next),
-      tonightLine: rec.notChecked
-        ? NOT_CHECKED[rec.notChecked]
-        : tested
-          ? tonightLine(q, word, swing, rec.p!, m)
-          : tooEarlyShort(q, rec, zone),
+      tonightLine: tonight,
       likelihood: tested ? likelihoodFor(rec.p!) : null,
       frequency: tested ? frequency(rec.p!, rec.matches, rec.iterations) : null,
       range: range?.line ?? null,
       tooEarly: !rec.notChecked && !tested ? tooEarly(q, rec, zone, nowUts, next) : null,
-      whatHappened: tested ? whatHappened(q, rec, swing) : null,
+      whatHappened: tested ? whatHappened(q, rec) : null,
       warmup:
         tested && q.warmupDays > 0
           ? q.measure === "oldfavorites"
@@ -762,8 +865,8 @@ export function answersPayload(
             `(Benjamini-Hochberg at 10%). A Yes needs this question's adjusted p at most 0.10 and its own p ` +
             `under 0.05. Adjusted p here: ${formatP(pAdjusted[i]!, "up")}.`,
       earlyReadRows: early ? earlyReadRows(q, rec.earlyReads, zone) : [],
-      typicalSwing: early && rec.typicalSingleSwing !== null ? typicalSwing(rec.typicalSingleSwing) : null,
-      headsUp: rec.notChecked ? null : headsUp(q, rec, record, zone, nowUts),
+      typicalSwing: early && rec.typicalSingleSwing !== null ? typicalSwing(q, rec.typicalSingleSwing) : null,
+      headsUp: rec.notChecked ? null : headsUp(q, rec, record, zone, nowUts, tested ? tonight : null),
     };
     return {
       id: q.id,
@@ -771,6 +874,7 @@ export function answersPayload(
       question: q.question,
       story: q.story,
       shortName: q.shortName,
+      subject: q.subject,
       status: rec.status,
       notChecked: rec.notChecked,
       updating: false,
@@ -789,7 +893,7 @@ export function answersPayload(
       earlyReads: early ? rec.earlyReads : [],
       typicalSingleSwing: early ? rec.typicalSingleSwing : null,
       nextStart: next,
-      pairings: rec.pairings ?? [],
+      pairings: pairingsOf(q.id, rec.pairings),
       nullSamples: rec.nullSamples,
       phrases,
     };
@@ -809,7 +913,7 @@ export function answersPayload(
       .filter((q) => group.includes(q.id) && q.phrases.headsUp && q.nextStart !== null)
       .sort((a, b) => a.nextStart! - b.nextStart!);
     if (candidates.length) {
-      top = { id: candidates[0].id, line: candidates[0].phrases.headsUp! };
+      top = { id: candidates[0].id, ...candidates[0].phrases.headsUp! };
       break;
     }
   }

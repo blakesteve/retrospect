@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { BODIES, type SkyAt, type SkyBody, type Sign } from "@/lib/sky/sky";
-import { zoneClock } from "@/lib/zone";
-import { byWildness, chipFor, chipText, pairingSentence, strangeness, wildNight, type FirstPlaySky, type NightEvents } from "./highlights";
+import { nightName, zoneClock } from "@/lib/zone";
+import {
+  byWildness,
+  chipFor,
+  chipText,
+  oneCardPerEvent,
+  pairingSentence,
+  strangeness,
+  wildNight,
+  wildOrder,
+  type FirstPlaySky,
+  type NightEvents,
+  type WildNight,
+} from "./highlights";
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 const night = (date: string) => Date.parse(`${date}T00:00:00Z`) / 86_400_000;
@@ -89,6 +101,122 @@ describe("wild nights (spec 7.5)", () => {
       chicago,
     )!;
     expect([both.rank, both.title]).toEqual([4, "A G4 storm, Kp 8"]);
+    // And keeps its flare as the next reason, for when the storm's card is next door.
+    expect([both.then?.rank, both.then?.night]).toEqual([5, both.night]);
+    // A night headed by something else, or by a storm alone, has none.
+    expect(wildNight(quiet("2024-05-14", { xflares: [[at("2024-05-14T16:51:00Z"), "X8.7"]] }), chicago)!.then).toBeUndefined();
+    expect(wildNight(quiet("2024-10-10", { kp: 8.67 }), chicago)!.then).toBeUndefined();
+  });
+});
+
+describe("wild nights an eclipse unseen from the zone heads (7.5, changed 2 Oct 2026)", () => {
+  /* From Chicago (7.5's measurements): Aug 12, 2026 covered 0.08% of the Sun,
+     Oct 2, 2024 and Feb 17, 2026 didn't reach it, and the Moon was down for
+     Sept 7, 2025 (-54°). Apr 8, 2024, Oct 14, 2023 and Mar 14, 2025 were
+     seen. */
+  const later = zoneClock("America/Chicago", at("2023-01-01T00:00:00Z"), at("2026-12-31T00:00:00Z"));
+  const eclipse = (date: string, kind: string, peak: string) => quiet(date, { eclipse: { kind, time: at(peak) } });
+
+  it("ranks seen eclipses, G5, G4, then unseen eclipses, then X5 flares and asteroids", () => {
+    const wild = [
+      eclipse("2026-08-12", "total solar", "2026-08-12T17:45:47Z"),
+      eclipse("2024-10-02", "annular solar", "2024-10-02T18:44:56Z"),
+      eclipse("2026-02-17", "annular solar", "2026-02-17T12:11:54Z"),
+      eclipse("2025-09-07", "total lunar", "2025-09-07T18:11:42Z"),
+      eclipse("2025-03-13", "total lunar", "2025-03-14T06:58:42Z"),
+      eclipse("2024-04-08", "total solar", "2024-04-08T18:17:19Z"),
+      eclipse("2023-10-14", "annular solar", "2023-10-14T17:59:27Z"),
+      quiet("2024-05-10", { kp: 9 }),
+      quiet("2024-10-10", { kp: 8.67 }),
+      quiet("2024-10-03", { xflares: [[at("2024-10-03T12:18:00Z"), "X9.0"]] }),
+      quiet("2024-06-29", { asteroid: { name: "2024 MK", time: at("2024-06-29T13:49:00Z"), ld: 0.77, meters: 141 } }),
+    ]
+      .map((e) => wildNight(e, later)!)
+      .sort(byWildness);
+    expect(wild.map((w) => [nightName(w.night), w.rank, w.visible])).toEqual([
+      ["2024-04-08", 0, true],
+      ["2023-10-14", 1, true],
+      ["2025-03-13", 2, true],
+      ["2024-05-10", 3, true],
+      ["2024-10-10", 4, true],
+      ["2026-08-12", 0, false],
+      ["2026-02-17", 1, false],
+      ["2024-10-02", 1, false],
+      ["2025-09-07", 2, false],
+      ["2024-10-03", 5, true],
+      ["2024-06-29", 6, true],
+    ]);
+  });
+
+  it("lets a G4 storm head a night over an eclipse the zone didn't see, and not over one it did", () => {
+    const unseen = wildNight({ ...eclipse("2026-08-12", "total solar", "2026-08-12T17:45:47Z"), kp: 8 }, later)!;
+    expect([unseen.rank, unseen.title]).toEqual([4, "A G4 storm, Kp 8"]);
+    const seen = wildNight({ ...eclipse("2024-04-08", "total solar", "2024-04-08T18:17:19Z"), kp: 8 }, later)!;
+    expect([seen.rank, seen.title]).toEqual([0, "A total solar eclipse across North America"]);
+  });
+
+  it("sees every eclipse from a zone with no city, as before", () => {
+    const utc = zoneClock("UTC", at("2026-01-01T00:00:00Z"));
+    expect(wildNight(eclipse("2026-08-12", "total solar", "2026-08-12T17:45:47Z"), utc)).toMatchObject({ rank: 0, visible: true });
+  });
+
+  it("orders by kind and sight, a version 2 record's missing flag read as seen", () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map((r) => wildOrder(r))).toEqual([0, 1, 2, 3, 4, 8, 9]);
+    expect([0, 1, 2].map((r) => wildOrder(r, false))).toEqual([5, 6, 7]);
+    const old = { night: 1, rank: 0, size: 0, title: "", story: null, eventId: null } as WildNight;
+    expect(byWildness(old, { ...old, night: 2, rank: 3 })).toBeLessThan(0);
+  });
+});
+
+describe("one event, one card (7.5, changed 2 Oct 2026)", () => {
+  const w = (date: string, rank: number, size: number, eventId: string | null = null): WildNight => ({
+    night: night(date),
+    rank,
+    size,
+    title: date,
+    story: null,
+    eventId,
+  });
+
+  it("keeps the night of a storm's higher reading", () => {
+    expect(oneCardPerEvent([w("2024-10-11", 4, 8.67), w("2024-10-10", 4, 8)]).map((x) => x.title)).toEqual(["2024-10-11"]);
+  });
+
+  it("on a tie, the night with a curated title, then the earlier", () => {
+    // The sample's May 10 and 11, 2024: both Kp 9, May 10 curated.
+    expect(oneCardPerEvent([w("2024-05-11", 3, 9), w("2024-05-10", 3, 9, "storm-2024-05-10")]).map((x) => x.title)).toEqual(["2024-05-10"]);
+    expect(oneCardPerEvent([w("2024-05-11", 3, 9, "x"), w("2024-05-10", 3, 9)]).map((x) => x.title)).toEqual(["2024-05-11"]);
+    expect(oneCardPerEvent([w("2024-05-11", 3, 9), w("2024-05-10", 3, 9)]).map((x) => x.title)).toEqual(["2024-05-10"]);
+  });
+
+  it("takes a run of three as one, and leaves apart what isn't a storm or isn't next door", () => {
+    const run = [w("2015-03-17", 4, 8), w("2015-03-18", 4, 8.33), w("2015-03-19", 4, 7.67)];
+    expect(oneCardPerEvent(run).map((x) => x.title)).toEqual(["2015-03-18"]);
+    // Two days apart, two storms. An eclipse and a flare beside a storm stay their own cards.
+    expect(oneCardPerEvent([w("2024-05-10", 3, 9), w("2024-05-12", 4, 8)])).toHaveLength(2);
+    expect(oneCardPerEvent([w("2024-10-03", 5, 509), w("2024-10-02", 1, 0), w("2024-10-04", 4, 8)])).toHaveLength(3);
+  });
+
+  it("keeps the row's order", () => {
+    const order = [w("2024-04-08", 0, 0), w("2024-05-11", 3, 9), w("2024-05-10", 3, 9, "c"), w("2024-10-03", 5, 509)];
+    expect(oneCardPerEvent(order).map((x) => x.title)).toEqual(["2024-04-08", "2024-05-10", "2024-10-03"]);
+  });
+
+  it("gives a night whose storm card went next door a card for its other event, in its place in the row", () => {
+    // A G4 night with an X5.8 flare, then a G5 night: the storm's card is the
+    // G5's, and the first night keeps the flare (review, 3 Oct 2026).
+    const flare: WildNight = { ...w("2024-10-09", 5, 508), title: "An X5.8 flare" };
+    const g4 = { ...w("2024-10-09", 4, 8.67), then: flare };
+    const cards = oneCardPerEvent([w("2024-10-10", 3, 9), g4, w("2025-01-01", 4, 8), w("2024-11-01", 6, 140)]);
+    // The flare takes a flare's place: after the other G4, before the asteroid.
+    expect(cards.map((x) => [x.title, x.rank])).toEqual([
+      ["2024-10-10", 3],
+      ["2025-01-01", 4],
+      ["An X5.8 flare", 5],
+      ["2024-11-01", 6],
+    ]);
+    // Without another event, the night has no card of its own.
+    expect(oneCardPerEvent([w("2024-10-10", 3, 9), w("2024-10-09", 4, 8.67)]).map((x) => x.title)).toEqual(["2024-10-10"]);
   });
 });
 

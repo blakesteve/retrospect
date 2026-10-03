@@ -4,23 +4,30 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@blakesteve/roster";
 import { sheetFrom } from "./sheetUrl";
+import { CAN_HOVER, prefersReducedMotion, useMedia } from "./media";
 
 /* The first-visit guide (spec 8.10): three tips on Tonight, after the reveal,
    dismissible at any step and remembered per browser. Not modal: each tip is
    a region named "Tip 1 of 3", focus moves to its Next button, and Escape
    ends it (11). Each step also advances when the visitor does what it asks:
-   a planet's sheet opening (tip 1, by tap or by key), the songs row
-   scrolling (tip 2), a question's sheet opening (tip 3). While a sheet is
-   open the guide waits, and takes up again once it closes. */
+   a planet's sheet opening (tip 1, by tap or by key), a question's sheet
+   opening (tip 2), the songs row moving (tip 3). While a sheet is open the
+   guide waits, and takes up again once it closes. The order follows the
+   page's (8.4). */
 
-const TIPS = [
+/** Tip 3 says "Swipe" to touch, and "Use the arrows" where the pointer can
+    hover, since a mouse can't swipe (8.10); neither when every song already
+    fits and the row can't move. */
+const tips = (hover: boolean, moves: boolean) => [
   "This is tonight's sky. Tap any planet.",
-  "Swipe your songs. Each one has a sky.",
   "These are the only claims we make. Tap one.",
+  !moves ? "Each of your songs has a sky." : hover ? "Each of your songs has a sky. Use the arrows for more." : "Each of your songs has a sky. Swipe for more.",
 ];
 const KEY = "retrospect:guide-done";
-/** The sheet each tip asks for: tip 1 a planet's, tip 3 a question's. */
-const ASKS: (string | null)[] = ["planet", null, "q"];
+/** The sheet each tip asks for: tip 1 a planet's, tip 2 a question's. */
+const ASKS: (string | null)[] = ["planet", "q", null];
+/** The tip that asks for the songs row to move. */
+const SONGS_STEP = 2;
 
 const done = () => {
   try {
@@ -33,6 +40,8 @@ const done = () => {
 export function Guide({ anchors }: { anchors: string[] }) {
   // Mounted only on the client, after the reveal, so storage is readable here.
   const [step, setStep] = useState<number | null>(() => (done() ? null : 0));
+  const [rowMoves, setRowMoves] = useState(true);
+  const TIPS = tips(useMedia(CAN_HOVER), rowMoves);
   const nextRef = useRef<HTMLButtonElement>(null);
   const [top, setTop] = useState(0);
   const sheet = sheetFrom(useSearchParams());
@@ -63,7 +72,7 @@ export function Guide({ anchors }: { anchors: string[] }) {
   useEffect(() => {
     const anchor = anchorId ? document.getElementById(anchorId) : null;
     if (!anchor) return;
-    anchor.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    anchor.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
     const place = () => setTop(anchor.getBoundingClientRect().bottom + window.scrollY + 8);
     const raf = requestAnimationFrame(place);
     const t = setTimeout(place, 400);
@@ -82,14 +91,19 @@ export function Guide({ anchors }: { anchors: string[] }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [step, sheetOpen]);
 
-  // Tip 2 asks for a swipe: the songs row scrolling.
+  // Tip 3 asks for the songs row to move: a swipe, a drag or an arrow.
   useEffect(() => {
-    if (step !== 1 || !anchorId) return;
-    const rail = document.getElementById(anchorId)?.querySelector<HTMLElement>(".rail");
-    if (!rail) return;
-    const onScroll = () => rail.scrollLeft > 60 && advance();
-    rail.addEventListener("scroll", onScroll, { passive: true });
-    return () => rail.removeEventListener("scroll", onScroll);
+    if (step !== SONGS_STEP || !anchorId) return;
+    const row = document.getElementById(anchorId)?.querySelector<HTMLElement>("ul[aria-label]");
+    // The Carousel marks a row that overflows, once measured; one that fits can't move.
+    const measured = requestAnimationFrame(() => setRowMoves(Boolean(row?.hasAttribute("data-overflowing"))));
+    if (!row) return () => cancelAnimationFrame(measured);
+    const onScroll = () => row.scrollLeft > 60 && advance();
+    row.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(measured);
+      row.removeEventListener("scroll", onScroll);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- per step
   }, [step, anchorId]);
 

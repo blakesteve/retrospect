@@ -7,7 +7,7 @@ import type { SheetBodyProps } from "../SheetHost";
 import { getJson, type Dignity } from "../api";
 import type { PlanetSheet as PlanetSheetData } from "@/lib/sky/planet";
 import { SheetLink } from "../cards";
-import { AnswerPill, SheetFailed, SheetSkeleton, Terms } from "../pieces";
+import { AnswerPill, Chevron, SheetFailed, SheetSkeleton, Terms } from "../pieces";
 import { DIGNITY_COLOR, planetGlyph, signGlyph } from "../sky";
 
 /* A planet (spec 8.7.4), from /api/sky/planet. */
@@ -127,7 +127,8 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
             <span>{data.path.endLabel}</span>
           </p>
           <p className="sr-only">
-            The strip colors each stretch by {name}&rsquo;s dignity: gold at home, sea green exalted, plum in detriment, rust in fall.
+            The strip colors each stretch by {value === "moon" || value === "sun" ? `the ${name}` : name}&rsquo;s dignity: gold at home, sea green exalted, plum in
+            detriment, rust in fall.
           </p>
         </>
       )}
@@ -140,11 +141,12 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
               const a = answers?.questions.find((x) => x.id === q.id);
               return (
                 <li key={q.id}>
-                  <SheetLink to={{ kind: "q", value: q.id }} className="flex min-h-11 items-center justify-between gap-3 py-2.5">
-                    <span className="text-[15px] text-ink">
+                  <SheetLink to={{ kind: "q", value: q.id }} className="group flex min-h-11 items-center gap-3 py-2.5">
+                    <span className="min-w-0 flex-1 text-[15px] text-ink">
                       Question {q.number}: {q.shortName}
                     </span>
                     {a && <AnswerPill word={a.word} />}
+                    <Chevron />
                   </SheetLink>
                 </li>
               );
@@ -169,7 +171,8 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
       {(data.next.station || data.next.signChange) && (
         <>
           <h3 className={H3}>Next</h3>
-          <Terms names={["Retrograde", "Station"]} />
+          {/* The key shows only the kinds listed: the Sun and Moon never station (8.7.4). */}
+          {data.next.station && <Terms names={["Retrograde", "Station"]} />}
           <ul className="mt-2 space-y-1.5 text-[15px] text-ink">
             {data.next.station && (
               <li>

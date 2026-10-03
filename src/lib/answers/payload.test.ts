@@ -81,7 +81,15 @@ describe("the word line and Tonight's line (9.2)", () => {
     expect(q.phrases.wordLine).toBe(
       "Yes. Around full moons, a 23% bigger share of your plays came after midnight. Very unlikely to be chance, and it holds up after allowing for asking 10 questions at once.",
     );
-    expect(q.phrases.tonightLine).toBe("Yes: a 23% bigger after-midnight share, even allowing for 10 questions.");
+    // Spec 9.2's Tonight line, word for word: the pill shows the word.
+    expect(q.phrases.tonightLine).toBe(
+      "Around full moons, a 23% bigger share of your plays came after midnight: very unlikely to be chance, even allowing for 10 questions.",
+    );
+    const unlikely = phrasesOf(record("fullmoon", { status: "tested", index: 1.23, p: 0.02, iterations: 2000 }, [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95].map((x) => x / 20)), "fullmoon");
+    expect(unlikely.word).toBe("Yes");
+    expect(unlikely.phrases.tonightLine).toBe(
+      "Around full moons, a 23% bigger share of your plays came after midnight: unlikely to be chance, even allowing for 10 questions.",
+    );
   });
 
   it("Maybe, under 0.05 but not after the correction", () => {
@@ -91,7 +99,7 @@ describe("the word line and Tonight's line (9.2)", () => {
       "Maybe. Around full moons, an 18% bigger share of your plays came after midnight. On its own that's unlikely to be chance, but after allowing for asking 10 questions at once, it could be.",
     );
     expect(q.phrases.tonightLine).toBe(
-      "Maybe: an 18% bigger after-midnight share, unlikely on its own but not after allowing for 10 questions.",
+      "Around full moons, an 18% bigger share of your plays came after midnight: unlikely to be chance on its own, but not after allowing for 10 questions.",
     );
   });
 
@@ -101,7 +109,7 @@ describe("the word line and Tonight's line (9.2)", () => {
     expect(maybe.phrases.wordLine).toBe(
       "Maybe. While the Moon was strong, a 5% smaller share of your plays were old favorites, which could be chance.",
     );
-    expect(maybe.phrases.tonightLine).toBe("Maybe: a 5% smaller share of old favorites, which could be chance.");
+    expect(maybe.phrases.tonightLine).toBe("While the Moon was strong, a 5% smaller share of your plays were old favorites, which could be chance.");
 
     const notClearly = phrasesOf(record("venusmars", { status: "tested", index: 1.11, p: 0.2, iterations: 2000 }, rest9), "venusmars");
     expect(notClearly.phrases.wordLine).toBe("Not clearly. While Venus and Mars got along, you listened 11% more, which could be chance.");
@@ -115,9 +123,25 @@ describe("the word line and Tonight's line (9.2)", () => {
       "No. While Mercury was retrograde, your share of old favorites barely moved: less than 1% either way, which could easily be chance.",
     );
     const more = phrasesOf(record("marsrx", { status: "tested", index: 1.01, p: 0.6, iterations: 2000 }, rest9), "marsrx");
-    expect(more.phrases.tonightLine).toBe("No: 1% more listening, which could easily be chance.");
-    const less = phrasesOf(record("venusdet", { status: "tested", index: 0.92, p: 0.2, iterations: 2000 }, rest9), "venusdet");
-    expect(less.phrases.tonightLine).toBe("Not clearly: 8% less listening, which could be chance.");
+    expect(more.phrases.tonightLine).toBe("While Mars was retrograde, you listened 1% more, which could easily be chance.");
+    // Spec 9.2's Not clearly and No, word for word.
+    const less = phrasesOf(record("venusmars", { status: "tested", index: 0.92, p: 0.2, iterations: 2000 }, rest9), "venusmars");
+    expect(less.phrases.tonightLine).toBe("While Venus and Mars got along, you listened 8% less, which could be chance.");
+    const flat = phrasesOf(record("venusdet", { status: "tested", index: 1.003, p: 0.6, iterations: 2000 }, rest9), "venusdet");
+    expect(flat.phrases.tonightLine).toBe(
+      "While Venus was in detriment, how much you listened barely moved: less than 1% either way, which could easily be chance.",
+    );
+  });
+
+  it("says barely moved in each measure's own words (9.2)", () => {
+    const flat = (id: QuestionId) =>
+      phrasesOf(record(id, { status: "tested", index: 0.998, p: 0.6, iterations: 2000 }, rest9), id).phrases.tonightLine;
+    expect(flat("mercury")).toBe(
+      "While Mercury was retrograde, your share of old favorites barely moved: less than 1% either way, which could easily be chance.",
+    );
+    expect(flat("fullmoon")).toBe("Around full moons, your after-midnight share barely moved: less than 1% either way, which could easily be chance.");
+    expect(flat("newmoon")).toBe("Around new moons, your share of first listens barely moved: less than 1% either way, which could easily be chance.");
+    expect(flat("marsrx")).toBe("While Mars was retrograde, how much you listened barely moved: less than 1% either way, which could easily be chance.");
   });
 });
 
@@ -158,12 +182,30 @@ describe("too early, by status (9.2)", () => {
     expect(q.phrases.tooEarly).toBe(
       "Too early. 1 of the 6 retrogrades a verdict needs. One retrograde can't show a pattern. The next one begins Saturday.",
     );
-    expect(q.phrases.tonightLine).toBe("Too early: 1 of the 6 retrogrades a verdict needs.");
+    expect(q.phrases.tonightLine).toBe("1 of the 6 retrogrades a verdict needs.");
     // From 1 Jan 2027 the next Venus retrograde (May 10, 2028) is over a year away.
     const later = phrasesOf(record("venusrx", { status: "too-few-events", events: 1 }), "venusrx", Date.parse("2027-01-01T18:00:00Z"));
     expect(later.phrases.tooEarly).toBe(
       "Too early. 1 of the 6 retrogrades a verdict needs. One retrograde can't show a pattern. The next one is expected around May 2028.",
     );
+  });
+
+  it("drops one-can't-show-a-pattern when an early read follows, which says it (9.2, 2 Oct 2026)", () => {
+    const q = phrasesOf(record("venusrx", { status: "too-few-events", events: 1, typicalSingleSwing: 0.2 }), "venusrx");
+    expect(q.phrases.tooEarly).toBe("Too early. 1 of the 6 retrogrades a verdict needs. The next one begins Saturday.");
+    expect(q.phrases.typicalSwing).toBe(
+      "At an ordinary time, a stretch this long usually swings your share of old favorites by up to about 20% either way, so one retrograde can't show a pattern.",
+    );
+  });
+
+  it("gives Tonight the sheet's first line without 'Too early.', for every status (9.2)", () => {
+    const line = (id: QuestionId, over: Partial<QuestionRecord>) => phrasesOf(record(id, over), id).phrases.tonightLine;
+    expect(line("storms", { status: "too-few-plays", inPlays: 244, notChecked: null })).toBe("244 of the 500 plays a verdict needs on storm nights.");
+    expect(line("mercury", { status: "warming-up", warmupReadyFrom: at("2027-05-20T12:00:00Z") })).toBe("Old favorites start counting in May 2027.");
+    expect(line("newmoon", { status: "warming-up", warmupReadyFrom: at("2027-05-20T12:00:00Z") })).toBe("First listens start counting in May 2027.");
+    expect(line("storms", { status: "no-comparison", notChecked: null })).toBe("Nothing to compare yet.");
+    expect(line("storms", { status: null, notChecked: "nasa" })).toBe("NASA's log didn't load.");
+    expect(line("venusdet", { status: null, notChecked: "error" })).toBe("Something went wrong on our side.");
   });
 
   it("too few plays, warming up, and nothing to compare", () => {
@@ -193,9 +235,8 @@ describe("the question sheet's other lines (8.7.3)", () => {
       record("venusdet", tested({ index: 1.01, p: 0.6, events: 7, spanStart: at("2023-01-01T00:00:00Z"), spanEnd: at("2026-01-01T00:00:00Z") }), rest9),
       "venusdet",
     );
-    expect(q.phrases.whatHappened).toBe(
-      "While Venus was in detriment, you listened 1% more than usual, across 7 stretches in your three years.",
-    );
+    // Only the count: the word line above it already says the swing (8.7.3, 2 Oct 2026).
+    expect(q.phrases.whatHappened).toBe("Counted across 7 stretches in your three years.");
   });
 
   it("how often a swing this big turns up, and the p-value note", () => {
@@ -263,7 +304,26 @@ describe("early reads (6.5, 9.2)", () => {
       "Mar 1 to Apr 12, 2025: a 14% smaller share of old favorites (in progress).",
       "Mar 1 to Apr 12, 2025: in your first year, before old favorites count.",
     ]);
-    expect(q.phrases.typicalSwing).toBe("One ordinary stretch this long usually moves less than about 20% either way.");
+    expect(q.phrases.typicalSwing).toBe(
+      "At an ordinary time, a stretch this long usually swings your share of old favorites by up to about 20% either way, so one retrograde can't show a pattern.",
+    );
+  });
+
+  it("says what swings, in each measure's words, and the question's own event noun (6.5)", () => {
+    const swing = (id: QuestionId) =>
+      phrasesOf(record(id, { status: "too-few-events", events: 2, typicalSingleSwing: 0.31 }), id).phrases.typicalSwing;
+    expect(swing("fullmoon")).toBe(
+      "At an ordinary time, a stretch this long usually swings your after-midnight share by up to about 35% either way, so one full moon can't show a pattern.",
+    );
+    expect(swing("newmoon")).toBe(
+      "At an ordinary time, a stretch this long usually swings your share of first listens by up to about 35% either way, so one new moon can't show a pattern.",
+    );
+    expect(swing("marsrx")).toBe(
+      "At an ordinary time, a stretch this long usually swings how much you listen by up to about 35% either way, so one retrograde can't show a pattern.",
+    );
+    expect(swing("storms")).toBe(
+      "At an ordinary time, a stretch this long usually swings your after-midnight share by up to about 35% either way, so one stretch of storm nights can't show a pattern.",
+    );
   });
 
   // Architect, 1 Oct 2026: two or more first-year events for a question with
@@ -353,7 +413,8 @@ describe("a question stored under another measure (architect, 1 Oct 2026)", () =
     inPlays: 400,
     warmupReadyFrom: at("2026-01-01T00:00:00Z"),
     nullSamples: [0.1, -0.2],
-    pairings: ["song-a"],
+    // Sept 29, 2026, 03:00 UT: the Moon in Taurus 7°14′ (JPL Horizons).
+    pairings: [{ songId: "song-a", at: at("2026-09-29T03:00:00Z") }],
   };
   const current = record("moonstrong", tested5, rest9);
   const v1: AnswerRecord = {
@@ -396,7 +457,7 @@ describe("a question stored under another measure (architect, 1 Oct 2026)", () =
       const q = find(payload, id);
       // Everything but who it is and what the sky alone decides.
       const rest: Partial<QuestionPayload> = { ...q };
-      for (const k of ["id", "number", "question", "story", "shortName", "nextStart", "pairings"] as const) delete rest[k];
+      for (const k of ["id", "number", "question", "story", "shortName", "subject", "nextStart", "pairings"] as const) delete rest[k];
       expect(rest, id).toEqual({
         status: null,
         notChecked: null,
@@ -431,9 +492,10 @@ describe("a question stored under another measure (architect, 1 Oct 2026)", () =
           headsUp: null,
         },
       });
+      expect(q.subject, id).toBe(questionById(id).subject);
       // What depends only on the sky stays.
       expect(q.nextStart, id).toBe(find(answersPayload(current, "ready", NOW), id).nextStart);
-      expect(q.pairings, id).toEqual(id === "moonstrong" ? ["song-a"] : []);
+      expect(q.pairings, id).toEqual(id === "moonstrong" ? [{ songId: "song-a", conditionText: "Moon in Taurus · exalted" }] : []);
     }
   });
 
@@ -457,8 +519,18 @@ describe("a question stored under another measure (architect, 1 Oct 2026)", () =
     // Venus and Mars come into sextile Sept 10, 2025.
     const now = Date.parse("2025-09-04T17:00:00Z");
     const stored = answersPayload(current, "ready", now).headsUp;
-    expect(stored?.id).toBe("venusmars");
-    expect(answersPayload(v1, "ready", now).headsUp).toEqual(stored);
+    expect(stored).toEqual({
+      id: "venusmars",
+      skyLine: "Venus and Mars come into sextile Wednesday",
+      line: "While Venus and Mars got along, you listened 1% more, which could easily be chance.",
+    });
+    // Checking, its stored numbers aren't shown (6.6a): the line says what the
+    // sky alone does, the one stretch lived through (Jan 23 to May 29, 2025).
+    expect(answersPayload(v1, "ready", now).headsUp).toEqual({
+      id: "venusmars",
+      skyLine: "Venus and Mars come into sextile Wednesday",
+      line: "You've lived through one. See how your listening went.",
+    });
   });
 
   it("words that heads-up with today's warm-up, not the stored measure's", () => {
@@ -466,8 +538,9 @@ describe("a question stored under another measure (architect, 1 Oct 2026)", () =
     // 1, 2025, so the one before (Mar 15) fell in its first year, when old
     // favorites don't count yet. Stored under a measure with no warm-up.
     const moved = record("mercury", { measure: "listening", warmupReadyFrom: null, status: "tested", p: 0.5, index: 1.01, iterations: 2000, rangeC: 0.2 });
-    const line = answersPayload(moved, "ready", Date.parse("2025-07-13T17:00:00Z")).headsUp?.line;
-    expect(line).toMatch(/^Mercury turns retrograde \w+\. You've lived through one, in your first year, before old favorites count\.$/);
+    const up = answersPayload(moved, "ready", Date.parse("2025-07-13T17:00:00Z")).headsUp;
+    expect(up?.skyLine).toMatch(/^Mercury turns retrograde \w+$/);
+    expect(up?.line).toBe("You've lived through one, in your first year, before old favorites count.");
   });
 
   it("reads each question's own stored measure, whatever the version", () => {
@@ -488,14 +561,35 @@ describe("Tonight's heads-up (8.4)", () => {
     // History from 1 Jan 2025: one Venus retrograde so far (Mar 1 to Apr 12, 2025).
     const p = answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", NOW);
     // Never "see what it did": that says Venus did something to the listener (9.6).
-    expect(p.headsUp).toEqual({ id: "venusrx", line: "Venus turns retrograde Saturday. You've lived through one; see how your listening went." });
+    expect(p.headsUp).toEqual({ id: "venusrx", skyLine: "Venus turns retrograde Saturday", line: "You've lived through one. See how your listening went." });
+    expect(p.questions.find((q) => q.id === "venusrx")!.phrases.headsUp).toEqual({
+      skyLine: "Venus turns retrograde Saturday",
+      line: "You've lived through one. See how your listening went.",
+    });
+  });
+
+  it("gives a tested question's heads-up its Tonight line (8.4)", () => {
+    const rec = record("venusrx", { status: "tested", index: 0.99, p: 0.6, iterations: 2000, rangeC: 0.2, events: 7 }, rest9);
+    const p = answersPayload(rec, "ready", NOW);
+    expect(p.headsUp).toEqual({
+      id: "venusrx",
+      skyLine: "Venus turns retrograde Saturday",
+      line: "While Venus was retrograde, a 1% smaller share of your plays were old favorites, which could easily be chance.",
+    });
+    expect(p.headsUp?.line).toBe(p.questions.find((q) => q.id === "venusrx")!.phrases.tonightLine);
+  });
+
+  it("says it'll be the first when the history holds none yet", () => {
+    // A history from Apr 20, 2025: after the Mar 1 to Apr 12 retrograde.
+    const rec = { ...record("venusrx", { status: "too-few-events", events: 0 }), historyStart: at("2025-04-20T00:00:00Z") };
+    expect(answersPayload(rec, "ready", NOW).headsUp).toEqual({ id: "venusrx", skyLine: "Venus turns retrograde Saturday", line: "It'll be your first." });
   });
 
   it("names the day as Tonight's chip does, counting from the heading's night between midnight and 4 a.m.", () => {
     // 1 a.m. CDT Friday, Oct 2, 2026: "Thursday night, Oct 1". Venus stations 2:09 a.m. Saturday.
     const now = Date.parse("2026-10-02T06:00:00Z");
     const p = answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", now);
-    expect(p.headsUp?.line).toBe("Venus turns retrograde Saturday. You've lived through one; see how your listening went.");
+    expect(p.headsUp).toMatchObject({ skyLine: "Venus turns retrograde Saturday", line: "You've lived through one. See how your listening went." });
     const chips = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).chips;
     expect(chips[0]).toMatchObject({ kind: "station", text: "Venus turns retrograde Saturday" });
   });
@@ -505,7 +599,7 @@ describe("Tonight's heads-up (8.4)", () => {
     const now = Date.parse("2026-10-03T06:00:00Z");
     const rec = record("venusrx", { status: "too-few-events", events: 1 });
     const p = answersPayload(rec, "ready", now);
-    expect(p.headsUp?.line).toBe("Venus turns retrograde today. You've lived through one; see how your listening went.");
+    expect(p.headsUp?.skyLine).toBe("Venus turns retrograde today");
     expect(p.questions.find((q) => q.id === "venusrx")!.phrases.tooEarly).toMatch(/ The next one begins today\.$/);
     const chips = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).chips;
     expect(chips[0]).toMatchObject({ kind: "station", text: "Venus turns retrograde today" });
@@ -514,6 +608,62 @@ describe("Tonight's heads-up (8.4)", () => {
   it("is quiet when nothing starts within a week", () => {
     // 15 Jul 2026: Mercury turned retrograde Jun 29; next is Venus into Libra, Aug 6.
     expect(answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", Date.parse("2026-07-15T12:00:00Z")).headsUp).toBeNull();
+  });
+});
+
+describe("pairings' chips (8.7.3, 2 Oct 2026)", () => {
+  /* Each chip names this question's condition at the song's first play, in
+     9.3's words. The skies: Venus in Aries on Apr 8, 2024 (finding 11), in
+     Libra Nov 15, 2026; the Moon in Taurus Sept 29, 2026, 03:00 UT and in
+     Cancer Oct 4, 2026, 03:00 UT; Mars in Cancer Sept 26, 2026 (JPL
+     Horizons, in tonight.test.ts); Venus and Mars in trine Apr 7, 2025 and in
+     sextile Sept 11, 2025 (6.2). */
+  const chips = (id: QuestionId, pairings: QuestionRecord["pairings"]) => phrasesOf(record(id, { pairings }), id).pairings;
+
+  it("words each question's condition at that minute", () => {
+    expect(chips("venusdet", [{ songId: "a", at: at("2024-04-08T18:38:00Z") }])).toEqual([{ songId: "a", conditionText: "Venus in Aries · in her detriment" }]);
+    expect(chips("venushome", [{ songId: "a", at: at("2026-11-15T18:00:00Z") }])).toEqual([{ songId: "a", conditionText: "Venus in Libra · at home" }]);
+    expect(chips("moonstrong", [{ songId: "a", at: at("2026-09-29T03:00:00Z") }, { songId: "b", at: at("2026-10-04T03:00:00Z") }])).toEqual([
+      { songId: "a", conditionText: "Moon in Taurus · exalted" },
+      { songId: "b", conditionText: "Moon in Cancer · at home" },
+    ]);
+    expect(chips("marswater", [{ songId: "a", at: at("2026-09-26T17:30:00Z") }])).toEqual([{ songId: "a", conditionText: "Mars in Cancer · a water sign" }]);
+    expect(chips("venusmars", [{ songId: "a", at: at("2025-04-07T12:00:00Z") }, { songId: "b", at: at("2025-09-11T12:00:00Z") }])).toEqual([
+      { songId: "a", conditionText: "Venus and Mars in trine" },
+      { songId: "b", conditionText: "Venus and Mars in sextile" },
+    ]);
+    const plain = (id: QuestionId) => chips(id, [{ songId: "a", at: at("2024-04-10T20:00:00Z") }])[0].conditionText;
+    expect(["mercury", "fullmoon", "newmoon", "venusrx", "marsrx"].map((id) => plain(id as QuestionId))).toEqual([
+      "Mercury retrograde",
+      "Full moon",
+      "New moon",
+      "Venus retrograde",
+      "Mars retrograde",
+    ]);
+    expect(chips("storms", [{ songId: "a", at: 0, kp: 7 }, { songId: "b", at: 0, kp: 8.67 }]).map((p) => p.conditionText)).toEqual([
+      "Kp 7 storm night",
+      "Kp 9- storm night",
+    ]);
+    expect(chips("flares", [{ songId: "a", at: 0, flare: "X5.8" }])).toEqual([{ songId: "a", conditionText: "X5.8 flare night" }]);
+  });
+
+  it("keeps the stored songs and their order", () => {
+    const order = ["c", "a", "b"].map((songId, i) => ({ songId, at: at("2026-09-29T03:00:00Z") + i }));
+    expect(chips("moonstrong", order).map((p) => p.songId)).toEqual(["c", "a", "b"]);
+  });
+
+  it("leaves out a record's bare song ids from before format 4, which has no time to word them from", () => {
+    expect(chips("mercury", ["song-a", "song-b"])).toEqual([]);
+  });
+});
+
+describe("naming a question (9.2)", () => {
+  it("carries each question's subject, for 'Question 1, on Mercury retrograde'", () => {
+    const p = answersPayload(record("mercury", {}), "ready", NOW);
+    expect(p.questions.map((q) => q.subject)).toEqual([
+      "Mercury retrograde", "a full moon", "the new moon", "Venus at home", "a strong Moon", "Venus and Mars getting along",
+      "solar storms", "big solar flares", "Mars in a water sign", "Venus in detriment", "Venus retrograde", "Mars retrograde",
+    ]);
   });
 });
 
@@ -569,7 +719,7 @@ describe("fixes from review", () => {
     expect(q.phrases.wordLine).toBe(
       "Yes. Around full moons, a 23% bigger share of your plays came after midnight. Very unlikely to be chance.",
     );
-    expect(q.phrases.tonightLine).toBe("Yes: a 23% bigger after-midnight share.");
+    expect(q.phrases.tonightLine).toBe("Around full moons, a 23% bigger share of your plays came after midnight: very unlikely to be chance.");
   });
 
   it("says what happened to a share without 'than usual'", () => {
@@ -577,9 +727,7 @@ describe("fixes from review", () => {
       record("fullmoon", tested({ index: 1.23, p: 0.6, events: 120, spanStart: 0, spanEnd: Math.round(10 * YEAR) }), rest9),
       "fullmoon",
     );
-    expect(q.phrases.whatHappened).toBe(
-      "Around full moons, a 23% bigger share of your plays came after midnight, across 120 full moons in your 10 years.",
-    );
+    expect(q.phrases.whatHappened).toBe("Counted across 120 full moons in your 10 years.");
   });
 
   it("never rounds a history's length up: ten years and nine months is ten years, 19 months isn't two years", () => {
@@ -594,14 +742,16 @@ describe("fixes from review", () => {
 
   it("writes big swings with thousands separators", () => {
     const q = phrasesOf(record("fullmoon", tested({ index: 13.34, p: 0.6 }), rest9), "fullmoon");
-    expect(q.phrases.tonightLine).toBe("No: a 1,234% bigger after-midnight share, which could easily be chance.");
+    expect(q.phrases.tonightLine).toBe(
+      "Around full moons, a 1,234% bigger share of your plays came after midnight, which could easily be chance.",
+    );
   });
 
   it("rounds the typical swing up, never down", () => {
     const line = (x: number) =>
       phrasesOf(record("venusrx", { status: "too-few-events", events: 1, typicalSingleSwing: x }), "venusrx").phrases.typicalSwing;
-    expect(line(0.124)).toBe("One ordinary stretch this long usually moves less than about 15% either way.");
-    expect(line(0.044)).toBe("One ordinary stretch this long usually moves less than about 5% either way.");
+    expect(line(0.124)).toMatch(/ by up to about 15% either way, /);
+    expect(line(0.044)).toMatch(/ by up to about 5% either way, /);
   });
 
   it("shows no swing or p for a question that wasn't tested, and matches records by id", () => {
@@ -639,7 +789,8 @@ describe("the reveal's last card (8.3)", () => {
 
   it("names the first to arrive, or says plays are what's missing, when nothing is tested", () => {
     const warming = allChecked(record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-01-15T12:00:00Z") }));
-    expect(reveal(warming).line).toBe("Too early for all 12. The first to arrive: Mercury retrograde, around January 2027.");
+    // Named as 9.2 names a question: never by its number alone.
+    expect(reveal(warming).line).toBe("Too early for all 12. The first to arrive: Question 1: Mercury retrograde, around January 2027.");
     expect(reveal(allChecked(record("mercury", {}))).line).toBe("Too early for all 12. They arrive as more of your listening falls under each sky.");
   });
 
@@ -680,11 +831,11 @@ describe("the reveal's last card (8.3)", () => {
   it("names the earliest of several to arrive, counting the next event as well as a warm-up", () => {
     const two = allChecked(record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-06-15T12:00:00Z") }));
     const both = { ...two, questions: two.questions.map((q) => (q.id === "venusrx" ? { ...q, status: "warming-up" as const, warmupReadyFrom: at("2027-01-15T12:00:00Z") } : q)) };
-    expect(reveal(both).line).toBe("Too early for all 12. The first to arrive: Venus retrograde, around January 2027.");
+    expect(reveal(both).line).toBe("Too early for all 12. The first to arrive: Question 11: Venus retrograde, around January 2027.");
     // A question short of events arrives at its next event: Venus turns
     // retrograde Oct 3, 2026 (Central), before either warm-up ends.
     const events = { ...both, questions: both.questions.map((q) => (q.id === "marsrx" ? q : q.id === "venusrx" ? { ...q, status: "too-few-events" as const, warmupReadyFrom: null, events: 2 } : q)) };
-    expect(reveal(events).line).toBe("Too early for all 12. The first to arrive: Venus retrograde, around October 2026.");
+    expect(reveal(events).line).toBe("Too early for all 12. The first to arrive: Question 11: Venus retrograde, around October 2026.");
   });
 
   it("counts the questions not checked yet", () => {

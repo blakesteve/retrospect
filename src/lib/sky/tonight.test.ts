@@ -68,7 +68,19 @@ describe("the heading and the time (spec 8.4)", () => {
     expect(tonightAt("2026-09-29T03:00:00Z", "Australia/Sydney").timeLine).toBe("The sky right now, 1:00 p.m. GMT+10");
     // Sydney's daylight saving began that morning.
     expect(tonightAt("2026-10-04T03:00:00Z", "Australia/Sydney").timeLine).toBe("The sky right now, 2:00 p.m. GMT+11");
-    expect(tonightAt("2026-10-05T01:00:00Z", "UTC").timeLine).toBe("The sky right now, 1:00 a.m. UTC");
+    // From midnight to 4 a.m. the heading names the night before, so the time names its day (8.4).
+    expect(tonightAt("2026-10-05T01:00:00Z", "UTC").timeLine).toBe("The sky right now, 1:00 a.m. UTC Monday");
+  });
+
+  it("adds the weekday from 0:00 to 3:59 only, the spec's own example included", () => {
+    // 1:12 a.m. CDT Tuesday, Sept 29, 2026, under "Monday night, Sept 28".
+    expect(tonightAt("2026-09-29T06:12:00Z", "America/Chicago").timeLine).toBe("The sky right now, 1:12 a.m. CDT Tuesday");
+    expect(tonightAt("2026-09-29T05:00:00Z", "America/Chicago").timeLine).toBe("The sky right now, 12:00 a.m. CDT Tuesday");
+    expect(tonightAt("2026-09-29T08:59:00Z", "America/Chicago").timeLine).toBe("The sky right now, 3:59 a.m. CDT Tuesday");
+    expect(tonightAt("2026-09-29T09:00:00Z", "America/Chicago").timeLine).toBe("The sky right now, 4:00 a.m. CDT");
+    expect(tonightAt("2026-09-29T04:59:00Z", "America/Chicago").timeLine).toBe("The sky right now, 11:59 p.m. CDT");
+    // Sydney's own clock: 3 a.m. Thursday.
+    expect(tonightAt("2026-06-24T17:00:00Z", "Australia/Sydney").timeLine).toBe("The sky right now, 3:00 a.m. GMT+10 Thursday");
   });
 });
 
@@ -79,6 +91,7 @@ describe("the Moon's line (spec 8.4)", () => {
       illumination: 93,
       label: "Waning gibbous, 93% lit",
       line: "Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted",
+      lineNoSign: "Waning gibbous, 93% lit · 2 days after full",
     };
     expect(tonightAt("2026-09-29T03:00:00Z", "America/Chicago").moon).toEqual(want);
     // The same instant reads the same in any zone: days are elapsed time.
@@ -97,6 +110,12 @@ describe("the Moon's line (spec 8.4)", () => {
     );
     expect(tonightAt("2026-09-30T20:00:00Z", "America/Chicago").moon.line).toBe("Waning gibbous, 79% lit · 4 days after full, in Gemini");
     expect(tonightAt("2026-06-18T00:00:00Z", "America/Chicago").moon.line).toBe("Waxing crescent, 12% lit · 3 days after new, in Leo");
+  });
+
+  it("drops her sign and dignity for a row above that names them (8.4)", () => {
+    expect(tonightAt("2026-10-04T03:00:00Z", "America/Chicago").moon.lineNoSign).toBe("Waning crescent, 44% lit · 7 days before new");
+    expect(tonightAt("2026-10-26T12:00:00Z", "America/Chicago").moon.lineNoSign).toBe("Full moon, 100% lit · 8 hours after full");
+    expect(tonightAt("2026-09-30T20:00:00Z", "America/Chicago").moon.lineNoSign).toBe("Waning gibbous, 79% lit · 4 days after full");
   });
 
   it("calls her full or new inside the questions' 36-hour windows, and only there", () => {
@@ -197,6 +216,101 @@ describe("the sky chips (spec 8.4)", () => {
   });
 });
 
+describe("each held question's sky line (spec 8.4, 2 Oct 2026)", () => {
+  /* The condition as it stands now, from the stations and moons in the
+     header, and Venus in Aries Feb 4 to Jun 5, 2025 (spec 6.2), Mars in
+     Cancer Sept 2024 to Apr 2025 (6.2), Venus and Mars in trine around Apr
+     7, 2025 and in sextile from Sept 10, 2025 (6.2, 8.4's heads-up), and
+     Mercury retrograde Dec 13, 2023 to Jan 1, 2024 (9:08 p.m. CST). */
+  const lines = (iso: string, zone = "America/Chicago") => {
+    const sky = skyAt(new Date(iso));
+    return tonightSky({ now: at(iso), zone, sky, questionsHeld: sky.conditions }).skyLines;
+  };
+
+  it("words the spec's own examples, one per held question", () => {
+    expect(lines("2026-09-29T03:00:00Z")).toEqual({
+      moonstrong: "The Moon is in Taurus, exalted",
+      venusdet: "Venus is in Scorpio, in her detriment",
+    });
+    expect(lines("2026-10-04T03:00:00Z")).toMatchObject({ moonstrong: "The Moon is in Cancer, at home" });
+    expect(lines("2026-11-15T18:00:00Z")).toMatchObject({ venushome: "Venus is in Libra, at home" });
+    expect(lines("2025-02-20T12:00:00Z")).toMatchObject({ venusdet: "Venus is in Aries, in her detriment" });
+    expect(lines("2026-09-26T17:30:00Z")).toMatchObject({ marswater: "Mars is in Cancer, a water sign" });
+    expect(lines("2025-04-07T12:00:00Z")).toMatchObject({ venusmars: "Venus and Mars are in trine" });
+    expect(lines("2025-09-11T12:00:00Z")).toMatchObject({ venusmars: "Venus and Mars are in sextile" });
+  });
+
+  it("gives a retrograde's end as its date in the zone, with the year when it isn't this one", () => {
+    // Venus turns direct Nov 14, 00:20 UT: Nov 13 in Chicago.
+    expect(lines("2026-11-01T18:00:00Z")).toMatchObject({
+      mercury: "Mercury is retrograde until Nov 13",
+      venusrx: "Venus is retrograde until Nov 13",
+    });
+    expect(lines("2026-11-01T18:00:00Z", "UTC").venusrx).toBe("Venus is retrograde until Nov 14");
+    expect(lines("2023-12-20T18:00:00Z")).toMatchObject({ mercury: "Mercury is retrograde until Jan 1, 2024" });
+    expect(lines("2023-12-20T18:00:00Z", "UTC").mercury).toBe("Mercury is retrograde until Jan 2, 2024");
+    expect(lines("2027-02-01T18:00:00Z").marsrx).toBe("Mars is retrograde until Apr 1");
+  });
+
+  it("says when the full or new moon is, in the listener's days", () => {
+    // Full Sept 26, 16:49 UT (11:49 a.m. CDT Saturday); new Oct 10, 15:50 UT.
+    expect(lines("2026-09-25T17:00:00Z").fullmoon).toBe("The full moon is tomorrow");
+    expect(lines("2026-09-26T12:00:00Z").fullmoon).toBe("The full moon is today");
+    expect(lines("2026-09-26T20:00:00Z").fullmoon).toBe("The full moon is today");
+    expect(lines("2026-09-27T18:00:00Z").fullmoon).toBe("The full moon was yesterday");
+    expect(lines("2026-10-10T12:00:00Z").newmoon).toBe("The new moon is today");
+    expect(lines("2026-10-09T12:00:00Z").newmoon).toBe("The new moon is tomorrow");
+  });
+
+  it("names tonight's highest Kp so far and its biggest X flare, as NOAA and NASA write them", () => {
+    const now = at("2026-06-24T17:00:00Z");
+    const sky = skyAt(new Date(now * 1000));
+    const nasa = (kp: number | null, flare: string | null) =>
+      tonightSky({ now, zone: "America/Chicago", sky, questionsHeld: ["storms", "flares"], nasaTonight: { kp, flare } }).skyLines;
+    expect(nasa(7, "X5.8")).toEqual({ storms: "A solar storm tonight, Kp 7", flares: "An X5.8 flare tonight" });
+    expect(nasa(6.67, "X1.1").storms).toBe("A solar storm tonight, Kp 7-");
+    expect(nasa(9, null).storms).toBe("A solar storm tonight, Kp 9");
+  });
+
+  it("has a line for every held question and none for the rest", () => {
+    for (const iso of ["2026-09-29T03:00:00Z", "2026-11-01T18:00:00Z", "2025-04-07T12:00:00Z", "2026-06-24T17:00:00Z"]) {
+      const sky = skyAt(new Date(iso));
+      expect(Object.keys(lines(iso)).sort(), iso).toEqual([...sky.conditions].sort());
+    }
+  });
+});
+
+describe("the sky facts (spec 8.4, 2 Oct 2026)", () => {
+  const facts = (iso: string, zone = "America/Chicago") => tonightAt(iso, zone).skyFacts;
+  const near = (t: number, iso: string) => Math.abs(t - at(iso)) < 60;
+
+  it("lists stations, then fresh sign changes, each with its body, its sheet and its time", () => {
+    const f = facts("2026-09-30T20:00:00Z");
+    expect(f.map((x) => ({ body: x.body, planet: x.planet, kind: x.kind, line: x.line }))).toEqual([
+      { body: "Venus", planet: "venus", kind: "station", line: "Venus turns retrograde Saturday" },
+      { body: "Mercury", planet: "mercury", kind: "sign", line: "Mercury just entered Scorpio" },
+    ]);
+    // Venus stations Oct 3, 07:10 UT (published).
+    expect(near(f[0].time, "2026-10-03T07:10:00Z")).toBe(true);
+    // Mars entered Leo under a day before Sept 29, 03:00 UT, the Sun Libra on Sept 23.
+    expect(facts("2026-09-29T03:00:00Z").map((x) => x.line)).toEqual(["Mars just entered Leo"]);
+    expect(facts("2026-10-26T12:00:00Z").map((x) => x.line)).toEqual(["Mercury turned retrograde Saturday", "Venus just backed into Libra"]);
+    expect(facts("2026-09-24T12:00:00Z").map((x) => x.line)).toContain("The Sun just entered Libra");
+  });
+
+  it("ends with the next full or new moon within 3 days, and only then", () => {
+    // New moon Oct 10, 15:50 UT, 10:50 a.m. CDT Saturday.
+    const f = facts("2026-10-08T12:00:00Z");
+    expect(f.at(-1)).toMatchObject({ body: "Moon", planet: "moon", kind: "moon", line: "New moon Saturday" });
+    expect(near(f.at(-1)!.time, "2026-10-10T15:50:00Z")).toBe(true);
+    expect(facts("2026-10-09T18:00:00Z").at(-1)?.line).toBe("New moon tomorrow");
+    // 3 days and 4 hours before: too far.
+    expect(facts("2026-10-07T12:00:00Z").filter((x) => x.kind === "moon")).toEqual([]);
+    // Just past the full moon, the next is two weeks off.
+    expect(facts("2026-10-26T12:00:00Z").filter((x) => x.kind === "moon")).toEqual([]);
+  });
+});
+
 describe("each planet's words (spec 8.4, 8.7.1, 9.3)", () => {
   it("gives every planet's sign, degree, dignity and retrograde flag, in words", () => {
     expect(tonightAt("2026-09-29T03:00:00Z", "America/Chicago").planets).toEqual([
@@ -276,11 +390,20 @@ describe("none overhead (spec 8.4, item 3)", () => {
      Mercury turns retrograde Jun 29 at 17:37. */
   const NONE = "None of the 12 questions' skies is overhead tonight.";
 
+  // The full moon's window opens 36 hours before Jun 29, 23:57 UT.
+  const FULL_OPENS = at("2026-06-28T11:57:00Z");
+  const near = (x: number | undefined) => Math.abs((x ?? 0) - FULL_OPENS) < 120;
+
   it("names the soonest condition by its subject, on the payload's day rules", () => {
-    expect(tonightAt("2026-06-18T00:00:00Z", "America/Chicago", []).noneOverhead).toBe(`${NONE} Next: a full moon begins Jun 28.`);
-    expect(tonightAt("2026-06-24T17:00:00Z", "America/Chicago", []).noneOverhead).toBe(`${NONE} Next: a full moon begins Sunday.`);
-    expect(tonightAt("2026-06-24T12:00:00Z", "Australia/Sydney", []).noneOverhead).toBe(`${NONE} Next: a full moon begins Sunday.`);
-    expect(tonightAt("2026-06-27T12:00:00Z", "America/Chicago", []).noneOverhead).toBe(`${NONE} Next: a full moon begins tomorrow.`);
+    const line = (iso: string, zone: string) => tonightAt(iso, zone, []).noneOverhead;
+    expect(line("2026-06-18T00:00:00Z", "America/Chicago")).toMatchObject({ line: NONE, next: { id: "fullmoon", line: "Next: a full moon begins Jun 28." } });
+    expect(line("2026-06-24T17:00:00Z", "America/Chicago")?.next?.line).toBe("Next: a full moon begins Sunday.");
+    expect(line("2026-06-24T12:00:00Z", "Australia/Sydney")?.next?.line).toBe("Next: a full moon begins Sunday.");
+    expect(line("2026-06-27T12:00:00Z", "America/Chicago")?.next?.line).toBe("Next: a full moon begins tomorrow.");
+  });
+
+  it("carries the start it names, so the client can drop it when the heads-up names the same", () => {
+    expect(near(tonightAt("2026-06-24T17:00:00Z", "America/Chicago", []).noneOverhead?.next?.start)).toBe(true);
   });
 
   it("is null while any question is overhead", () => {
@@ -290,9 +413,10 @@ describe("none overhead (spec 8.4, item 3)", () => {
   it("leaves storms and flares out, with no count, when NASA's log didn't load", () => {
     const iso = "2026-06-24T17:00:00Z";
     const unread = tonightSky({ now: at(iso), zone: "America/Chicago", sky: skyAt(new Date(iso)), questionsHeld: [], nasaLoaded: false });
-    expect(unread.noneOverhead).toBe(
-      "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked. Next: a full moon begins Sunday.",
-    );
+    expect(unread.noneOverhead).toMatchObject({
+      line: "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked.",
+      next: { id: "fullmoon", line: "Next: a full moon begins Sunday." },
+    });
   });
 });
 
@@ -306,9 +430,10 @@ describe("Tonight's words never break spec 9.6", () => {
   for (let t = at("2026-01-01T00:00:00Z"), i = 0; t < at("2028-01-01T00:00:00Z"); t += 11 * 3600, i++) {
     const sky = skyAt(new Date(t * 1000));
     const x = tonightSky({ now: t, zone: zones[i % 3], sky, questionsHeld: sky.conditions });
-    sentences.push(x.heading, x.timeLine, x.moon.label, x.moon.line, ...x.chips.map((c) => c.text), ...x.receptions);
+    sentences.push(x.heading, x.timeLine, x.moon.label, x.moon.line, x.moon.lineNoSign, ...x.chips.map((c) => c.text), ...x.receptions);
     sentences.push(...x.planets.flatMap((p) => [p.line, p.detail, p.name]));
-    if (x.noneOverhead) sentences.push(x.noneOverhead);
+    sentences.push(...Object.values(x.skyLines), ...x.skyFacts.map((f) => f.line));
+    if (x.noneOverhead) sentences.push(x.noneOverhead.line, ...(x.noneOverhead.next ? [x.noneOverhead.next.line] : []));
   }
 
   it("reached every template", () => {
@@ -320,6 +445,12 @@ describe("Tonight's words never break spec 9.6", () => {
       "Last quarter, ", "Waning crescent, ", "less than an hour ", "an hour ", " hours ", "a day ", " days ",
       ", at home", ", where she's exalted", ", in her detriment", ", in her fall", "· domicile", "· exaltation",
       "· detriment", "· fall", ", retrograde",
+      // The sky lines and facts (8.4, 2 Oct 2026).
+      "Mercury is retrograde until ", "Venus is retrograde until ", "Mars is retrograde until ", "The full moon is ",
+      "The full moon was ", "The new moon is ", "The new moon was ", "Venus is in Taurus, at home", "Venus is in Libra, at home",
+      "The Moon is in Taurus, exalted", "The Moon is in Cancer, at home", "Venus and Mars are in trine",
+      "Venus and Mars are in sextile", ", a water sign", "Venus is in Aries, in her detriment",
+      "Venus is in Scorpio, in her detriment", "Full moon ", "New moon ",
     ];
     expect(markers.filter((m) => !sentences.some((s) => s.includes(m)))).toEqual([]);
     expect(sentences).toContain("Full moon");
@@ -331,7 +462,7 @@ describe("Tonight's words never break spec 9.6", () => {
       /\b(cannot|peregrine|wandering|because|caused?|made you|significant|statistically|proves?|electromagnet\w*|energ(y|ies|etic)|vibrat\w*|vibes?|frequenc(y|ies)|download\w*|activat\w*)\b|\u2014/i;
     expect(sentences.filter((s) => banned.test(s))).toEqual([]);
     const openers = new Set([
-      "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "The", "None",
+      "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "The", "None", "Next:",
       "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
       "New", "Waxing", "First", "Full", "Waning", "Last",
     ]);
@@ -448,7 +579,12 @@ describe("GET /api/sky/now, with Tonight's words (spec 7.4, 8.4)", () => {
     await writeCompact(synthCompact("2026-06-24T16:00:00Z"));
     const quiet = await callNow("2026-06-24T17:00:00Z", "America/Chicago");
     expect(quiet.body.questionsHeld).toEqual([]);
-    expect(quiet.body.noneOverhead).toBe("None of the 12 questions' skies is overhead tonight. Next: a full moon begins Sunday.");
+    expect(quiet.body.noneOverhead).toEqual({
+      line: "None of the 12 questions' skies is overhead tonight.",
+      next: { id: "fullmoon", line: "Next: a full moon begins Sunday.", start: expect.any(Number) },
+    });
+    // The full moon's window opens Jun 28, 11:57 UT.
+    expect(Math.abs(quiet.body.noneOverhead.next.start - at("2026-06-28T11:57:00Z"))).toBeLessThan(120);
     expect(quiet.body.epic).toBeNull(); // nothing from DSCOVR in the last 3 days
 
     // A G4 reading ending 11 a.m. CDT, after tonight began at 4 a.m.
@@ -456,6 +592,32 @@ describe("GET /api/sky/now, with Tonight's words (spec 7.4, 8.4)", () => {
     const storm = await callNow("2026-06-24T17:00:00Z", "America/Chicago");
     expect(storm.body.questionsHeld).toEqual(["storms"]);
     expect(storm.body.noneOverhead).toBeNull();
+    // Its sky line names tonight's highest reading so far (NOAA's notation).
+    expect(storm.body.skyLines).toEqual({ storms: "A solar storm tonight, Kp 8" });
+  });
+
+  it("words tonight's storm and flare by what NASA logged since 4 a.m., the night before's left out", async () => {
+    await writeMonth({ source: "epic", month: "2026-06", firstDate: "2015-06-13", refreshedAt: "2026-06-24T00:00:00.000Z", records: [] });
+    // Tonight began 4 a.m. CDT (09:00 UT). The X9.0 at 3 a.m. CDT was last
+    // night's, and so was the Kp 9 reading ending at 4 a.m. exactly: DONKI
+    // times a reading at the end of its 3-hour bin, so it covered 1 to 4 a.m.
+    await writeCompact(
+      synthCompact("2026-06-24T16:00:00Z", {
+        kp: [["2026-06-24T09:00:00Z", 9], ["2026-06-24T12:00:00Z", 6.33], ["2026-06-24T15:00:00Z", 7]],
+        xflares: [["2026-06-24T08:00:00Z", "X9.0"], ["2026-06-24T14:00:00Z", "X5.8"], ["2026-06-24T16:30:00Z", "X1.2"]],
+      }),
+    );
+    const { body } = await callNow("2026-06-24T17:00:00Z", "America/Chicago");
+    expect(body.questionsHeld).toEqual(["storms", "flares"]);
+    expect(body.skyLines).toEqual({ storms: "A solar storm tonight, Kp 7", flares: "An X5.8 flare tonight" });
+  });
+
+  it("names the body of each coming-up item, for the wheel's pulse", async () => {
+    await writeCompact(synthCompact("2026-09-29T02:00:00Z"));
+    const { body } = await callNow("2026-09-29T03:00:00Z", "America/Chicago");
+    const items = body.comingUp as { text: string; body: string | null }[];
+    expect(items.find((i) => i.text === "Venus stations retrograde in Scorpio")?.body).toBe("Venus");
+    expect(items.every((i) => typeof i.body === "string")).toBe(true);
   });
 
   it("still shows the sky when NASA's data can't be read", async () => {
@@ -486,9 +648,10 @@ describe("GET /api/sky/now, with Tonight's words (spec 7.4, 8.4)", () => {
     // No log stored: Jun 24, 2026 holds none of the sky conditions.
     const { body } = await callNow("2026-06-24T17:00:00Z", "America/Chicago");
     expect(body.nasa).toBe("unavailable");
-    expect(body.noneOverhead).toBe(
-      "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked. Next: a full moon begins Sunday.",
-    );
+    expect(body.noneOverhead).toMatchObject({
+      line: "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked.",
+      next: { line: "Next: a full moon begins Sunday." },
+    });
   });
 });
 

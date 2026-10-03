@@ -296,6 +296,9 @@ describe("the answers store", () => {
     expect(isCurrent(record, plays, "2026-10-01", 2_000)).toBe(false);
     // A record from before each question stored its measure.
     expect(isCurrent({ ...record, format: 2 }, plays, null, 2_000)).toBe(false);
+    // Nor one whose pairings are bare song ids, with no time for their chips (8.7.3).
+    expect(record.format).toBe(4);
+    expect(isCurrent({ ...record, format: 3 }, plays, null, 2_000)).toBe(false);
     // A question stored under another measure, whatever the version says.
     const moved = { ...record, questions: record.questions.map((q) => (q.id === "moonstrong" ? { ...q, measure: "listening" as const } : q)) };
     expect(isCurrent(moved, plays, null, 2_000)).toBe(false);

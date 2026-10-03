@@ -123,8 +123,8 @@ describe("the committed sample", () => {
     // versions and platforms, so a value computed with them and written in
     // full makes the committed files stale on CI. These are the ones the
     // routes write; plain + - * / (a share, a p-value) is the same everywhere.
-    const LIMITS: Record<string, number> = { phaseAngle: 2, illumination: 2, meters: 6 };
-    const seen: Record<string, number> = { phaseAngle: 0, illumination: 0, meters: 0 };
+    const LIMITS: Record<string, number> = { phaseAngle: 2, illumination: 2, meters: 6, moonPhase: 2 };
+    const seen: Record<string, number> = { phaseAngle: 0, illumination: 0, meters: 0, moonPhase: 0 };
     const long: string[] = [];
     const scan = (v: unknown, where: string) => {
       if (Array.isArray(v)) v.forEach((x, i) => scan(x, `${where}[${i}]`));
@@ -141,6 +141,8 @@ describe("the committed sample", () => {
     expect(seen.phaseAngle).toBeGreaterThan(200);
     expect(seen.illumination).toBeGreaterThan(200);
     expect(seen.meters).toBeGreaterThan(200);
+    // The songs' and the wild nights' Moons (8.9).
+    expect(seen.moonPhase).toBeGreaterThan(60);
     expect(long.slice(0, 5)).toEqual([]);
   });
 
@@ -153,8 +155,11 @@ describe("the committed sample", () => {
   it("stays small, since a sheet fetches it on demand", () => {
     const sizes = committedNames().map((f) => committed(f).length);
     // 2 Oct 2026: 375,998 characters once the nights carried NASA's photos
-    // and JPL's asteroids (300,397 at 29597fc). One sheet fetches one file.
-    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(400_000);
+    // and JPL's asteroids (300,397 at 29597fc). 3 Oct 2026: 415,214 once each
+    // night carried its sign changes and stations and when its conditions
+    // began or ended, and the answers their Tonight lines and pairing chips;
+    // re-baselined from 400,000. One sheet fetches one file.
+    expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(440_000);
     expect(Math.max(...sizes)).toBeLessThan(80_000);
   });
 });

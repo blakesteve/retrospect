@@ -51,7 +51,7 @@ function Tile({
         <Card padding="none" className="sky-card flex h-full flex-col overflow-hidden transition-transform group-hover:-translate-y-0.5">
           <span aria-hidden className="relative block overflow-hidden bg-[var(--deep)]" style={{ aspectRatio: "1 / 0.86" }}>
             {art}
-            <span className="absolute left-2 top-2 rounded-full bg-[rgba(7,10,28,.78)] px-2 py-1 text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-gold">
+            <span className="absolute left-2 top-2 rounded-full bg-[#1b2148] px-2 py-1 text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-gold">
               Sample
             </span>
           </span>
@@ -65,7 +65,8 @@ function Tile({
   );
 }
 
-/** A label over the art, as the sample's own chips read. */
+/** A label over the art, as the sample's own chips read: a fact, so a
+    solid fill and no border (8.9). */
 function ArtCaption({ title, chip }: { title: string; chip: string | null }) {
   return (
     <span className="absolute inset-x-2 bottom-2 flex flex-col items-start gap-1">
@@ -73,7 +74,7 @@ function ArtCaption({ title, chip }: { title: string; chip: string | null }) {
         {title}
       </span>
       {chip && (
-        <span className="max-w-full truncate rounded-full border border-[var(--hairline)] bg-[rgba(7,10,28,.78)] px-2 py-1 text-[11px] leading-none text-ink">{chip}</span>
+        <span className="max-w-full truncate rounded-full bg-[#1b2148] px-2 py-1 text-[11px] leading-none text-ink">{chip}</span>
       )}
     </span>
   );
@@ -157,7 +158,7 @@ export function Tiles({ facts }: { facts: TileFacts }) {
           href="/?sample=tonight"
           onOpen={sample("tonight")}
           title="Tonight"
-          line="Today’s real sky, and what skies like it have meant for you."
+          line="Today’s real sky, and how your listening went under skies like it."
           art={
             <span className="absolute inset-0 flex items-center justify-center" style={{ background: "radial-gradient(80% 80% at 50% 45%, #1a2152, #070a1c)" }}>
               <SkyWheel bodies={planets} size={140} className="h-auto w-[86%]" />

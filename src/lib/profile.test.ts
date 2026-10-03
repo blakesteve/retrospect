@@ -577,16 +577,23 @@ describe("ListeningProfile.tsx, the habits row", () => {
     expect("?tz=UTC&noise=exclude").toMatch(/noise=|["'`]noise["'`]|\bnoise:/);
   });
 
-  it("is a row: a section and an h2 named Your habits, and one line when it fails (8.4, 11)", () => {
+  it("is a row: a section and a heading named Your habits, an h3 in Tonight's history, and one line when it fails (8.4, 11)", () => {
     // The heading, section and failed line are the shared row's, so check
-    // the row draws them and that this one is named for the habits.
+    // the row draws them and that this one is named for the habits. On
+    // Tonight it sits under "{Length} under the sky", an h2, so it's an h3
+    // (8.4 item 5, 2 Oct 2026).
     const pieces = readFileSync(path.join(root, "src/components/listener/pieces.tsx"), "utf8");
+    const head = pieces.slice(pieces.indexOf("export function RowHead("), pieces.indexOf("export function Row("));
     const row = pieces.slice(pieces.indexOf("export function Row("));
     expect(row).toMatch(/<section aria-labelledby=/);
-    expect(row).toMatch(/<h2 id=/);
+    expect(row).toMatch(/<RowHead id=\{id\} title=\{title\} level=\{level\}/);
+    expect(head).toMatch(/const H = level === 3 \? "h3" : "h2";/);
+    expect(head).toMatch(/<H id=\{`\$\{id\}-h`\}/);
     expect(pieces).toMatch(/\{name\} didn(?:'|\u2019|&rsquo;)t load\. Refresh to try again\./);
-    expect(componentSource).toMatch(/<Row id="your-habits" title=\{HEADING\} sub=\{LINE\}>/);
+    expect(componentSource).toMatch(/<Row id="your-habits" title=\{HEADING\} sub=\{LINE\} level=\{level\}>/);
     expect(componentSource).toContain("<RowFailed name={HEADING} />");
+    const tonight = readFileSync(path.join(root, "src/components/listener/Tonight.tsx"), "utf8");
+    expect(tonight).toContain("<ListeningProfile username={L.username} zone={L.zone} level={3} />");
   });
 
   it("imports none of the modules that reach the window JSON", () => {

@@ -8,6 +8,7 @@ import { nightName, nightWeekday, zoneClock, type ZoneClock } from "@/lib/zone";
 import type { WildNight } from "./highlights";
 import type { ListenerRecord } from "./record";
 import { kickerDate, lengthWords, WEEKDAYS, wildCardLine } from "./sentences";
+import { moonAt, ninePm } from "./skyNights";
 import { flareSize, readEpicIndex, spaceNights, zoneLongitude, type SpaceNight } from "./spaceNights";
 import { aboutMeters, dateIn, nightDate, timeIn } from "./words";
 
@@ -176,6 +177,9 @@ export interface WildCard {
   dateLine: string;
   kind: WildKind;
   photo: CardPhoto | null;
+  /** The Moon's phase angle at 9 p.m. that night, to 0.01°, the night's own
+      `moonAt`: a drawn sky shows her real phase, never a made-up one (8.9). */
+  moonPhase: number;
 }
 
 /** The wild night row's cards (8.4), in the order given. */
@@ -183,6 +187,7 @@ export function wildCards(
   record: Pick<ListenerRecord, "nights" | "usual">,
   wild: WildNight[],
   photos: Map<number, CardPhoto | null>,
+  clock: ZoneClock,
 ): WildCard[] {
   const plays = new Map(record.nights.map(([n, p]) => [n, p]));
   return wild.map((w) => {
@@ -200,6 +205,7 @@ export function wildCards(
       dateLine: kickerDate(w.night),
       kind: wildKind(w.rank),
       photo: photos.get(w.night) ?? null,
+      moonPhase: moonAt(ninePm(clock, w.night)).phaseAngle,
     };
   });
 }

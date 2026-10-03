@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { QUESTIONS } from "@/lib/answers/questions";
 import { guarded, loadListener } from "@/lib/listener/serve";
-import { moonAt, ninePm, skyNights } from "@/lib/listener/skyNights";
+import { conditionNotes, moonAt, nightChanges, ninePm, skyNights } from "@/lib/listener/skyNights";
 import { spaceNights, zoneLongitude } from "@/lib/listener/spaceNights";
 import { sunMonths, sunsByNight } from "@/lib/listener/tonightCards";
 import { aboutMeters, dateIn, lunarDistanceWords, timeIn } from "@/lib/listener/words";
@@ -24,9 +24,11 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
  * every night of those months in the listener's history, up to tonight
  * (spec 7.4, 8.5, 8.7.2). Each night: its plays against the usual for its
  * weekday, after-midnight plays, the songs first heard (with pairings), the
- * Moon at 9 p.m., the questions whose condition held, the filters it lights,
- * its wild title, its genre mix, and NASA's facts with the night's photos.
- * Plus the filter counts for the whole history.
+ * Moon at 9 p.m., every sign change and station during the night with its
+ * time, the questions whose condition held (with when, for one that began or
+ * ended that night), the filters it lights, its wild title, its genre mix,
+ * and NASA's facts with the night's photos. Plus the filter counts for the
+ * whole history.
  */
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   return guarded(async () => {
@@ -55,6 +57,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
     if (last < first) return NextResponse.json({ ...base, nights: [] });
 
     const sky = skyNights(clock, first, last);
+    const changes = nightChanges(clock, first, last, Date.now() / 1000);
+    const notes = conditionNotes(clock, first, last);
     const space = await spaceNights(clock, first, last, nasa, {
       allFlares: true,
       epic: true,
@@ -123,8 +127,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
           return { songId: id, artist: song.artist, track: song.track, pairing: song.pairing };
         }),
         moon: moonAt(ninePm(clock, n)),
+        changes: changes.get(n) ?? [],
         eclipse,
         conditions: QUESTIONS.map((q) => q.id).filter((id) => held.has(id)),
+        // A condition that began or ended inside the night says when (8.7.2).
+        conditionNotes: notes.get(n) ?? {},
         filters,
         wild: w ? { rank: w.rank, title: w.title, story: w.story } : null,
         genres: record.mixes[n] ?? [],

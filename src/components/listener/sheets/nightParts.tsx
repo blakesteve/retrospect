@@ -6,7 +6,8 @@ import { useListener } from "../Shell";
 import { getJson, type Night, type Nights, type SkyAt } from "../api";
 import { monthOf } from "../format";
 import { Icon, StormMeter, Terms } from "../pieces";
-import { SkyPill } from "../cards";
+import { FactLabel } from "../cards";
+import { Rail } from "../rail";
 import { MoonDrawing, phaseName } from "../sky";
 import { dateIn, timeIn } from "@/lib/listener/words";
 
@@ -91,22 +92,21 @@ export function Gallery({ night }: { night: Night }) {
       </div>
     );
   }
+  // One photo a view, with "2 of 5" (8.7.1, 12).
   return (
     <>
-      <ul className="rail -mx-5 px-5" aria-label="Photos of that night">
+      <Rail label="Photos of that night" noun="photo" gallery gutter={20}>
         {photos.map((p) => (
-          <li key={p.url} className="w-[85%] max-w-[420px]">
-            <figure>
-              {/* eslint-disable-next-line @next/next/no-img-element -- NASA's own CDN, credited */}
-              <img src={p.url} alt={p.caption} loading="lazy" className="aspect-square w-full rounded-2xl bg-[var(--deep)] object-contain" />
-              <figcaption className="mt-2 text-[12px] leading-snug text-ink-2">
-                {p.caption}
-                {p.credit ? ` · ${p.credit}` : ""}
-              </figcaption>
-            </figure>
-          </li>
+          <figure key={p.url}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- NASA's own CDN, credited */}
+            <img src={p.url} alt={p.caption} loading="lazy" draggable={false} className="aspect-square w-full rounded-2xl bg-[var(--deep)] object-contain" />
+            <figcaption className="mt-2 text-[12px] leading-snug text-ink-2">
+              {p.caption}
+              {p.credit ? ` · ${p.credit}` : ""}
+            </figcaption>
+          </figure>
         ))}
-      </ul>
+      </Rail>
       {night.space.sunNote && <p className="mt-2 text-[13px] text-ink-2">{night.space.sunNote}</p>}
     </>
   );
@@ -167,7 +167,7 @@ export function NightFacts({
       )}
       {s.biggestFlare ? (
         <Fact icon={<Icon name="flare" />} label="Biggest solar flare">
-          <SkyPill color={s.biggestFlare.startsWith("X") ? "var(--flare)" : undefined}>{s.biggestFlare}</SkyPill>
+          <FactLabel tone={s.biggestFlare.startsWith("X") ? "var(--flare)" : undefined}>{s.biggestFlare}</FactLabel>
           <Terms names={["Flare classes"]} />
         </Fact>
       ) : (

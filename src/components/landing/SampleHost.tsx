@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+/* Loaded with the host, not with each sheet: a sheet loads on demand
+   (13), and Turbopack copies any module its parent hasn't loaded into that
+   sheet's own chunk. Without this, the Carousel the sheets' rows use was
+   copied into every sheet's chunk, 10 copies of about 12 kB in all. */
+import "@/components/listener/rail";
 import { useSearchParams } from "next/navigation";
 import { Button, Sheet } from "@blakesteve/roster";
 import { QUESTIONS } from "@/lib/answers/questions";
@@ -168,7 +173,7 @@ export default function SampleHost({ onInvalid, onValid }: SampleHostProps) {
 
   // What the sheet shows, kept through the leave so it never slides out empty.
   const [shown, setShown] = useState<{ open: Open; kind: BodyKind } | null>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState<ReactNode>("");
   const [bodyBusy, setBodyBusy] = useState(true);
   const [deepLinked, setDeepLinked] = useState(false);
   // What opened the sheet, read as it opens from closed: the first sheet
@@ -249,6 +254,7 @@ export default function SampleHost({ onInvalid, onValid }: SampleHostProps) {
       close,
       replayReveal: () => {},
       guideReady: false,
+      revealOpen: false,
       retryData,
       serverFellBack: false,
     }),

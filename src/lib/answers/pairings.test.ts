@@ -3,7 +3,8 @@ import type { Scrobble } from "@/lib/analysis/nostalgia";
 import { nasaLogFrom } from "@/lib/space/compact";
 import { synthCompact } from "@/lib/space/synthLog";
 import { songIdOf } from "@/lib/listener/songs";
-import { computeAnswers } from "./engine";
+import { computeAnswers, type PairingFact } from "./engine";
+import { answersPayload } from "./payload";
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 
@@ -19,13 +20,21 @@ describe("pairings", () => {
     ...song("Under Mercury", "2024-04-10T20:00:00Z"),
     ...song("After Mercury", "2024-05-20T20:00:00Z"),
     ...song("Storm Song", "2024-05-11T01:00:00Z"), // 8 p.m. CDT, May 10: a storm night
+    ...song("Flare Song", "2024-10-03T18:00:00Z"), // 1 p.m. CDT, Oct 3: the X9.0 peaked at 7:18 a.m.
     ...song("Already Loved", "2023-01-05T20:00:00Z", 30), // first 90 days: never news
   );
   plays.sort((a, b) => a.uts - b.uts);
   const id = (track: string) => songIdOf(`band ${track}`.toLowerCase());
-  const log = nasaLogFrom(synthCompact("2024-12-30T12:00:00Z", { kp: [["2024-05-11T03:00:00Z", 9]] }));
+  // May 10's storm reached Kp 9 at 10 p.m. CDT; the night's earlier 6.33 doesn't head it.
+  const log = nasaLogFrom(
+    synthCompact("2024-12-30T12:00:00Z", {
+      kp: [["2024-05-10T21:00:00Z", 6.33], ["2024-05-11T03:00:00Z", 9]],
+      xflares: [["2024-10-03T12:18:00Z", "X9.0"], ["2024-10-03T20:00:00Z", "X1.1"]],
+    }),
+  );
   const record = computeAnswers("pairing-test", plays, "America/Chicago", 0, log);
-  const pairings = (q: string) => record.questions.find((x) => x.id === q)!.pairings;
+  const facts = (q: string) => record.questions.find((x) => x.id === q)!.pairings as PairingFact[];
+  const pairings = (q: string) => facts(q).map((p) => p.songId);
 
   it("lists a song first played inside a condition's window, and not one outside it", () => {
     expect(pairings("mercury")).toContain(id("Under Mercury"));
@@ -34,11 +43,25 @@ describe("pairings", () => {
 
   it("pairs questions 7 and 8 by the night NASA logged", () => {
     expect(pairings("storms")).toEqual([id("Storm Song")]);
-    expect(pairings("flares")).toEqual([]);
+    expect(pairings("flares")).toEqual([id("Flare Song")]);
+  });
+
+  it("keeps each first play's time, and the night's Kp or biggest flare, for the chip (8.7.3)", () => {
+    expect(facts("mercury").find((p) => p.songId === id("Under Mercury"))).toEqual({ songId: id("Under Mercury"), at: at("2024-04-10T20:00:00Z") });
+    expect(facts("storms")).toEqual([{ songId: id("Storm Song"), at: at("2024-05-11T01:00:00Z"), kp: 9 }]);
+    expect(facts("flares")).toEqual([{ songId: id("Flare Song"), at: at("2024-10-03T18:00:00Z"), flare: "X9.0" }]);
+    const chips = Object.fromEntries(
+      answersPayload(record, "ready", at("2024-12-31T00:00:00Z") * 1000).questions.map((q) => [q.id, q.pairings]),
+    );
+    expect(chips.storms).toEqual([{ songId: id("Storm Song"), conditionText: "Kp 9 storm night" }]);
+    expect(chips.flares).toEqual([{ songId: id("Flare Song"), conditionText: "X9.0 flare night" }]);
+    expect(chips.mercury).toContainEqual({ songId: id("Under Mercury"), conditionText: "Mercury retrograde" });
   });
 
   it("never pairs a song from the first 90 days", () => {
-    for (const q of record.questions) expect(q.pairings).not.toContain(id("Already Loved"));
+    for (const q of record.questions) expect(pairings(q.id)).not.toContain(id("Already Loved"));
+    // Reach: the scan reads song ids, and this history has some.
+    expect(record.questions.flatMap((q) => pairings(q.id)).length).toBeGreaterThan(2);
   });
 
   it("never pairs one even when the 90-day rule is dropped and it's listed", () => {
@@ -50,6 +73,7 @@ describe("pairings", () => {
       ...song("Late One", "2023-06-01T20:00:00Z"),
     ].sort((a, b) => a.uts - b.uts);
     const rec = computeAnswers("pairing-early", young, "America/Chicago", 0, null);
-    expect(rec.questions.find((q) => q.id === "mercury")!.pairings).not.toContain(id("Early Mercury"));
+    const mercury = rec.questions.find((q) => q.id === "mercury")!.pairings as PairingFact[];
+    expect(mercury.map((p) => p.songId)).not.toContain(id("Early Mercury"));
   });
 });

@@ -47,7 +47,7 @@ const fmtHour = (h: number) => {
   return `${h % 12} ${h < 12 ? "a.m." : "p.m."}`;
 };
 
-export function ListeningProfile({ username, zone }: { username: string; zone: string }) {
+export function ListeningProfile({ username, zone, level = 2 }: { username: string; zone: string; level?: 2 | 3 }) {
   const query = zone ? `?${new URLSearchParams({ tz: zone })}` : "";
   const url = `/api/user/${encodeURIComponent(username)}/profile${query}`;
   /* Keyed by the URL it answers, so a new username or zone shows the
@@ -79,13 +79,13 @@ export function ListeningProfile({ username, zone }: { username: string; zone: s
   }
   if (result?.kind === "too-few") {
     return (
-      <Row id="your-habits" title={HEADING}>
+      <Row id="your-habits" title={HEADING} level={level}>
         <p className="text-ink-2 text-sm max-w-xl leading-relaxed">{tooFewLine(result.needed, result.have)}</p>
       </Row>
     );
   }
   return (
-    <Row id="your-habits" title={HEADING} sub={LINE}>
+    <Row id="your-habits" title={HEADING} sub={LINE} level={level}>
       {result ? <Habits p={result.profile} /> : <HabitsSkeleton />}
     </Row>
   );

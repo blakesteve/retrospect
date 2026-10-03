@@ -7,6 +7,7 @@ import { degreeInSign, longitude, signOf, type SkyBody } from "@/lib/sky/sky";
 import { zoneClock, type ZoneClock } from "@/lib/zone";
 import type { NasaLog } from "@/lib/space/compact";
 import { selectSongs, songsOf } from "@/lib/listener/songs";
+import { flareSize } from "@/lib/listener/spaceNights";
 import { conditionFor, nightsCondition, type Condition, type ConditionWindow } from "./conditions";
 import { QUESTIONS, questionById, type Measure, type Question, type QuestionId } from "./questions";
 import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
@@ -28,8 +29,9 @@ export const ANSWERS_VERSION = 2;
 /** The stored record's shape, apart from the analysis: a record in an older
     format is recomputed, with the same seeds (6.6 keeps the analysis version
     in the seed, and adding pairings changed no answer). 2: pairings. 3: each
-    question's measure. */
-export const RECORD_FORMAT = 3;
+    question's measure. 4: each pairing's first-play time, and for 7 and 8
+    its night's Kp or flare, for the pairing card's chip (8.7.3). */
+export const RECORD_FORMAT = 4;
 export const ROTATIONS = 2_000;
 /** At most this many shuffles go to the client, for the histogram. */
 export const MAX_NULL_SAMPLES = 600;
@@ -58,6 +60,20 @@ export interface MergedEvent {
   start: number;
   end: number;
   windows: { start: number; end: number; sign?: string; aspect?: 60 | 120; side?: "+" | "-" }[];
+}
+
+/** A song first played while a question's condition held (7.4), with what
+    its chip needs (8.7.3): when, and on a storm or X-flare night, NASA's
+    reading for that night. Facts, not sentences: the chip's words are built
+    when the answers are served. */
+export interface PairingFact {
+  songId: string;
+  /** The first play, Unix seconds. */
+  at: number;
+  /** Question 7: the night's highest Kp in NASA's log. */
+  kp?: number;
+  /** Question 8: the night's biggest X flare. */
+  flare?: string;
 }
 
 export interface QuestionRecord {
@@ -97,8 +113,9 @@ export interface QuestionRecord {
   nullSamples: number[];
   /** Songs first played while the condition held (7.4): the listed songs
       (7.5) whose first play falls inside a window, or for 7 and 8 on a
-      night NASA logged. Facts, not proof. */
-  pairings: string[];
+      night NASA logged. Facts, not proof. A record before format 4 holds
+      bare song ids. */
+  pairings: PairingFact[] | string[];
 }
 
 export interface AnswerRecord {
@@ -613,6 +630,27 @@ export function nasaNights(id: "storms" | "flares", log: NasaLog, clock: ZoneClo
   return nights;
 }
 
+/** Each night's highest Kp (question 7) or biggest X flare (question 8) in
+    NASA's log, binned as `nasaNights` bins them. */
+export function nightFacts(id: "storms" | "flares", log: NasaLog, clock: ZoneClock): Map<number, number | string> {
+  const out = new Map<number, number | string>();
+  if (id === "storms") {
+    for (const [start, end, kp] of log.kp) {
+      for (let n = clock.nightOf(start); n <= clock.nightOf(Math.max(start, end - 1)); n++) {
+        const had = out.get(n) as number | undefined;
+        if (had === undefined || kp > had) out.set(n, kp);
+      }
+    }
+  } else {
+    for (const [peak, cls] of log.xflares) {
+      const n = clock.nightOf(peak);
+      const had = out.get(n) as string | undefined;
+      if (had === undefined || flareSize(cls) > flareSize(had)) out.set(n, cls);
+    }
+  }
+  return out;
+}
+
 /**
  * The whole nights inside NASA's coverage for question 7 or 8: from the log's
  * start to `coveredUntil` (3 days before its refresh, since DONKI logs
@@ -675,8 +713,10 @@ export function computeAnswers(
   const clock = zoneClock(zone, history.first, history.last);
   // Songs whose first play is news: listed (7.5), and not from the first 90 days.
   const songs = selectSongs(songsOf(kept), kept[0].uts).listed.filter((s) => !s.early);
-  const pairingsOf = (condition: Condition) =>
-    songs.filter((s) => condition.windows.some((w) => s.firstPlayUts >= w.start && s.firstPlayUts <= w.end)).map((s) => s.songId);
+  const pairingsOf = (condition: Condition, nightFact?: (night: number) => Pick<PairingFact, "kp" | "flare">): PairingFact[] =>
+    songs
+      .filter((s) => condition.windows.some((w) => s.firstPlayUts >= w.start && s.firstPlayUts <= w.end))
+      .map((s) => ({ songId: s.songId, at: s.firstPlayUts, ...nightFact?.(clock.nightOf(s.firstPlayUts)) }));
   record.questions = QUESTIONS.map((q) => {
     if (q.nasa && !nasa) return blank(q, { notChecked: "nasa" });
     try {
@@ -693,7 +733,11 @@ export function computeAnswers(
           : { ...measure, spanEnd: measure.spanStart };
         const nights = covered ? nasaNights(id, nasa!, clock, covered.first, covered.last) : [];
         const condition = nightsCondition(nights, clock);
-        return { ...runQuestion(q, condition, span, history, drawsFor(username, q.id)), pairings: pairingsOf(condition) };
+        const facts = nightFacts(id, nasa!, clock);
+        return {
+          ...runQuestion(q, condition, span, history, drawsFor(username, q.id)),
+          pairings: pairingsOf(condition, (n) => (id === "storms" ? { kp: facts.get(n) as number } : { flare: facts.get(n) as string })),
+        };
       }
       const condition = conditionFor(q.id)!;
       return { ...runQuestion(q, condition, measures[q.measure], history, drawsFor(username, q.id)), pairings: pairingsOf(condition) };

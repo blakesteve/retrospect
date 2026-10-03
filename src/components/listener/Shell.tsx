@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import NextLink from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Button, LiquidNav, type LiquidNavLinkProps } from "@blakesteve/roster";
+import { Button, EmptyState, LiquidNav, type LiquidNavLinkProps } from "@blakesteve/roster";
 import { SyncScreen } from "@/components/SyncScreen";
 import { NoScrobbles } from "@/components/NoScrobbles";
 import { RemoveDataLink } from "@/components/RemoveDataLink";
@@ -38,6 +38,8 @@ export interface Listener {
   replayReveal: () => void;
   /** The first-visit guide may start (8.10): after the reveal, not on a shared link. */
   guideReady: boolean;
+  /** The reveal is up, or about to be: Tonight's motion waits for it (8.11). */
+  revealOpen: boolean;
   /** Fetch the listener's data again, for a sheet's "Try again" (8.7). */
   retryData: () => void;
   /** The server read the history in UTC: the browser's zone was rejected (7.1). */
@@ -55,6 +57,14 @@ export function useListener(): Listener {
 
 /** The view's heading, where focus returns when a deep-linked sheet closes. */
 export const VIEW_HEADING = "view-heading";
+
+/** The views, in the switcher's order. Every night and Sky join as they're
+    built (3b, 3c); `route` is the path after `/u/{name}`. */
+export const VIEWS: { id: string; label: string; route: string }[] = [{ id: "tonight", label: "Tonight", route: "" }];
+
+/** With one view there's no switcher: a lone gold item reads as a button
+    that does nothing (8.4 item 1, 10). The view then names itself. */
+export const HAS_SWITCHER = VIEWS.length > 1;
 
 /** Query strings the report used; ignored and dropped on arrival (4). */
 const OLD_PARAMS = ["body", "metric", "from", "to", "noise", "threshold", "level"];
@@ -265,10 +275,11 @@ export function ListenerShell({ username, children }: { username: string; childr
       close: closeSheets,
       replayReveal,
       guideReady,
+      revealOpen: revealing === true,
       retryData,
       serverFellBack: skyNow.state === "ready" && skyNow.data.zoneFellBack && !urlTz && zone !== "UTC",
     }),
-    [username, zone, sync, answers, songs, highlights, skyNow, listenerUrl, open, replayReveal, guideReady, retryData, urlTz],
+    [username, zone, sync, answers, songs, highlights, skyNow, listenerUrl, open, replayReveal, guideReady, revealing, retryData, urlTz],
   );
 
   const restart = () => {
@@ -293,16 +304,22 @@ export function ListenerShell({ username, children }: { username: string; childr
           {username}
         </span>
       </div>
-      {/* The views (4, 11). Every night and Sky join as they're built (3b, 3c). */}
-      <LiquidNav
-        aria-label="Views"
-        size="lg"
-        fullWidth
-        className="mt-3"
-        linkComponent={NextNavLink}
-        activeTab={pathname?.endsWith("/nights") ? "nights" : pathname?.endsWith("/sky") ? "sky" : "tonight"}
-        items={[{ id: "tonight", label: "Tonight", href: `/u/${encodeURIComponent(username)}${urlTz ? `?tz=${encodeURIComponent(urlTz)}` : ""}` }]}
-      />
+      {/* The views (4, 11), once there are two (8.4 item 1). */}
+      {HAS_SWITCHER && (
+        <LiquidNav
+          aria-label="Views"
+          size="lg"
+          fullWidth
+          className="mt-3"
+          linkComponent={NextNavLink}
+          activeTab={VIEWS.find((v) => v.route && pathname?.endsWith(v.route))?.id ?? VIEWS[0].id}
+          items={VIEWS.map((v) => ({
+            id: v.id,
+            label: v.label,
+            href: `/u/${encodeURIComponent(username)}${v.route}${urlTz ? `?tz=${encodeURIComponent(urlTz)}` : ""}`,
+          }))}
+        />
+      )}
       <ZoneLine urlTz={urlTz} browser={browser} serverFellBack={value.serverFellBack} />
     </header>
   );
@@ -311,20 +328,7 @@ export function ListenerShell({ username, children }: { username: string; childr
   if (fatal === "no-scrobbles") {
     body = <NoScrobbles username={username} onFound={restart} onError={(c) => setFatal(c)} sky={skyNow} />;
   } else if (fatal) {
-    const v = visitorError(fatal, username);
-    body = (
-      <div className="py-16 text-center">
-        <h1 id={VIEW_HEADING} tabIndex={-1} className="font-display text-3xl text-ink outline-none">
-          {v.title}
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-ink-2">{v.body}</p>
-        {fatal === "server" && (
-          <Button size="lg" className="mt-6" onClick={restart}>
-            Try again
-          </Button>
-        )}
-      </div>
-    );
+    body = <Fatal code={fatal} username={username} onRetry={restart} />;
   } else if (!ready) {
     body = <SyncScreen username={username} sync={sync} />;
   } else if (revealing && (answers.state === "loading" || songs.state === "loading" || highlights.state === "loading")) {
@@ -332,18 +336,7 @@ export function ListenerShell({ username, children }: { username: string; childr
     body = <SyncScreen username={username} sync={sync} checking />;
   } else if (revealing && answers.state === "failed") {
     // A failure while checking: server's copy, and a way to check again (8.2).
-    const v = visitorError("server", username);
-    body = (
-      <div className="py-16 text-center">
-        <h1 id={VIEW_HEADING} tabIndex={-1} className="font-display text-3xl text-ink outline-none">
-          {v.title}
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-ink-2">{v.body}</p>
-        <Button size="lg" className="mt-6" onClick={restart}>
-          Try again
-        </Button>
-      </div>
-    );
+    body = <Fatal code="server" username={username} onRetry={restart} />;
   } else {
     body = children;
   }
@@ -372,6 +365,30 @@ export function ListenerShell({ username, children }: { username: string; childr
       {revealShown && <Reveal onDone={endReveal} />}
       {ready && <SheetHost onInvalid={() => setInvalidLink(true)} lead={lead} />}
     </ListenerContext.Provider>
+  );
+}
+
+/** A page-level fatal state (8.2): Roster's `EmptyState` as the page's h1,
+    focusable so a closed deep-linked sheet returns focus to it. */
+function Fatal({ code, username, onRetry }: { code: VisitorErrorCode; username: string; onRetry: () => void }) {
+  const v = visitorError(code, username);
+  return (
+    <EmptyState
+      id={VIEW_HEADING}
+      tabIndex={-1}
+      headingLevel={1}
+      variant="simple"
+      title={v.title}
+      description={v.body}
+      action={
+        code === "server" ? (
+          <Button size="lg" onClick={onRetry}>
+            Try again
+          </Button>
+        ) : undefined
+      }
+      className="py-16 font-[family-name:var(--font-body)] outline-none [&_h1]:font-[family-name:var(--font-display)] [&_h1]:text-3xl [&_h1]:font-normal [&_h1]:text-ink [&_p]:mx-auto [&_p]:mt-3 [&_p]:max-w-md [&_p]:text-base [&_p]:text-ink-2"
+    />
   );
 }
 

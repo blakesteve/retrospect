@@ -9,7 +9,9 @@ export const dynamic = "force-dynamic";
  * writes what's still to fetch by source (months for DONKI, calls for JPL,
  * pages for APOD, an estimate, event moments for SDO, days for EPIC, with
  * "epic-priority" the days that come first) and its own calls, writes and
- * failures, the latest 30 newest first. Counts only: nothing about anyone.
+ * failures, the latest 30 newest first, and `running` while a full pass is
+ * under way (it records only at its end, up to 270 seconds later). Never
+ * cached (`no-store`). Counts only: nothing about anyone.
  */
 export async function GET() {
   try {

@@ -178,6 +178,8 @@ async function pass({ only }: WorkOptions, deadline: number): Promise<WorkSummar
   const nowIso = new Date(started).toISOString();
   const today = nowIso.slice(0, 10);
   const thisMonth = monthOf(nowIso);
+  // A full pass says it's under way before its first fetch.
+  if (!only) await markRunning(nowIso).catch((err) => console.error("[retrospect] fill progress wouldn't save:", err));
 
   /** Runs one unit of work if there's time, counting what it fetched. */
   const attempt = async (label: string, job: () => Promise<number>): Promise<"ok" | "failed" | "stop"> => {
@@ -590,6 +592,20 @@ interface Progress {
   left: Record<string, { count: number; at: string }>;
   /** The latest full passes, newest first. */
   passes: { at: string; ms: number; fetches: number; wrote: number; failed: number; done: boolean }[];
+  /**
+   * A full pass under way, from its start until it records itself: a pass
+   * runs up to 270 seconds and records only at its end, so without this the
+   * file showed no pass for four and a half minutes. One the function limit
+   * cut short stays here, which says so. Null when none is.
+   */
+  running?: { since: string } | null;
+}
+
+/** A full pass has started (`/api/space/progress`). */
+async function markRunning(since: string): Promise<void> {
+  const p = (await readSpaceJson<Progress>(PROGRESS_KEY)) ?? { updatedAt: since, left: {}, passes: [] };
+  p.running = { since };
+  await writeSpaceJson(PROGRESS_KEY, p);
 }
 
 /** One full pass into the progress file (`/api/space/progress`). */
@@ -598,5 +614,6 @@ async function recordProgress(s: WorkSummary, at: string): Promise<void> {
   for (const [source, count] of Object.entries(s.left)) p.left[source] = { count: Math.max(0, count), at };
   p.passes = [{ at, ms: s.ms, fetches: s.fetches, wrote: s.wrote.length, failed: s.failed.length, done: s.done }, ...p.passes].slice(0, 30);
   p.updatedAt = at;
+  p.running = null;
   await writeSpaceJson(PROGRESS_KEY, p);
 }
