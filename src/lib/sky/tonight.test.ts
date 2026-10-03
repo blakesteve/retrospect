@@ -286,6 +286,14 @@ describe("none overhead (spec 8.4, item 3)", () => {
   it("is null while any question is overhead", () => {
     expect(tonightAt("2026-06-24T17:00:00Z", "America/Chicago", ["storms"]).noneOverhead).toBeNull();
   });
+
+  it("leaves storms and flares out, with no count, when NASA's log didn't load", () => {
+    const iso = "2026-06-24T17:00:00Z";
+    const unread = tonightSky({ now: at(iso), zone: "America/Chicago", sky: skyAt(new Date(iso)), questionsHeld: [], nasaLoaded: false });
+    expect(unread.noneOverhead).toBe(
+      "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked. Next: a full moon begins Sunday.",
+    );
+  });
 });
 
 describe("Tonight's words never break spec 9.6", () => {
@@ -472,6 +480,15 @@ describe("GET /api/sky/now, with Tonight's words (spec 7.4, 8.4)", () => {
     expect(body.epic).toBeNull();
     expect(body.heading).toBe("Monday night, Sept 28");
     expect(body.moon.label).toBe("Waning gibbous, 93% lit");
+  });
+
+  it("says why storms and flares are left out when NASA's log didn't load", async () => {
+    // No log stored: Jun 24, 2026 holds none of the sky conditions.
+    const { body } = await callNow("2026-06-24T17:00:00Z", "America/Chicago");
+    expect(body.nasa).toBe("unavailable");
+    expect(body.noneOverhead).toBe(
+      "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked. Next: a full moon begins Sunday.",
+    );
   });
 });
 

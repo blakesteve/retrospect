@@ -75,6 +75,28 @@ describe("buildProfile keeps what doesn't need a warm-up", () => {
   });
 });
 
+describe("the night badges' words (9.2)", () => {
+  const why = (scrobbles: Scrobble[], label: string) => buildProfile(scrobbles, "UTC")!.archetypes.find((a) => a.label === label)?.why;
+
+  it("writes 4 a.m. as the spec does, and whole percents", () => {
+    expect(why(history(utc(2026, 1, 1), utc(2026, 4, 1), 8, 1), "Night Owl")).toBe(
+      "100% of your listening lands between midnight and 4 a.m. The small hours are your listening room.",
+    );
+    // 1 play in 31 after midnight: 3.2%, written 3%.
+    const mostlyDay = [...history(utc(2023, 1, 1), utc(2026, 1, 1), 30), ...history(utc(2023, 1, 1), utc(2026, 1, 1), 1, 1)];
+    expect(why(mostlyDay, "Daylight Listener")).toBe(
+      "Almost none of your listening happens between midnight and 4 a.m. (3%). Your headphones sleep when you do.",
+    );
+    // Under half a percent: "less than 1%", never 0%; from half a percent, 1%.
+    // 300 plays a day from 6 a.m., a minute apart, and 1 or 2 at 1 a.m.
+    const daylight = (perNight: number) =>
+      why([...history(utc(2023, 1, 1), utc(2026, 1, 1), 300, 6), ...history(utc(2023, 1, 1), utc(2026, 1, 1), perNight, 1)], "Daylight Listener");
+    expect(daylight(1)).toBe("Almost none of your listening happens between midnight and 4 a.m. (less than 1%). Your headphones sleep when you do."); // 0.33%
+    expect(daylight(2)).toBe("Almost none of your listening happens between midnight and 4 a.m. (1%). Your headphones sleep when you do."); // 0.66%
+    expect(why(history(utc(2023, 1, 1), utc(2026, 1, 1), 5), "Daylight Listener")).toMatch(/\(less than 1%\)/);
+  });
+});
+
 describe("buildProfile on an old history", () => {
   it("reports every habit and has nothing pending", () => {
     const old = buildProfile(history(utc(2023, 1, 1), utc(2026, 1, 1), 5), "UTC")!;
@@ -368,6 +390,12 @@ describe("profileResponse writes the sentence for the request's clock", () => {
         "and whether you go back to artists after long breaks (from July 2027, once you've played about 500 songs after that).",
     );
     expect(r).toMatchObject({ zone: "UTC", zoneFellBack: false });
+  });
+
+  it("names the month in the zone the response is for", () => {
+    // The first two habits start Jan 1, 2027 at 1 a.m. UTC: 7 p.m. Dec 31 in Chicago.
+    const r = profileResponse(young, "America/Chicago", false, Date.UTC(2026, 3, 1));
+    expect(r.pendingSentence).toContain("for new music (from December 2026, once");
   });
 
   it("counts songs instead once those months have passed, from the same profile", () => {

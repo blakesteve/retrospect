@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@blakesteve/roster";
+import { percentWords } from "@/lib/listener/words";
 import type { ProfileResponse } from "@/lib/profile";
 import { Row, RowFailed } from "./listener/pieces";
 
@@ -39,9 +40,11 @@ async function readResponse(res: Response): Promise<Result> {
   return { kind: "failed" };
 }
 
+/** "6 a.m.", "noon", "midnight", as 9.2 writes times. */
 const fmtHour = (h: number) => {
-  const hr = h % 12 === 0 ? 12 : h % 12;
-  return `${hr}${h < 12 ? "am" : "pm"}`;
+  if (h % 24 === 0) return "midnight";
+  if (h === 12) return "noon";
+  return `${h % 12} ${h < 12 ? "a.m." : "p.m."}`;
 };
 
 export function ListeningProfile({ username, zone }: { username: string; zone: string }) {
@@ -146,7 +149,7 @@ function Habits({ p }: { p: ProfileResponse }) {
           return (
             <span
               key={h}
-              title={`${fmtHour(h)}: ${(share * 100).toFixed(1)}%`}
+              title={`${fmtHour(h)}: ${percentWords(share)}`}
               className="flex-1 rounded-t-[3px]"
               style={{
                 height: `${Math.max(4, (share / maxShare) * 100)}%`,
@@ -158,10 +161,10 @@ function Habits({ p }: { p: ProfileResponse }) {
       </div>
       <div className="flex justify-between text-[10px] text-ink-2 tabular mt-1" aria-hidden="true">
         <span>midnight</span>
-        <span>6am</span>
+        <span>6 a.m.</span>
         <span>noon</span>
-        <span>6pm</span>
-        <span>11pm</span>
+        <span>6 p.m.</span>
+        <span>11 p.m.</span>
       </div>
     </Card>
   );

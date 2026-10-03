@@ -29,12 +29,13 @@ export interface Warmup {
 
 export const TOO_SOON_HEADLINE = "Too soon to tell.";
 
-/** "March 2027". UTC, so the server and every visitor agree on the month. */
-export function fmtMonthYear(uts: number): string {
+/** "March 2027", in `zone`: the listener's, where the caller has it (9.2).
+    UTC otherwise, so the server and every visitor agree on the month. */
+export function fmtMonthYear(uts: number, zone = "UTC"): string {
   return new Date(uts * 1000).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: zone,
   });
 }
 
@@ -108,15 +109,16 @@ function moreSongs(n: number): string {
   return n < 20 ? `${n} more songs` : `about ${Math.ceil(n / 10) * 10} more songs`;
 }
 
-/** One sentence naming every withheld habit and when it can start, or null. */
-export function pendingHabitsSentence(pending: PendingHabit[], nowMs: number): string | null {
+/** One sentence naming every withheld habit and when it can start, or null,
+    its months in the listener's zone. */
+export function pendingHabitsSentence(pending: PendingHabit[], nowMs: number, zone: string): string | null {
   if (pending.length === 0) return null;
   const parts = pending.map((p) => {
     /* A future start is not a promise of an answer on that date: the habit
        then needs `minPlays` songs after it, and the sentence says so. */
     const when =
       p.readyFromUts * 1000 > nowMs
-        ? `from ${fmtMonthYear(p.readyFromUts)}, once you've played about ${p.minPlays} songs after that`
+        ? `from ${fmtMonthYear(p.readyFromUts, zone)}, once you've played about ${p.minPlays} songs after that`
         : `needs ${moreSongs(Math.max(1, p.minPlays - p.countedPlays))}`;
     return `${HABIT_WORDS[p.habit]} (${when})`;
   });

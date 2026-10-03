@@ -61,3 +61,25 @@ export function lunarDistanceWords(ld: number): string {
   const n = ld < 10 ? ld.toFixed(1) : Math.round(ld).toLocaleString("en-US");
   return `${n} lunar distance${n === "1.0" ? "" : "s"}`;
 }
+
+/**
+ * How long a history runs, in whole calendar months and whole years, always
+ * rounded down: a claim about someone's history is never rounded up, so ten
+ * years and nine months is ten years (architect, 2 Oct 2026). Every length
+ * the app states comes from here: the reveal's "Ten years under the sky" and
+ * the answers' "in your 10 years".
+ */
+export function historySpan(first: number, last: number): { months: number; years: number } {
+  const a = new Date(first * 1000);
+  const b = new Date(last * 1000);
+  let months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+  // A month counts once it's whole: the same date and time of day, or later.
+  const into = (d: Date) => ((d.getUTCDate() * 24 + d.getUTCHours()) * 60 + d.getUTCMinutes()) * 60 + d.getUTCSeconds();
+  if (into(b) < into(a)) months--;
+  months = Math.max(0, months);
+  return { months, years: Math.floor(months / 12) };
+}
+
+/** A share as 9.2 writes it: a whole percent, and "less than 1%" under half
+    of one, never "0%". */
+export const percentWords = (share: number): string => (share < 0.005 ? "less than 1%" : `${Math.round(share * 100)}%`);

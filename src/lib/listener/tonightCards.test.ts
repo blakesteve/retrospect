@@ -2,9 +2,9 @@ import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Scrobble } from "@/lib/analysis/nostalgia";
 import { synthHistory } from "@/lib/answers/synthHistory";
-import { writeCompact } from "@/lib/space/compact";
+import { nasaLogFrom, writeCompact } from "@/lib/space/compact";
 import { synthCompact } from "@/lib/space/synthLog";
-import { forgetFinalMonths, writeMonth, type SpaceMonth, type SpaceRecords, type SpaceSource } from "@/lib/space/store";
+import { forgetFinalMonths, writeMonth, writeSpaceJson, type SpaceMonth, type SpaceRecords, type SpaceSource } from "@/lib/space/store";
 import { getBlobStore, MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
 import { getStore } from "@/lib/store/jsonStore";
 import { userKey } from "@/lib/store/userKeys";
@@ -12,7 +12,7 @@ import { zoneClock } from "@/lib/zone";
 import { readListener } from "./record";
 import { songIdOf, songKey } from "./songs";
 import type { SpaceNight } from "./spaceNights";
-import { factItems, factSeeds, nightGallery, NO_FACTS, type FactSeeds } from "./tonightCards";
+import { factItems, factSeeds, firstPhotos, nightGallery, NO_FACTS, sunMonths, sunsByNight, type FactSeeds } from "./tonightCards";
 
 /* Tonight's wild night cards and the Surprise me pool (spec 7.5, 8.4),
    through the highlights route as routes.test.ts drives it: made-up
@@ -317,6 +317,121 @@ describe("a night's photo gallery (spec 8.7.1)", () => {
   });
 });
 
+describe("SDO's Sun, by the listener's night (8.7.1, ClickUp 86e3jdkeg)", () => {
+  /* SDO's pictures as the fill stored them (read from NASA, 2 Oct 2026): one
+     per UTC day, aimed at that day's first X flare. */
+  const sdo = (time: string) => {
+    const [d, hms] = time.slice(0, 19).split("T");
+    return { date: d, time, url: `https://sdo.gsfc.nasa.gov/assets/img/browse/${d.replaceAll("-", "/")}/${d.replaceAll("-", "")}_${hms.replaceAll(":", "")}_1024_0171.jpg` };
+  };
+  const files = [
+    month("sdo", "2024-05", ["2024-05-09T09:17:10Z", "2024-05-10T06:56:46Z", "2024-05-11T01:26:34Z", "2024-05-12T16:26:22Z"].map(sdo)),
+    month("sdo", "2024-10", ["2024-10-01T22:17:34Z", "2024-10-03T12:17:46Z"].map(sdo)),
+  ];
+  // NASA's X flares those days (DONKI, read 1 Oct 2026).
+  const log = nasaLogFrom(
+    synthCompact("2026-10-01T00:00:00Z", {
+      xflares: [
+        ["2024-05-09T09:13:00Z", "X2.2"],
+        ["2024-05-09T17:44:00Z", "X1.1"],
+        ["2024-05-10T06:54:00Z", "X3.9"],
+        ["2024-05-11T01:23:00Z", "X5.8"],
+        ["2024-05-11T11:44:00Z", "X1.5"],
+        ["2024-05-12T16:26:00Z", "X1.0"],
+        ["2024-10-01T22:20:00Z", "X7.1"],
+        ["2024-10-03T12:18:00Z", "X9.0"],
+      ],
+    }),
+  );
+  const honolulu = zoneClock("Pacific/Honolulu", at("2023-01-01T00:00:00Z"), at("2026-12-31T00:00:00Z"));
+  const taken = (clock: typeof chicago, date: string) => {
+    const sun = sunsByNight(files, clock, log).get(night(date));
+    return sun ? new Date(sun.time * 1000).toISOString() : null;
+  };
+
+  it("gives Chicago's May 10, 2024 storm night the X5.8 picture, filed under May 11, and May 11's night none of May 10's", () => {
+    expect(log).not.toBeNull();
+    expect(taken(chicago, "2024-05-10")).toBe("2024-05-11T01:26:34.000Z"); // 8:26 p.m. CDT, the X5.8
+    expect(taken(chicago, "2024-05-11")).toBeNull(); // by UTC date it showed May 10's X5.8
+    expect(taken(chicago, "2024-05-12")).toBe("2024-05-12T16:26:22.000Z");
+  });
+
+  it("gives Honolulu's Oct 2, 2024 night the X9.0, filed under Oct 3", () => {
+    expect(taken(honolulu, "2024-10-02")).toBe("2024-10-03T12:17:46.000Z"); // 2:17 a.m. HST, still Oct 2's night
+    expect(taken(honolulu, "2024-10-01")).toBe("2024-10-01T22:17:34.000Z"); // the X7.1
+    expect(taken(chicago, "2024-10-03")).toBe("2024-10-03T12:17:46.000Z"); // 7:17 a.m. CDT, Oct 3's night
+    expect(taken(chicago, "2024-10-02")).toBeNull();
+  });
+
+  it("picks the picture nearest a night's biggest X flare when two fall in it, and the earlier with no log", () => {
+    // Chicago's May 9 night (4 a.m. May 9 to 4 a.m. May 10) holds May 9's X2.2 and May 10's X3.9.
+    expect(taken(chicago, "2024-05-09")).toBe("2024-05-10T06:56:46.000Z");
+    expect(new Date(sunsByNight(files, chicago, null).get(night("2024-05-09"))!.time * 1000).toISOString()).toBe("2024-05-09T09:17:10.000Z");
+  });
+
+  it("reads the UTC months a night's pictures can be filed under", () => {
+    expect(sunMonths(chicago, night("2024-05-10"), night("2024-05-10"))).toEqual(["2024-05"]);
+    expect(sunMonths(chicago, night("2024-04-30"), night("2024-04-30"))).toEqual(["2024-04", "2024-05"]);
+    expect(sunMonths(honolulu, night("2024-10-31"), night("2024-10-31"))).toEqual(["2024-10", "2024-11"]);
+    expect(sunMonths(zoneClock("Pacific/Kiritimati", at("2024-01-01T00:00:00Z")), night("2024-06-01"), night("2024-06-01"))).toEqual(["2024-05", "2024-06"]);
+  });
+
+  it("shows the night's own Sun in the nights route", async () => {
+    await writeMonth(files[0]);
+    await seed("suns", chicagoListener);
+    const { body } = await call(nightsRoute, "suns", "tz=America/Chicago&from=2024-05&to=2024-05");
+    const sunOf = (d: string) => body.nights.find((n: { date: string }) => n.date === d).space.photos.find((p: { kind: string }) => p.kind === "sdo");
+    expect(sunOf("2024-05-10").caption).toBe("The Sun at 8:26 p.m. CDT on May 10, 2024, from NASA's Solar Dynamics Observatory.");
+    expect(sunOf("2024-05-11")).toBeUndefined();
+  });
+});
+
+describe("the wild night photos' reads (spec 8.4)", () => {
+  const image = (date: string) => ({ date, images: [{ name: `epic_${date}`, time: `${date}T17:00:00Z`, lat: 0, lon: -90 }] });
+  /** The store, with reads of `failing` keys throwing as a timed-out R2 read would, and EPIC's index reads counted. */
+  async function photosWith(failing: string[]) {
+    // A finished month read once is kept in memory: start each call cold.
+    forgetFinalMonths();
+    await writeMonth(month("epic", "2024-04", [image("2024-04-08")]));
+    await writeMonth(month("epic", "2024-06", [image("2024-06-29")]));
+    await writeMonth(month("epic", "2024-10", [image("2024-10-03")]));
+    await writeSpaceJson("space/epic-done.json", { days: ["2024-04-08", "2024-06-29", "2024-10-03"], available: ["2024-04-08", "2024-06-29", "2024-10-03"] });
+    const store = getBlobStore();
+    const reads = { index: 0 };
+    const get = store.get.bind(store);
+    store.get = async (key: string) => {
+      if (key === "space/epic-done.json") reads.index++;
+      if (failing.includes(key)) throw new Error("R2 timed out");
+      return get(key);
+    };
+    const photos = await firstPhotos(chicago, ["2024-04-08", "2024-06-29", "2024-10-03"].map(night), null);
+    return { photos, reads, url: (d: string) => photos.get(night(d))?.url ?? null, credit: (d: string) => photos.get(night(d))?.credit ?? null };
+  }
+
+  it("reads EPIC's index once per request", async () => {
+    const { reads, url } = await photosWith([]);
+    expect(reads.index).toBe(1);
+    expect(url("2024-04-08")).toMatch(/epic_2024-04-08\.jpg$/);
+  });
+
+  it("costs a night whose facts won't read only its own photo, its curated one still shown", async () => {
+    const { url, credit } = await photosWith(["space/epic/2024-04.json"]);
+    expect(credit("2024-04-08")).toBe("NASA/GRC/Jordan Salkin");
+    expect(url("2024-06-29")).toMatch(/epic_2024-06-29\.jpg$/);
+    expect(url("2024-10-03")).toMatch(/epic_2024-10-03\.jpg$/);
+  });
+
+  it("keeps every card's photo when EPIC's index or SDO's months won't read", async () => {
+    // No index: a day EPIC has a photo for still shows it (the index only decides "none").
+    const noIndex = await photosWith(["space/epic-done.json"]);
+    expect(noIndex.url("2024-04-08")).toMatch(/epic_2024-04-08\.jpg$/);
+    // No SDO month: Oct 3's X-flare night keeps EPIC's Earth.
+    const noSun = await photosWith(["space/sdo/2024-10.json"]);
+    expect(noSun.url("2024-10-03")).toMatch(/epic_2024-10-03\.jpg$/);
+    expect(noSun.url("2024-06-29")).toMatch(/epic_2024-06-29\.jpg$/);
+  });
+});
+
 describe("the Surprise me pool (spec 7.5)", () => {
   it("holds the songs with a chip, every wild night, and dated facts from this history", async () => {
     await seed("pool", chicagoListener);
@@ -472,6 +587,26 @@ describe("a fact's example (spec 7.5)", () => {
       }).flyby;
     expect(seeds(null)).toBeNull();
     expect(seeds(8.2)).toEqual({ night: night("2024-06-29"), time: at("2024-06-29T12:00:00Z"), meters: 8.2 });
+  });
+
+  it("names a flyby only on a night with one within 0.01 AU, never a bigger nearest pass farther out", () => {
+    // Jun 28: a 900 m asteroid passes 7.8 lunar distances out (0.02 AU), no flyby.
+    // Jun 29: a 40 m one inside 0.01 AU. Both nights have plays.
+    const far = { name: "far", time: at("2024-06-28T12:00:00Z"), ld: 7.8, meters: 900 };
+    const near = { name: "near", time: at("2024-06-29T12:00:00Z"), ld: 2, meters: 40 };
+    const seeds = factSeeds({
+      clock: chicago,
+      first: at("2024-06-01T00:00:00Z"),
+      last: at("2024-07-01T00:00:00Z"),
+      listened: () => true,
+      space: new Map([
+        [night("2024-06-28"), quiet({ flybys: 0, asteroid: far })],
+        [night("2024-06-29"), quiet({ flybys: 1, asteroid: near })],
+      ]),
+      eclipses: new Map(),
+      xflares: [],
+    });
+    expect(seeds.flyby).toEqual({ night: night("2024-06-29"), time: at("2024-06-29T12:00:00Z"), meters: 40 });
   });
 });
 

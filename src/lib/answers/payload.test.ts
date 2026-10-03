@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { skyAt } from "@/lib/sky/sky";
+import { tonightSky } from "@/lib/sky/tonight";
 import { ANSWERS_VERSION, type AnswerRecord, type QuestionRecord } from "./engine";
 import { answersPayload, computingPayload, formatP, type QuestionPayload } from "./payload";
 import { QUESTIONS, questionById, type QuestionId } from "./questions";
@@ -188,7 +190,7 @@ describe("the question sheet's other lines (8.7.3)", () => {
 
   it("what happened", () => {
     const q = phrasesOf(
-      record("venusdet", tested({ index: 1.01, p: 0.6, events: 7, spanStart: 0, spanEnd: Math.round(3 * YEAR) }), rest9),
+      record("venusdet", tested({ index: 1.01, p: 0.6, events: 7, spanStart: at("2023-01-01T00:00:00Z"), spanEnd: at("2026-01-01T00:00:00Z") }), rest9),
       "venusdet",
     );
     expect(q.phrases.whatHappened).toBe(
@@ -489,6 +491,26 @@ describe("Tonight's heads-up (8.4)", () => {
     expect(p.headsUp).toEqual({ id: "venusrx", line: "Venus turns retrograde Saturday. You've lived through one; see how your listening went." });
   });
 
+  it("names the day as Tonight's chip does, counting from the heading's night between midnight and 4 a.m.", () => {
+    // 1 a.m. CDT Friday, Oct 2, 2026: "Thursday night, Oct 1". Venus stations 2:09 a.m. Saturday.
+    const now = Date.parse("2026-10-02T06:00:00Z");
+    const p = answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", now);
+    expect(p.headsUp?.line).toBe("Venus turns retrograde Saturday. You've lived through one; see how your listening went.");
+    const chips = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).chips;
+    expect(chips[0]).toMatchObject({ kind: "station", text: "Venus turns retrograde Saturday" });
+  });
+
+  it("calls a station later the same small-hours night today, in the heads-up, the too-early line and the chip", () => {
+    // 1 a.m. CDT Saturday, Oct 3, 2026: "Friday night, Oct 2". Venus stations at 2:09 a.m.
+    const now = Date.parse("2026-10-03T06:00:00Z");
+    const rec = record("venusrx", { status: "too-few-events", events: 1 });
+    const p = answersPayload(rec, "ready", now);
+    expect(p.headsUp?.line).toBe("Venus turns retrograde today. You've lived through one; see how your listening went.");
+    expect(p.questions.find((q) => q.id === "venusrx")!.phrases.tooEarly).toMatch(/ The next one begins today\.$/);
+    const chips = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).chips;
+    expect(chips[0]).toMatchObject({ kind: "station", text: "Venus turns retrograde today" });
+  });
+
   it("is quiet when nothing starts within a week", () => {
     // 15 Jul 2026: Mercury turned retrograde Jun 29; next is Venus into Libra, Aug 6.
     expect(answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", Date.parse("2026-07-15T12:00:00Z")).headsUp).toBeNull();
@@ -560,6 +582,16 @@ describe("fixes from review", () => {
     );
   });
 
+  it("never rounds a history's length up: ten years and nine months is ten years, 19 months isn't two years", () => {
+    const span = (from: string, to: string) =>
+      phrasesOf(record("fullmoon", tested({ index: 1.23, p: 0.6, events: 120, spanStart: at(from), spanEnd: at(to) }), rest9), "fullmoon").phrases
+        .whatHappened;
+    expect(span("2016-01-01T00:00:00Z", "2026-09-30T00:00:00Z")).toMatch(/ in your 10 years\.$/);
+    expect(span("2025-01-01T00:00:00Z", "2026-08-15T00:00:00Z")).toMatch(/ in your 19 months\.$/);
+    // Under a month is never "one month".
+    expect(span("2026-08-01T00:00:00Z", "2026-08-21T00:00:00Z")).toMatch(/ in your few weeks\.$/);
+  });
+
   it("writes big swings with thousands separators", () => {
     const q = phrasesOf(record("fullmoon", tested({ index: 13.34, p: 0.6 }), rest9), "fullmoon");
     expect(q.phrases.tonightLine).toBe("No: a 1,234% bigger after-midnight share, which could easily be chance.");
@@ -599,10 +631,28 @@ describe("the reveal's last card (8.3)", () => {
     expect(reveal(record("fullmoon", tested(0.5), [0.6])).line).toBe("Too early for most. Here's what Mercury retrograde already says.");
   });
 
+  /** Every question checked: NASA's two read, so none is "Not checked". */
+  const allChecked = (rec: AnswerRecord): AnswerRecord => ({
+    ...rec,
+    questions: rec.questions.map((q) => (q.notChecked ? { ...q, notChecked: null, status: "too-few-plays" as const } : q)),
+  });
+
   it("names the first to arrive, or says plays are what's missing, when nothing is tested", () => {
-    const warming = record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-01-15T12:00:00Z") });
+    const warming = allChecked(record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-01-15T12:00:00Z") }));
     expect(reveal(warming).line).toBe("Too early for all 12. The first to arrive: Mercury retrograde, around January 2027.");
-    expect(reveal(record("mercury", {})).line).toBe("Too early for all 12. They arrive as more of your listening falls under each sky.");
+    expect(reveal(allChecked(record("mercury", {}))).line).toBe("Too early for all 12. They arrive as more of your listening falls under each sky.");
+  });
+
+  it("counts what's too early and what's still being checked when nothing is tested, never all 12 too early", () => {
+    // record() leaves NASA's two not checked: ten too early, two not checked.
+    expect(reveal(record("mercury", {}))).toEqual({ line: "No answers yet: 10 need more history, two are still being checked.", notChecked: null });
+    // A tested question recomputing under a new measure reads Checking, not tested.
+    const recomputing = allChecked(record("moonstrong", { ...tested(0.5), measure: "listening" as const }));
+    expect(answersPayload(recomputing, "ready", NOW).tally).toMatchObject({ Checking: 1, "Too early": 11 });
+    expect(reveal(recomputing).line).toBe("No answers yet: 11 need more history, one is still being checked.");
+    // All twelve not checked: no history clause.
+    const none = { ...record("mercury", {}), questions: record("mercury", {}).questions.map((q) => ({ ...q, notChecked: "error" as const })) };
+    expect(reveal(none).line).toBe("No answers yet: 12 are still being checked.");
   });
 
   it("puts Yes first when there's a Yes and a Maybe", () => {
@@ -628,7 +678,7 @@ describe("the reveal's last card (8.3)", () => {
   });
 
   it("names the earliest of several to arrive, counting the next event as well as a warm-up", () => {
-    const two = record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-06-15T12:00:00Z") });
+    const two = allChecked(record("mercury", { status: "warming-up", warmupReadyFrom: at("2027-06-15T12:00:00Z") }));
     const both = { ...two, questions: two.questions.map((q) => (q.id === "venusrx" ? { ...q, status: "warming-up" as const, warmupReadyFrom: at("2027-01-15T12:00:00Z") } : q)) };
     expect(reveal(both).line).toBe("Too early for all 12. The first to arrive: Venus retrograde, around January 2027.");
     // A question short of events arrives at its next event: Venus turns

@@ -1,6 +1,7 @@
 import type { Scrobble, TagResult } from "./analysis/nostalgia";
 import { tagScrobbles } from "./analysis/nostalgia";
 import { tagDiscovery, tagOldFlame } from "./analysis/metrics";
+import { percentWords } from "./listener/words";
 import { pendingHabitsSentence, type PendingHabit, type PendingHabitKey } from "./readiness";
 import { nightMonth, nightName, nightWeekday, zoneClock } from "./zone";
 
@@ -110,7 +111,7 @@ export function profileResponse(
     ...profile,
     zone,
     zoneFellBack,
-    pendingSentence: pendingHabitsSentence(profile.pending, nowMs),
+    pendingSentence: pendingHabitsSentence(profile.pending, nowMs, zone),
   };
 }
 
@@ -196,7 +197,7 @@ export function buildProfile(scrobbles: Scrobble[], zone: string): ListeningProf
     } else if (oldFavoriteShare <= 0.35) {
       archetypes.push({
         label: "Restless Explorer",
-        why: `Only ${Math.round(oldFavoriteShare * 100)}% of your plays are old favorites. You rarely look back; there's always something next.`,
+        why: `${oldFavoriteShare < 0.005 ? "Less than 1%" : `Only ${percentWords(oldFavoriteShare)}`} of your plays are old favorites. You rarely look back; there's always something next.`,
       });
     } else {
       archetypes.push({
@@ -214,12 +215,12 @@ export function buildProfile(scrobbles: Scrobble[], zone: string): ListeningProf
   if (nightShare >= 0.12) {
     archetypes.push({
       label: "Night Owl",
-      why: `${Math.round(nightShare * 100)}% of your listening lands between midnight and 4am. The small hours are your listening room.`,
+      why: `${Math.round(nightShare * 100)}% of your listening lands between midnight and 4 a.m. The small hours are your listening room.`,
     });
   } else if (nightShare <= 0.04) {
     archetypes.push({
       label: "Daylight Listener",
-      why: `Almost none of your listening happens between midnight and 4am (${(nightShare * 100).toFixed(1)}%). Your headphones sleep when you do.`,
+      why: `Almost none of your listening happens between midnight and 4 a.m. (${percentWords(nightShare)}). Your headphones sleep when you do.`,
     });
   }
   if (playsPerDay >= 60) {

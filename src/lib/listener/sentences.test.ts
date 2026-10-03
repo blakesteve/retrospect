@@ -30,6 +30,9 @@ describe("the reveal's sentences (spec 8.3)", () => {
     expect(lengthWords(at("2026-08-15T00:00:00Z"), at("2026-09-30T00:00:00Z"))).toBe("A few weeks");
     expect(lengthWords(at("2024-10-15T00:00:00Z"), at("2026-09-30T00:00:00Z"))).toBe("Twenty-three months");
     expect(lengthWords(at("2002-03-01T00:00:00Z"), at("2026-09-30T00:00:00Z"))).toBe("Twenty-four years");
+    // Never rounded up (architect, 2 Oct 2026): ten years and nine months is ten years.
+    expect(lengthWords(at("2016-01-01T00:00:00Z"), at("2026-09-30T00:00:00Z"))).toBe("Ten years");
+    expect(lengthWords(at("2024-10-15T12:00:00Z"), at("2026-10-15T11:59:00Z"))).toBe("Twenty-three months");
   });
 
   it("writes the wildest night's line as the spec does", () => {

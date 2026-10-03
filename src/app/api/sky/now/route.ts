@@ -45,7 +45,7 @@ export async function GET(req: Request) {
       questionsHeld,
       nasa: nasa ? "ok" : "unavailable",
       comingUp: comingUp(now).map((i) => ({ ...i, date: dateIn(zone, i.time), at: timeIn(zone, i.time) })),
-      ...tonightSky({ now, zone, sky, questionsHeld }),
+      ...tonightSky({ now, zone, sky, questionsHeld, nasaLoaded: nasa !== null }),
       epic,
     });
   } catch (err) {
