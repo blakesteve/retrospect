@@ -7,7 +7,8 @@
  *   the committed nights, and the months of its wild nights. Each day keeps
  *   only the frame facing the sample's zone (Chicago, 90° west, as the
  *   routes pick it), so the file stays small.
- * - SDO's Sun on every storm or X-flare day in those months.
+ * - SDO's Sun on every storm or X-flare day in those months, and the UTC day
+ *   either side, since the routes match a picture to the night it was taken in.
  * - JPL's close approaches and fireballs for the whole history, a year per
  *   call, so the reveal's flyby count covers all of it.
  *
@@ -105,14 +106,13 @@ const days = await each(listed, async (date) => {
 for (const m of months) files.push(file("epic", m, days.filter((d) => d.date.startsWith(m))));
 console.log(`EPIC: ${listed.length} days.`);
 
-// SDO: the Sun on each storm or X-flare day in the shown months.
+// SDO: the Sun on each storm or X-flare day in the shown months, and the UTC
+// day either side: a night's picture can be filed under the next day's date.
 const donki = JSON.parse(readFileSync(path.join(root, "src/lib/answers/testdata/donki-compact.json"), "utf8"));
-const sunDays = [...sdoDays({ kp: {}, xflares: {}, ...donki })].filter(([d]) => months.includes(d.slice(0, 7)) && d >= FIRST_DATES.sdo).sort();
+const near = (d) => [-1, 0, 1].some((k) => months.includes(new Date(Date.parse(`${d}T12:00:00Z`) + k * 86_400_000).toISOString().slice(0, 7)));
+const sunDays = [...sdoDays({ kp: {}, xflares: {}, ...donki })].filter(([d]) => near(d) && d >= FIRST_DATES.sdo).sort();
 const suns = await each(sunDays, async ([day, at]) => (await fetchSdoNearest(day, at)) ?? { date: day, time: at, url: null });
-for (const m of months) {
-  const records = suns.filter((s) => s.date.startsWith(m));
-  if (records.length) files.push(file("sdo", m, records));
-}
+for (const m of [...new Set(suns.map((s) => s.date.slice(0, 7)))].sort()) files.push(file("sdo", m, suns.filter((s) => s.date.startsWith(m))));
 console.log(`SDO: ${suns.length} days, ${suns.filter((s) => s.url).length} with a picture.`);
 
 /** The sample's night for a moment, by the routes' own clock: 4 a.m. to

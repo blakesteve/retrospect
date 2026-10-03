@@ -305,7 +305,7 @@ first date and its last refresh:
 | DONKI storms and flares ([CCMC](https://ccmc.gsfc.nasa.gov/tools/DONKI/)) | each storm's Kp readings; each flare's class and peak | storm and X-flare nights, questions 7 and 8 |
 | JPL close approaches and fireballs | approaches within 0.05 AU; fireballs with their energy | a night's asteroid and fireballs |
 | EPIC | each day's photos of Earth from DSCOVR, with where each faces | Earth that day |
-| SDO | the Sun's AIA 171 image nearest each storm or X-flare day's event, from 2016, where its browse archive starts | the Sun on those nights |
+| SDO | the Sun's AIA 171 image nearest each storm or X-flare day's event, from 2016, where its browse archive starts | the Sun on those nights, each picture on the night it was taken in, by the listener's clock |
 | APOD | each day's title, credit and page, never the picture | the APOD link |
 
 Storm and flare times are kept in UTC, plus a compact list of every Kp reading

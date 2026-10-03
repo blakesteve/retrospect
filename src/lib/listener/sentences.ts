@@ -1,7 +1,7 @@
 import { haloDignity, type SkyAt, type SkyBody } from "@/lib/sky/sky";
 import { nightName, nightWeekday } from "@/lib/zone";
 import type { Chip } from "./highlights";
-import { nightDate } from "./words";
+import { historySpan, nightDate } from "./words";
 
 /**
  * The reveal's sentences (spec 8.3), and the wild night cards' (8.4), built
@@ -35,16 +35,13 @@ function capitalNumber(n: number): string {
 
 /**
  * "{Length} under the sky" (8.3, card 1): whole years from 2, months under 2
- * years, "A few weeks" under 2 months.
+ * years, "A few weeks" under 2 months, always rounded down (`historySpan`).
  */
 export function lengthWords(first: number, last: number): string {
-  const a = new Date(first * 1000);
-  const b = new Date(last * 1000);
-  let months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
-  if (b.getUTCDate() < a.getUTCDate()) months--;
+  const { months, years } = historySpan(first, last);
   if (months < 2) return "A few weeks";
   if (months < 24) return `${capitalNumber(months)} months`;
-  return `${capitalNumber(Math.floor(months / 12))} years`;
+  return `${capitalNumber(years)} years`;
 }
 
 /**

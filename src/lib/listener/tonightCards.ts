@@ -1,14 +1,14 @@
 import type { NasaLog } from "@/lib/space/compact";
 import { SPACE_PHOTOS } from "@/lib/space/curated";
 import { kpLabel, stormGrade } from "@/lib/space/kp";
-import { readMonths } from "@/lib/space/store";
+import { monthsBetween, readMonths, type SpaceMonth } from "@/lib/space/store";
 import { dignityPhrase, type Sign } from "@/lib/sky/sky";
 import { signWindows } from "@/lib/sky/windows";
 import { nightName, nightWeekday, zoneClock, type ZoneClock } from "@/lib/zone";
 import type { WildNight } from "./highlights";
 import type { ListenerRecord } from "./record";
 import { kickerDate, lengthWords, WEEKDAYS, wildCardLine } from "./sentences";
-import { flareSize, spaceNights, zoneLongitude, type SpaceNight } from "./spaceNights";
+import { flareSize, readEpicIndex, spaceNights, zoneLongitude, type SpaceNight } from "./spaceNights";
 import { aboutMeters, dateIn, nightDate, timeIn } from "./words";
 
 /**
@@ -33,10 +33,61 @@ export interface CardPhoto {
   caption: string;
 }
 
-/** SDO's Sun for a day, as the fill stored it. */
+/** SDO's Sun, as the fill stored it: a picture and when it was taken. */
 export interface SunPhoto {
   url: string;
   time: number;
+}
+
+/** The UTC months whose SDO files can hold a picture taken during nights
+    `first` to `last`: a night runs 4 a.m. to 4 a.m. local, so its pictures
+    can be filed under the UTC day, and month, either side of its date. */
+export function sunMonths(clock: ZoneClock, first: number, last: number): string[] {
+  const month = (uts: number) => new Date(uts * 1000).toISOString().slice(0, 7);
+  return monthsBetween(month(clock.nightStart(first)), month(clock.nightStart(last + 1) - 1));
+}
+
+/**
+ * SDO's Sun for each night, by the listener's clock (8.7.1, 7.3; ClickUp
+ * 86e3jdkeg). The fill files a picture under the UTC day of the event it
+ * aims at, an X flare's peak or the day's strongest Kp reading, so the UTC
+ * date can name the wrong night: Chicago's May 10, 2024 storm night has the
+ * X5.8 picture filed under May 11. Each picture goes to the night it was
+ * taken in. Two in one night: the one nearer that night's biggest X flare,
+ * or its strongest Kp reading, as the fill itself prefers; the earlier with
+ * no log.
+ */
+export function sunsByNight(files: Iterable<SpaceMonth<"sdo">>, clock: ZoneClock, nasa: NasaLog | null): Map<number, SunPhoto> {
+  const byNight = new Map<number, SunPhoto[]>();
+  for (const file of files) {
+    for (const d of file.records) {
+      if (!d.url) continue;
+      const time = Date.parse(d.time) / 1000;
+      const n = clock.nightOf(time);
+      byNight.set(n, [...(byNight.get(n) ?? []), { url: d.url, time }]);
+    }
+  }
+  const out = new Map<number, SunPhoto>();
+  for (const [n, suns] of byNight) {
+    suns.sort((a, b) => a.time - b.time);
+    const aim = nasa ? nightAim(nasa, clock, n) : null;
+    out.set(n, aim === null ? suns[0] : suns.reduce((a, b) => (Math.abs(b.time - aim) < Math.abs(a.time - aim) ? b : a)));
+  }
+  return out;
+}
+
+/** The moment a night's Sun should show: its biggest X flare's peak, else the
+    middle of its strongest Kp reading, else null. */
+function nightAim(nasa: NasaLog, clock: ZoneClock, n: number): number | null {
+  let flare: [number, string] | null = null;
+  for (const f of nasa.xflares) if (clock.nightOf(f[0]) === n && (!flare || flareSize(f[1]) > flareSize(flare[1]))) flare = f;
+  if (flare) return flare[0];
+  let storm: [number, number, number] | null = null;
+  for (const k of nasa.kp) {
+    const mid = (k[0] + k[1]) / 2;
+    if (clock.nightOf(mid) === n && (!storm || k[2] > storm[2])) storm = k;
+  }
+  return storm ? (storm[0] + storm[1]) / 2 : null;
 }
 
 /**
@@ -73,20 +124,32 @@ export function nightGallery(night: number, space: SpaceNight | undefined, sun: 
 /**
  * Each night's first gallery photo, or null. NASA's facts are read per night
  * as the nights route reads them, so a card shows the photo its sheet opens on.
+ * The shared files (SDO's months, EPIC's index) are read once per call, and a
+ * read that fails costs only what it feeds: a night whose facts won't read
+ * still gets its curated photo, and the other nights keep theirs.
  */
 export async function firstPhotos(clock: ZoneClock, nights: number[], nasa: NasaLog | null): Promise<Map<number, CardPhoto | null>> {
   const out = new Map<number, CardPhoto | null>();
   if (nights.length === 0) return out;
   const year = (n: number) => Number(nightName(n).slice(0, 4));
-  const [sdo, spaces] = await Promise.all([
-    readMonths("sdo", [...new Set(nights.map((n) => nightName(n).slice(0, 7)))]),
-    Promise.all(nights.map((n) => spaceNights(clock, n, n, nasa, { epic: true, longitude: zoneLongitude(clock, year(n)) }))),
+  const failed = (what: string) => (err: unknown) => {
+    console.error(`[retrospect] ${what} wouldn't read for the wild night photos:`, err);
+    return null;
+  };
+  const [sdo, epicIndex] = await Promise.all([
+    readMonths("sdo", [...new Set(nights.flatMap((n) => sunMonths(clock, n, n)))]).catch(failed("SDO's months")),
+    readEpicIndex().catch(failed("EPIC's index")),
   ]);
-  const sun = new Map<string, SunPhoto>();
-  for (const file of sdo.values()) {
-    for (const d of file.records) if (d.url) sun.set(d.date, { url: d.url, time: Date.parse(d.time) / 1000 });
-  }
-  nights.forEach((n, i) => out.set(n, nightGallery(n, spaces[i].get(n), sun.get(nightName(n)), clock)[0] ?? null));
+  const sun = sunsByNight(sdo?.values() ?? [], clock, nasa);
+  const spaces = await Promise.allSettled(
+    nights.map((n) => spaceNights(clock, n, n, nasa, { epic: true, longitude: zoneLongitude(clock, year(n)), epicIndex })),
+  );
+  nights.forEach((n, i) => {
+    const s = spaces[i];
+    if (s.status === "rejected") failed(`${nightName(n)}'s facts`)(s.reason);
+    const space = s.status === "fulfilled" ? s.value.get(n) : undefined;
+    out.set(n, nightGallery(n, space, sun.get(n), clock)[0] ?? null);
+  });
   return out;
 }
 

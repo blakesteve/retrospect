@@ -91,7 +91,7 @@ interface NightOut {
     kp: number | null;
     biggestFlare: string | null;
     epic: { url: string; credit: string } | "none" | "unknown";
-    photos: { kind?: string }[];
+    photos: { kind?: string; caption?: string }[];
     asteroid: { name: string } | null;
   };
 }
@@ -259,6 +259,10 @@ describe("the sample opens what the landing promises (8.1)", () => {
     expect(nights.filter((n) => n.space.epic === "unknown")).toEqual([]);
     expect(nights.filter((n) => n.space.photos.some((p) => p.kind === "sdo")).length).toBeGreaterThan(20);
     expect(json<{ counts: { flybys: number } }>("highlights.json").counts.flybys).toBeGreaterThan(1000);
+    // The May 10 storm night's Sun is the X5.8's, filed under May 11 UTC (ClickUp 86e3jdkeg).
+    expect(night("2024-05-10")!.space.photos.find((p) => p.kind === "sdo")?.caption).toBe(
+      "The Sun at 8:26 p.m. CDT on May 10, 2024, from NASA's Solar Dynamics Observatory.",
+    );
   });
 
   it("has every selected song's night, so a song sheet always finds it", () => {

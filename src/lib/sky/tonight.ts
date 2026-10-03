@@ -1,7 +1,8 @@
 import { MakeTime, SearchMoonPhase } from "astronomy-engine";
 import { conditionFor } from "@/lib/answers/conditions";
 import { QUESTIONS, type Question } from "@/lib/answers/questions";
-import { dateIn, nightDate, timeIn } from "@/lib/listener/words";
+import { nightDate, timeIn } from "@/lib/listener/words";
+import { happenedWhen, startsWhen } from "@/lib/listener/when";
 import { nightName, nightWeekday, zoneClock } from "@/lib/zone";
 import {
   DIGNITY_TABLE,
@@ -30,54 +31,6 @@ const uts = (iso: string) => Date.parse(iso) / 1000;
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** "Mars", "the Sun", "the Moon", for the middle of a sentence. */
 const bodyName = (body: SkyBody) => (body === "Sun" || body === "Moon" ? `the ${body}` : body);
-
-/* ---- Days in the listener's zone ------------------------------------------ */
-
-interface LocalDay {
-  year: number;
-  weekday: number;
-  /** Days since 1970 on the local calendar. */
-  serial: number;
-}
-
-function localDay(zone: string, t: number): LocalDay {
-  const local = zoneClock(zone, t).localSeconds(t);
-  const d = new Date(local * 1000);
-  return { year: d.getUTCFullYear(), weekday: d.getUTCDay(), serial: Math.floor(local / DAY) };
-}
-
-/** "Oct 24", with the year when it isn't this one. */
-function shortDate(zone: string, t: number, withYear: boolean): string {
-  const full = dateIn(zone, t);
-  return withYear ? full : full.replace(/, \d{4}$/, "");
-}
-
-/** When something starts, from now, by the answers payload's rules
-    (`startsWhen` in `src/lib/answers/payload.ts`, so Tonight's chips and its
-    heads-up agree): "today", "tomorrow", "Saturday" within a week, "Oct 24"
-    within a year, else null. */
-export function startsWhen(zone: string, now: number, t: number): string | null {
-  const a = localDay(zone, now);
-  const b = localDay(zone, t);
-  const days = b.serial - a.serial;
-  if (days <= 0) return "today";
-  if (days === 1) return "tomorrow";
-  if (days < 7) return WEEKDAYS[b.weekday];
-  if (t - now <= 365 * DAY) return shortDate(zone, t, b.year !== a.year);
-  return null;
-}
-
-/** The same rules looking back: "today", "yesterday", "Saturday" within a
-    week, then "Oct 24". */
-export function happenedWhen(zone: string, now: number, t: number): string {
-  const a = localDay(zone, now);
-  const b = localDay(zone, t);
-  const days = a.serial - b.serial;
-  if (days <= 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 7) return WEEKDAYS[b.weekday];
-  return shortDate(zone, t, b.year !== a.year);
-}
 
 /* ---- The heading (8.4) ----------------------------------------------------- */
 
@@ -313,9 +266,11 @@ export function receptions(bodies: readonly { body: SkyBody; sign: Sign }[]): st
  * "None of the 12 questions' skies is overhead tonight. Next: a full moon
  * begins Sunday." The next is the sky question whose condition starts
  * soonest (NASA's two can't be foreseen), named by its spec 9.2 subject, the
- * day by `startsWhen`. Null while any question is overhead.
+ * day by `startsWhen`. Null while any question is overhead. When NASA's log
+ * didn't load, storms and flares can't be checked: no count, and it says why
+ * (architect, 2 Oct 2026).
  */
-export function noneOverhead(zone: string, now: number, questionsHeld: readonly string[]): string | null {
+export function noneOverhead(zone: string, now: number, questionsHeld: readonly string[], nasaLoaded = true): string | null {
   if (questionsHeld.length > 0) return null;
   let next: { start: number; q: Question } | null = null;
   for (const q of QUESTIONS) {
@@ -323,7 +278,9 @@ export function noneOverhead(zone: string, now: number, questionsHeld: readonly 
     const w = conditionFor(q.id)?.windows.find((x) => x.start > now);
     if (w && (!next || w.start < next.start)) next = { start: w.start, q };
   }
-  const none = "None of the 12 questions' skies is overhead tonight.";
+  const none = nasaLoaded
+    ? "None of the 12 questions' skies is overhead tonight."
+    : "None of these skies is overhead tonight. NASA's log didn't load, so storms and flares can't be checked.";
   const when = next ? startsWhen(zone, now, next.start) : null;
   return next && when ? `${none} Next: ${next.q.subject} begins ${when}.` : none;
 }
@@ -346,11 +303,14 @@ export function tonightSky({
   zone,
   sky,
   questionsHeld,
+  nasaLoaded = true,
 }: {
   now: number;
   zone: string;
   sky: SkyAtWithWords;
   questionsHeld: readonly string[];
+  /** Whether NASA's log read, so storms and flares were checked. */
+  nasaLoaded?: boolean;
 }): Tonight {
   return {
     heading: tonightHeading(zone, now),
@@ -368,6 +328,6 @@ export function tonightSky({
       name: b.name,
     })),
     receptions: receptions(sky.bodies),
-    noneOverhead: noneOverhead(zone, now, questionsHeld),
+    noneOverhead: noneOverhead(zone, now, questionsHeld, nasaLoaded),
   };
 }

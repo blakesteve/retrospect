@@ -3,6 +3,7 @@ import { QUESTIONS } from "@/lib/answers/questions";
 import { guarded, loadListener } from "@/lib/listener/serve";
 import { moonAt, ninePm, skyNights } from "@/lib/listener/skyNights";
 import { spaceNights, zoneLongitude } from "@/lib/listener/spaceNights";
+import { sunMonths, sunsByNight } from "@/lib/listener/tonightCards";
 import { aboutMeters, dateIn, lunarDistanceWords, timeIn } from "@/lib/listener/words";
 import { type FilterId } from "@/lib/listener/record";
 import { kpLabel } from "@/lib/space/kp";
@@ -58,11 +59,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
       epic: true,
       longitude: zoneLongitude(clock, Number(from.slice(0, 4))),
     });
-    // SDO's Sun, for the gallery on a storm or flare night (8.7.1).
-    const sdo = new Map<string, { url: string; time: number }>();
-    for (const file of (await readMonths("sdo", monthsBetween(nightName(first).slice(0, 7), nightName(last).slice(0, 7)))).values()) {
-      for (const d of file.records) if (d.url) sdo.set(d.date, { url: d.url, time: Date.parse(d.time) / 1000 });
-    }
+    // SDO's Sun, for the gallery on a storm or flare night (8.7.1), by the night it was taken in.
+    const sun = sunsByNight((await readMonths("sdo", sunMonths(clock, first, last))).values(), clock, nasa);
     const tally = new Map(record.nights.map(([n, plays, after]) => [n, { plays, after }]));
     const wild = new Map(record.wild.map((w) => [w.night, w]));
     const songs = new Map(record.songs.listed.map((s) => [s.songId, s]));
@@ -101,14 +99,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
           caption: p.caption,
           credit: p.credit,
         })),
-        ...(sdo.has(date) && (s.kp !== null || s.xFlare)
+        ...(sun.has(n) && (s.kp !== null || s.xFlare)
           ? [
               {
                 kind: "sdo" as const,
-                url: sdo.get(date)!.url,
+                url: sun.get(n)!.url,
                 page: null,
                 // Every caption says when it was taken (7.3).
-                caption: `The Sun at ${timeIn(zone, sdo.get(date)!.time)} on ${dateIn(zone, sdo.get(date)!.time)}, from NASA's Solar Dynamics Observatory.`,
+                caption: `The Sun at ${timeIn(zone, sun.get(n)!.time)} on ${dateIn(zone, sun.get(n)!.time)}, from NASA's Solar Dynamics Observatory.`,
                 credit: "NASA/SDO and the AIA science team",
               },
             ]

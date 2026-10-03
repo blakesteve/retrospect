@@ -64,7 +64,18 @@ export interface SpaceOptions {
   epic?: boolean;
   /** Degrees east the zone faces at its standard offset, for EPIC (7.3). */
   longitude?: number;
+  /** EPIC's index, already read (`readEpicIndex`), null when it isn't
+      stored: a caller asking for many single nights reads it once. */
+  epicIndex?: EpicIndex | null;
 }
+
+/** The fill's index of EPIC (`work.ts`): the days read, and EPIC's own list. */
+export interface EpicIndex {
+  days: string[];
+  available?: string[];
+}
+
+export const readEpicIndex = () => readSpaceJson<EpicIndex>(`${SPACE_PREFIX}epic-done.json`);
 
 const uts = (iso: string) => Date.parse(iso) / 1000;
 
@@ -183,7 +194,7 @@ export async function spaceNights(
     }
   }
 
-  if (opts.epic) await pickEpic(out, months, opts.longitude ?? 0);
+  if (opts.epic) await pickEpic(out, months, opts.longitude ?? 0, opts.epicIndex === undefined ? await readEpicIndex() : opts.epicIndex);
   return out;
 }
 
@@ -195,11 +206,10 @@ export async function spaceNights(
  * EPIC listed it with no photos; a listed date not read yet is unknown, and
  * so is everything while the fill hasn't stored EPIC's list.
  */
-async function pickEpic(nights: Map<number, SpaceNight>, months: string[], longitude: number): Promise<void> {
+async function pickEpic(nights: Map<number, SpaceNight>, months: string[], longitude: number, index: EpicIndex | null): Promise<void> {
   const files = await readMonths("epic", months.filter((m) => m >= BACKFILL_FROM.epic));
   const byDate = new Map<string, EpicDay>();
   for (const f of files.values()) for (const d of f.records) byDate.set(d.date, d);
-  const index = await readSpaceJson<{ days: string[]; available?: string[] }>(`${SPACE_PREFIX}epic-done.json`);
   const available = index?.available ? new Set(index.available) : null;
   const lastListed = index?.available?.reduce((a, d) => (d > a ? d : a), "") ?? "";
   for (const [n, night] of nights) {

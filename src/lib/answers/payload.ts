@@ -1,5 +1,7 @@
 import { MIN_EVENTS, MIN_RETRO_N, type VerdictStatus } from "@/lib/analysis/confidence";
 import { isRetrograde, longitude, signOf, type SkyBody } from "@/lib/sky/sky";
+import { startsWhen } from "@/lib/listener/when";
+import { historySpan } from "@/lib/listener/words";
 import { zoneClock } from "@/lib/zone";
 import { conditionFor } from "./conditions";
 import {
@@ -96,7 +98,6 @@ const MONTHS_LONG = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SMALL = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -131,9 +132,6 @@ interface LocalDate {
   year: number;
   month: number;
   day: number;
-  weekday: number;
-  /** Days since 1970 on the local calendar, for "today" and "tomorrow". */
-  serial: number;
 }
 
 function localDate(zone: string, uts: number): LocalDate {
@@ -143,8 +141,6 @@ function localDate(zone: string, uts: number): LocalDate {
     year: d.getUTCFullYear(),
     month: d.getUTCMonth(),
     day: d.getUTCDate(),
-    weekday: d.getUTCDay(),
-    serial: Math.floor(local / DAY),
   };
 }
 
@@ -164,19 +160,6 @@ const monthYear = (zone: string, uts: number) => {
   const d = localDate(zone, uts);
   return `${MONTHS_LONG[d.month]} ${d.year}`;
 };
-
-/** When something starts, from now: "today", "tomorrow", "Saturday" within a
-    week, "Oct 24" within a year, else null (the caller says "around"). */
-function startsWhen(zone: string, nowUts: number, uts: number): string | null {
-  const now = localDate(zone, nowUts);
-  const at = localDate(zone, uts);
-  const days = at.serial - now.serial;
-  if (days <= 0) return "today";
-  if (days === 1) return "tomorrow";
-  if (days < 7) return WEEKDAYS[at.weekday];
-  if (uts - nowUts <= 365 * DAY) return shortDate(at, at.year !== now.year);
-  return null;
-}
 
 /* ---- The measures' words (9.2) -------------------------------------------- */
 
@@ -424,14 +407,12 @@ function tooEarlyShort(q: Question, rec: QuestionRecord, zone: string): string {
   }
 }
 
-/** "in your three years", "in your 20 years", "in your eight months". */
-function spanWords(seconds: number): string {
-  const years = seconds / (365.25 * DAY);
-  if (years >= 1.5) {
-    const n = Math.round(years);
-    return `in your ${spelled(n)} years`;
-  }
-  const months = Math.max(1, Math.round(seconds / (30.44 * DAY)));
+/** "in your three years", "in your 20 years", "in your 18 months": whole
+    years from 2, months under, always rounded down (`historySpan`). */
+function spanWords(start: number, end: number): string {
+  const { months, years } = historySpan(start, end);
+  if (months >= 24) return `in your ${spelled(years)} years`;
+  if (months < 1) return "in your few weeks";
   return `in your ${spelled(months)} month${months === 1 ? "" : "s"}`;
 }
 
@@ -440,7 +421,7 @@ function whatHappened(q: Question, rec: QuestionRecord, swing: number): string {
   // "You listened 1% more than usual"; a share's "bigger" already compares.
   const thanUsual = barely(swing) || q.measure !== "listening" ? "" : " than usual";
   const noun = rec.events === 1 ? q.eventNoun.one : q.eventNoun.many;
-  return `${capital(q.when)}, ${long}${thanUsual}, across ${count(rec.events)} ${noun} ${spanWords(rec.spanEnd - rec.spanStart)}.`;
+  return `${capital(q.when)}, ${long}${thanUsual}, across ${count(rec.events)} ${noun} ${spanWords(rec.spanStart, rec.spanEnd)}.`;
 }
 
 const PRONOUN: Partial<Record<SkyBody, { she: string; her: string }>> = {
@@ -618,6 +599,9 @@ export function computingPayload(): ComputingPayload {
  * yet, more than half too early, any Yes, any Maybe, otherwise No. "The first
  * to arrive" is the earliest warm-up end or next event among the questions
  * held back only by events or the warm-up; plays have no date to promise.
+ * Nothing tested with some still checking or not checked says what's true,
+ * by count, never "Too early for all 12" (architect, 2 Oct 2026); the line
+ * counts those, so the card's "{n} not checked yet" is left off.
  */
 function revealLines(
   questions: QuestionPayload[],
@@ -628,6 +612,15 @@ function revealLines(
   const notChecked = tally["Not checked"] > 0 ? `${capital(spelled(tally["Not checked"]))} not checked yet` : null;
   const tested = questions.filter((q) => q.status === "tested" && !q.updating);
   let line: string;
+  const pending = tally.Checking + tally["Not checked"];
+  if (tested.length === 0 && pending > 0) {
+    const early = tally["Too early"];
+    const parts = [
+      ...(early > 0 ? [`${spelled(early)} ${early === 1 ? "needs" : "need"} more history`] : []),
+      `${spelled(pending)} ${pending === 1 ? "is" : "are"} still being checked`,
+    ];
+    return { line: `No answers yet: ${parts.join(", ")}.`, notChecked: null };
+  }
   if (tested.length === 0) {
     const arriving = questions
       .map((q) => ({

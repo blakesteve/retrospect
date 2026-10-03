@@ -2,7 +2,8 @@
 
 **Index**
 
-- **Done:** Tonight, the sheets, the landing and the reveal (2 Oct 2026) ·
+- **Done:** Tonight's follow-ups (2 Oct 2026) · Tonight, the sheets, the
+  landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
   songs, highlights and genres as facts (1 Oct 2026) ·
   NASA's data, and questions 7 and 8 (1 Oct 2026) · The answers
@@ -19,6 +20,33 @@
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Tonight's follow-ups (2 October 2026)
+
+- **The Sun on the right night.** SDO files a picture under the UTC day of
+  the event it aims at, so a night now shows the picture taken during it, by
+  the listener's clock (ClickUp 86e3jdkeg): Chicago's May 10, 2024 shows the
+  X5.8 at 8:26 p.m., and May 11 no longer shows it. Two in one night: the one
+  nearer that night's biggest X flare, or strongest storm reading. The
+  landing's May 10 sample shows the X5.8 too. A storm night no stored picture
+  was taken in now shows no Sun (Chicago's May 11, 2024): the fill keeps one
+  picture per UTC day.
+- **Wild cards keep their photos.** One night's facts that won't read cost
+  only that card's photo, and EPIC's index is read once per request.
+- **The reveal never says "Too early for all 12"** while some questions are
+  still being checked: "No answers yet: 10 need more history, two are still
+  being checked."
+- **NASA's log unread**: the "none overhead" line leaves storms and flares
+  out and says why, with no count.
+- **One set of day words** for chips, heads-ups and the "none overhead" line
+  (`src/lib/listener/when.ts`), counted from the night the heading names: at
+  1 a.m. Tuesday, Monday afternoon and the rest of the night are "today". A
+  test fails if a second copy appears.
+- **A history's length is never rounded up**, through one function: ten
+  years and nine months is "Ten years", and the answers' "in your 10 years".
+- **The habits' copy follows 9.2**: "4 a.m." and "6 p.m." in the badges and
+  the hour chart, whole percents ("less than 1%" under half of one), and the
+  pending sentence's month in the listener's zone.
 
 ### Tonight, the sheets, the landing and the reveal (2 October 2026)
 
