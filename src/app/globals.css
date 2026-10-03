@@ -281,24 +281,66 @@ html {
   font-variant-emoji: text;
 }
 
-/* A row you swipe (10): scrolls sideways inside itself, never the page. */
-.rail {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding: 0 16px;
-  padding: 4px 16px 14px;
-  margin: 0 -16px;
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
+/* Motion (spec 8.11): transform and opacity only; nothing under reduced
+   motion; held still while the tab is hidden (`data-hidden`, set by the
+   listener views). The final state is each element's own style, so the
+   page is complete at rest. */
+
+/* The wheel arrives on a visit's first paint: the planets scale up from
+   30% and fade in, 60ms apart, done within 1.2s (the prototype's plIn). */
+@keyframes pl-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
 }
-.rail::-webkit-scrollbar {
-  display: none;
+.pl-arrive {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pl-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
 }
-.rail > * {
-  scroll-snap-align: start;
-  flex: none;
+
+/* A planet pulses: once on arriving at a moment, three times for the
+   heads-up, then holds still. */
+@keyframes pl-pulse {
+  50% {
+    transform: scale(1.38);
+  }
+}
+.pl-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pl-pulse 0.9s ease-in-out var(--pulse-delay, 0ms) var(--pulse-n, 1);
+}
+
+/* A Too early jar fills once, from empty to its level over 600ms. */
+@keyframes jar-fill {
+  from {
+    transform: scaleY(0);
+  }
+}
+.jar-fill {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: jar-fill 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-play-state: paused;
+}
+.jar-fill[data-run] {
+  animation-play-state: running;
+}
+
+[data-hidden] .pl-arrive,
+[data-hidden] .pl-pulse,
+[data-hidden] .jar-fill {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pl-arrive,
+  .pl-pulse,
+  .jar-fill {
+    animation: none;
+  }
 }
 
 .sky-card {

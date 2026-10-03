@@ -24,7 +24,7 @@ import {
   type WildNight,
 } from "./highlights";
 import { tallyNights, usualByWeekday } from "./nights";
-import { skyNights } from "./skyNights";
+import { moonPhaseAt, skyNights } from "./skyNights";
 import { selectSongs, songsOf, type SelectedSong } from "./songs";
 import { spaceNights } from "./spaceNights";
 import { factSeeds, NO_FACTS, type FactSeeds } from "./tonightCards";
@@ -42,8 +42,9 @@ import type { TagStore } from "@/lib/genres";
  */
 
 /** Bump when anything stored here, sentences included, changes. 2: the
-    Surprise facts' examples (`surpriseFacts`). */
-export const LISTENER_VERSION = 2;
+    Surprise facts' examples (`surpriseFacts`). 3: each song's Moon phase,
+    and wild nights ranked by whether the zone saw their eclipse (7.5). */
+export const LISTENER_VERSION = 3;
 export const MAX_ZONES = 4;
 
 /** The Every night filters (8.5), each counting nights you listened. */
@@ -85,6 +86,10 @@ export interface SongEntry extends SelectedSong {
       the history's first 90 days, the first scrobble included: its first
       play isn't news (7.5), so no question is pointed at. */
   questionsHeld: string[];
+  /** The Moon's phase angle at the first-play minute (MoonPhase: 0 new, 180
+      full), to 0.01°, so a drawn sky shows her real phase (8.9). Missing
+      from a version 2 record; the songs route fills it in. */
+  moonPhase: number;
 }
 
 export interface ListenerRecord {
@@ -241,6 +246,7 @@ export async function computeListener(
       pairing: news ? pairingSentence(s.track, zone, f, chip, stormSpans, clock) : null,
       pairingFact: news ? pairingFact(f, chip, stormSpans, clock) : null,
       questionsHeld: ORDER.filter((id) => held.includes(id)),
+      moonPhase: moonPhaseAt(s.firstPlayUts),
     };
   };
   const listed = selection.listed.map(entryOf);

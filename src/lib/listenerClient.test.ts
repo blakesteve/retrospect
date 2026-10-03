@@ -127,14 +127,23 @@ describe("the listener components", () => {
     readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((e) =>
       e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)],
     );
-  const files = [...walk("src/components/listener"), "src/components/Histogram.tsx", "src/components/Apod.tsx", "src/components/NoScrobbles.tsx", "src/components/SyncScreen.tsx"].filter((f) =>
-    /\.tsx?$/.test(f),
-  );
+  // With the pure modules the browser imports for them (`src/lib/client`, `src/lib/motion`), tests aside.
+  const files = [
+    ...walk("src/components/listener"),
+    ...walk("src/lib/client"),
+    ...walk("src/lib/motion"),
+    "src/components/Histogram.tsx",
+    "src/components/Apod.tsx",
+    "src/components/NoScrobbles.tsx",
+    "src/components/SyncScreen.tsx",
+  ].filter((f) => /\.tsx?$/.test(f) && !/\.test\.ts$/.test(f));
   const sources = files.map((f) => ({ f, s: readFileSync(path.join(root, f), "utf8") }));
 
   it("reach every file they're about", () => {
     expect(files).toContain(path.join("src/components/listener/Tonight.tsx"));
     expect(files).toContain(path.join("src/components/listener/sheets/QuestionSheet.tsx"));
+    expect(files).toContain(path.join("src/lib/client/forYou.ts"));
+    expect(files).toContain(path.join("src/lib/motion/wheelPath.ts"));
     expect(files.length).toBeGreaterThan(15);
   });
 
@@ -153,6 +162,26 @@ describe("the listener components", () => {
     // The control: the pattern catches a runtime import of the payload module.
     expect(runtimeImports('import { answersPayload } from "@/lib/answers/payload";')[0]).toMatch(banned);
     expect(runtimeImports('import type { AnswersPayload } from "@/lib/answers/payload";')).toEqual([]);
+  });
+
+  it("never name a question by its number alone (9.2, 2 Oct 2026)", () => {
+    // "Question {n}: {short name}", "Question {n}, on {subject}", or the
+    // sheet's own "Question {n} of 12"; anything else after the number is bare.
+    const bare = /Question (?:\$\{[^}]+\}|\{[^}]+\})(?!:|,| of )/;
+    let reached = 0;
+    for (const { f, s } of sources) {
+      for (const m of s.matchAll(/Question (?:\$\{[^}]+\}|\{[^}]+\})[^\n]{0,4}/g)) {
+        reached++;
+        expect(m[0], f).not.toMatch(bare);
+      }
+    }
+    expect(reached).toBeGreaterThanOrEqual(6);
+    // Controls: the pattern catches 3a's bare link and passes the named forms.
+    expect("Question {meta.number}\n</SheetLink>").toMatch(bare);
+    expect("Question ${held.number} has the answer").toMatch(bare);
+    expect("Question {q.number}: {q.shortName}").not.toMatch(bare);
+    expect("Question ${held.number}, on ${held.subject}").not.toMatch(bare);
+    expect("Question ${question.number} of 12").not.toMatch(bare);
   });
 
   it("never write what 9.6 forbids, in any string they show", () => {

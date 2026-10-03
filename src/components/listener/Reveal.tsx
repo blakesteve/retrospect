@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Re
 import { Button, Stat } from "@blakesteve/roster";
 import type { AnswerWord } from "@/lib/answers/words";
 import { useListener } from "./Shell";
-import { songIndex } from "./format";
+import { nightTitle, songIndex } from "./format";
 import { Jar, WORD_COLOR } from "./pieces";
 import { SkyWheel } from "./sky";
 
@@ -104,8 +104,10 @@ export function Reveal({ onDone }: { onDone: (seen?: boolean) => void }) {
             // eslint-disable-next-line @next/next/no-img-element -- NASA's own CDN, credited
             <img src={wild.photo.url} alt="" className="mt-5 aspect-[4/3] w-full rounded-2xl object-cover" />
           )}
-          {/* The line opens with the night's title (8.3). */}
-          <p className="mt-5 text-[17px] leading-relaxed text-ink">{h.wildest.line}</p>
+          {/* The night's date as an eyebrow, so the card says which night;
+              the line opens with its title and says "that night" (8.3). */}
+          <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.14em] text-gold">{h.wildest.dateLine ?? nightTitle(h.wildest.date)}</p>
+          <p className="mt-2 text-[17px] leading-relaxed text-ink">{h.wildest.line}</p>
           {wild.photo?.credit && <p className="mt-2 text-[12px] text-ink-2">{wild.photo.credit}</p>}
         </>
       ),

@@ -6,14 +6,6 @@ import { Button, Card, Input } from "@blakesteve/roster";
 import { isValidUsername } from "@/lib/username";
 
 /**
- * `aria-invalid="true"` on a Roster `Input` (spec 8.1, 11). Roster's field is
- * Headless UI's, which sets `aria-invalid` from its own `invalid` prop and
- * overwrites one passed directly, so the prop that reaches it is `invalid`.
- * Roster's types don't list it; it rides through Roster's rest props.
- */
-export const invalidProps = (invalid: boolean) => ({ invalid, "aria-invalid": invalid ? ("true" as const) : undefined });
-
-/**
  * The username card (spec 8.1 item 6). The name is checked in the browser
  * with the status route's own pattern before anything is asked of the
  * server; a good one goes to `/u/{name}` with nothing else in the URL. There
@@ -62,7 +54,7 @@ export function UsernameForm() {
               setName(e.target.value);
               setInvalid(false);
             }}
-            {...invalidProps(invalid)}
+            aria-invalid={invalid || undefined}
             errorMessage={invalid ? "That doesn't look like a Last.fm username." : undefined}
             autoCapitalize="none"
             autoCorrect="off"

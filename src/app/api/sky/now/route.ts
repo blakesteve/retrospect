@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { QUESTIONS } from "@/lib/answers/questions";
 import { dateIn, timeIn } from "@/lib/listener/words";
+import { flareSize } from "@/lib/listener/spaceNights";
 import { readNasaLog } from "@/lib/space/compact";
 import { latestEpic } from "@/lib/space/latestEpic";
 import { refreshNasaAfter } from "@/lib/space/refresh";
@@ -18,10 +19,12 @@ export const dynamic = "force-dynamic";
  * next 45 days, at most 6, each with its date and time in the zone.
  *
  * Plus the top of Tonight (8.4), every sentence built here: the heading, the
- * time line, the Moon's line, up to three sky chips, each planet's words,
- * mutual receptions, the latest photo of Earth from the last 3 days (null
- * without one, or when NASA's data can't be read), and the "none overhead"
- * line when no question's sky holds.
+ * time line, the Moon's line (with and without her sign), each held
+ * question's sky line, the sky facts that fill the "for you" rows, each
+ * planet's words, mutual receptions, the latest photo of Earth from the last
+ * 3 days (null without one, or when NASA's data can't be read), and the
+ * "none overhead" row when no question's sky holds. The three sky chips are
+ * still sent, though no page reads them since the Tonight revision.
  */
 export async function GET(req: Request) {
   try {
@@ -34,8 +37,17 @@ export async function GET(req: Request) {
     const [nasa, epic] = await Promise.all([readNasaLog().catch(() => null), latestEpic(zone, now)]);
     refreshNasaAfter(nasa);
     const held = new Set<string>(sky.conditions);
-    if (nasa?.kp.some(([s, e]) => e >= tonightFrom && s <= now)) held.add("storms");
-    if (nasa?.xflares.some(([peak]) => peak >= tonightFrom && peak <= now)) held.add("flares");
+    // Tonight so far: its highest Kp reading, and its biggest X flare. A
+    // reading ending at 4 a.m. covered the night before, as the nights count
+    // it (a reading belongs to the night its last second falls in).
+    let kp: number | null = null;
+    for (const [s, e, k] of nasa?.kp ?? []) if (e > tonightFrom && s <= now && (kp === null || k > kp)) kp = k;
+    let flare: string | null = null;
+    for (const [peak, cls] of nasa?.xflares ?? []) {
+      if (peak >= tonightFrom && peak <= now && (!flare || flareSize(cls) > flareSize(flare))) flare = cls;
+    }
+    if (kp !== null) held.add("storms");
+    if (flare) held.add("flares");
     const questionsHeld = QUESTIONS.map((q) => q.id).filter((id) => held.has(id));
 
     return NextResponse.json({
@@ -45,7 +57,7 @@ export async function GET(req: Request) {
       questionsHeld,
       nasa: nasa ? "ok" : "unavailable",
       comingUp: comingUp(now).map((i) => ({ ...i, date: dateIn(zone, i.time), at: timeIn(zone, i.time) })),
-      ...tonightSky({ now, zone, sky, questionsHeld, nasaLoaded: nasa !== null }),
+      ...tonightSky({ now, zone, sky, questionsHeld, nasaLoaded: nasa !== null, nasaTonight: { kp, flare } }),
       epic,
     });
   } catch (err) {

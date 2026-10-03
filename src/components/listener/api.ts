@@ -7,9 +7,11 @@ import type { AnswersPayload, ComputingPayload, QuestionPayload } from "@/lib/an
 import type { SongEntry } from "@/lib/listener/record";
 import type { GenreFact } from "@/lib/listener/genres";
 import type { QuestionId } from "@/lib/answers/questions";
+import type { NoneOverhead, SkyFact, TonightMoon } from "@/lib/sky/tonight";
+import type { SkyPath } from "@/lib/motion/wheelPath";
 import { apiError } from "@/lib/visitorErrors";
 
-export type { AnswersPayload, ComputingPayload, QuestionPayload, SongEntry, GenreFact, QuestionId };
+export type { AnswersPayload, ComputingPayload, QuestionPayload, SongEntry, GenreFact, QuestionId, NoneOverhead, SkyFact, SkyPath };
 
 export type Dignity = "home" | "exalted" | "detriment" | "fall" | "neutral";
 
@@ -39,13 +41,6 @@ export interface SkyAt {
   questionsHeld?: QuestionId[];
 }
 
-export interface SkyChip {
-  kind: "station" | "sign" | "dignity" | "moon";
-  body?: string;
-  dignity?: Exclude<Dignity, "neutral">;
-  text: string;
-}
-
 export interface ComingUpItem {
   time: number;
   kind: "station" | "sign" | "moon" | "eclipse" | "condition";
@@ -53,6 +48,8 @@ export interface ComingUpItem {
   questions: QuestionId[];
   date: string;
   at: string;
+  /** The body the moment is about, which pulses on the wheel (8.11). */
+  body?: string | null;
 }
 
 export interface SkyNow {
@@ -64,12 +61,15 @@ export interface SkyNow {
   comingUp: ComingUpItem[];
   heading?: string;
   timeLine?: string;
-  moon?: { phaseName: string; illumination: number; label: string; line: string };
-  chips?: SkyChip[];
+  moon?: Pick<TonightMoon, "phaseName" | "illumination" | "label" | "line"> & { lineNoSign?: string };
+  /** Each held question's sky line, for "Tonight, for you" (8.4). */
+  skyLines?: Partial<Record<QuestionId, string>>;
+  /** Untested sky facts, in 8.4's order. */
+  skyFacts?: SkyFact[];
   planets?: (Planet & { degreeText?: string })[];
   receptions?: string[];
   epic?: { url: string; date: string; line: string; credit: string } | null;
-  noneOverhead?: string | null;
+  noneOverhead?: NoneOverhead | null;
 }
 
 export interface WildNight {
@@ -84,6 +84,8 @@ export interface WildNight {
   dateLine?: string;
   kind?: "eclipse" | "storm" | "flare" | "asteroid";
   photo?: { url: string; credit: string; caption: string } | null;
+  /** The Moon's phase angle at 9 p.m. that night, for a drawn sky (8.9). */
+  moonPhase?: number;
 }
 
 export interface SurpriseItem {
@@ -101,7 +103,8 @@ export interface Highlights {
   counts?: { plays: number; venusSignChanges: number; storms: number; flybys: number };
   wildCount?: number;
   wild?: WildNight[];
-  wildest?: { date: string; line: string } | null;
+  /** `dateLine`: "Friday, May 10, 2024", the reveal card's eyebrow (8.3). */
+  wildest?: { date: string; line: string; dateLine?: string } | null;
   strangest?: { songId: string; score: number; line: string } | null;
   surprise?: SurpriseItem[];
 }
@@ -143,6 +146,10 @@ export interface Night {
   wild: { rank: number; title: string; story: string } | null;
   genres: { genre: string; plays: number }[];
   space: NightSpace;
+  /** Every sign change and station during the night, with its sentence (8.7.2). */
+  changes?: { time: number; body: string; kind: "sign" | "station"; text: string }[];
+  /** "from 10:13 p.m. CDT", for a condition that began or ended in the night. */
+  conditionNotes?: Partial<Record<QuestionId, string>>;
 }
 
 export interface Nights {

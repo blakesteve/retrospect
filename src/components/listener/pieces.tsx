@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { Button, Pill, SegmentBar } from "@blakesteve/roster";
 import type { AnswerWord } from "@/lib/answers/words";
+import { FLUKE_LABELS, flukeFill } from "@/lib/client/fluke";
 import { Jar, WORD_COLOR } from "./jar";
 
 /* The shared pieces (spec 8.9): answer pills, the fluke meter, the storm
@@ -25,30 +26,28 @@ export function AnswerPill({ word, className = "" }: { word: AnswerWord; classNa
   );
 }
 
-const LIKELIHOODS = ["Very unlikely to be chance.", "Unlikely to be chance.", "Could be chance.", "Could easily be chance."];
-const NOTCH_LABELS = ["Very unlikely", "Unlikely", "Could be", "Could easily be"];
 const OFF = "rgba(242,239,230,.12)";
 
-/** The fluke meter: four notches, one lit, for the four likelihood phrases
-    (9.1), labeled in words. A meter, never a number. */
-export function FlukeMeter({ likelihood, word, labels = true }: { likelihood: string; word: AnswerWord; labels?: boolean }) {
-  const on = LIKELIHOODS.indexOf(likelihood);
+/** The fluke meter: four notches filled from the left up to the likelihood
+    phrase, weakest evidence first, so more fill means stronger evidence
+    (8.9, 9.1). Labeled in words, and only where its labels are: the
+    question sheet, never a grid tile. A meter, never a number. */
+export function FlukeMeter({ likelihood, word }: { likelihood: string; word: AnswerWord }) {
+  const fill = flukeFill(likelihood);
   return (
     <div aria-hidden className="w-full">
       <SegmentBar
         showLegend={false}
         size="md"
-        segments={NOTCH_LABELS.map((label, i) => ({ key: label, label, value: 1, color: i === on ? WORD_COLOR[word] : OFF }))}
+        segments={FLUKE_LABELS.map((label, i) => ({ key: label, label, value: 1, color: i < fill ? WORD_COLOR[word] : OFF }))}
       />
-      {labels && (
-        <div className="mt-1.5 grid grid-cols-4 text-[11px] leading-tight text-ink-2">
-          {NOTCH_LABELS.map((l, i) => (
-            <span key={l} className={i === on ? "font-semibold text-ink" : ""}>
-              {l}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="mt-1.5 grid grid-cols-4 text-[11px] leading-tight text-ink-2">
+        {FLUKE_LABELS.map((l, i) => (
+          <span key={l} className={i === fill - 1 ? "font-semibold text-ink" : ""}>
+            {l}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -148,35 +147,64 @@ export function Icon({ name, className = "size-[1.15em]" }: { name: IconName; cl
   );
 }
 
-/** A heading, an optional "See all", and a row (8.4, 11). */
+/** A row's heading line: the heading, and on the right "See all" and the
+    row's arrows (10: "in the row's heading line beside 'See all', never over
+    the cards"). */
+export function RowHead({
+  id,
+  title,
+  level = 2,
+  sub,
+  action,
+}: {
+  id: string;
+  title: ReactNode;
+  level?: 2 | 3;
+  sub?: ReactNode;
+  action?: ReactNode;
+}) {
+  const H = level === 3 ? "h3" : "h2";
+  return (
+    <div className="flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        <H id={`${id}-h`} className={`font-display leading-tight text-ink ${level === 3 ? "text-[22px]" : "text-[25px]"}`}>
+          {title}
+        </H>
+        {sub && <p className="mt-1 text-[13px] text-ink-2">{sub}</p>}
+      </div>
+      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+    </div>
+  );
+}
+
+/** A heading, an optional "See all", and what the row holds (8.4, 11). */
 export function Row({
   id,
   title,
+  level = 2,
   sub,
   action,
   children,
 }: {
   id: string;
-  title: string;
+  title: ReactNode;
+  level?: 2 | 3;
   sub?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section aria-labelledby={`${id}-h`} className="mt-10">
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 id={`${id}-h`} className="font-display text-[25px] leading-tight text-ink">
-            {title}
-          </h2>
-          {sub && <p className="mt-1 text-[13px] text-ink-2">{sub}</p>}
-        </div>
-        {action}
-      </div>
+      <RowHead id={id} title={title} level={level} sub={sub} action={action} />
       <div className="mt-3">{children}</div>
     </section>
   );
 }
+
+/** A row's trailing chevron: it opens something (8.9). */
+export const Chevron = ({ className = "" }: { className?: string }) => (
+  <Icon name="chev" className={`size-[18px] text-ink-2 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none ${className}`} />
+);
 
 /** Terms explained on tap (9.4), word for word. */
 export const TERMS = {
@@ -201,7 +229,7 @@ export type TermName = keyof typeof TERMS;
 /** A term popover (9.4, 11): the term is a button with `aria-expanded`, the
     explanation follows it in the DOM, and Escape closes it with focus left
     on the term. */
-export function Term({ name }: { name: TermName }) {
+export function Term({ name, label, className = "text-[13px] text-ink-2" }: { name: TermName; label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
@@ -217,9 +245,9 @@ export function Term({ name }: { name: TermName }) {
             setOpen(false);
           }
         }}
-        className="inline-flex min-h-11 items-center text-[13px] text-ink-2 underline decoration-dotted underline-offset-4 hover:text-gold"
+        className={`inline-flex min-h-11 items-center underline decoration-dotted underline-offset-4 hover:text-gold ${className}`}
       >
-        {name}
+        {label ?? name}
       </button>
       <span id={id} hidden={!open} className="mb-2 block rounded-xl border border-[var(--line)] bg-surface-2 px-3 py-2 text-[13px] leading-relaxed text-ink">
         {TERMS[name]}

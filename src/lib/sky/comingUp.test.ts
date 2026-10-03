@@ -21,6 +21,22 @@ describe("coming up (spec 7.4)", () => {
     expect(all.filter((i) => i.kind === "moon" && Math.abs(i.time - eclipse.time) < 86_400)).toEqual([]);
   });
 
+  it("names the body each is about, for the wheel's pulse (8.11)", () => {
+    const body = (text: string) => all.find((i) => i.text === text)?.body;
+    expect(body("Mercury stations retrograde in Aries")).toBe("Mercury");
+    expect(body("Total solar eclipse")).toBe("Sun");
+    expect(all.filter((i) => i.kind === "moon").map((i) => i.body)).toEqual(all.filter((i) => i.kind === "moon").map(() => "Moon"));
+    expect(all.find((i) => i.kind === "sign" && i.text.startsWith("The Sun"))?.body).toBe("Sun");
+    // The Moon entering her signs, and Venus and Mars coming into harmony.
+    expect(all.filter((i) => i.text.startsWith("The Moon enters")).every((i) => i.body === "Moon")).toBe(true);
+    expect(all.filter((i) => i.text.startsWith("The Moon enters")).length).toBeGreaterThan(0);
+    // The total lunar eclipse of Mar 14, 2025, from a month before.
+    const lunar = comingUp(at("2025-02-20T12:00:00Z"), 45, 100).find((i) => i.kind === "eclipse");
+    expect(lunar).toMatchObject({ text: "Total lunar eclipse", body: "Moon" });
+    const harmony = comingUp(at("2025-08-20T12:00:00Z"), 45, 100).find((i) => i.text === "Venus and Mars come into harmony");
+    expect(harmony?.body).toBe("Venus");
+  });
+
   it("keeps to the next 45 days, in time order, and shows at most 6", () => {
     expect(all.every((i) => i.time > now && i.time <= now + 45 * 86_400)).toBe(true);
     expect(all.map((i) => i.time)).toEqual([...all.map((i) => i.time)].sort((a, b) => a - b));

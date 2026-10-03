@@ -1,4 +1,5 @@
 import { conditionFor } from "@/lib/answers/conditions";
+import type { SkyBody } from "./sky";
 import { QUESTIONS, type QuestionId } from "@/lib/answers/questions";
 import { eclipseEvents, moonEvents, retrogradeWindows, signWindows } from "./windows";
 
@@ -17,6 +18,10 @@ export interface ComingUp {
   text: string;
   /** The questions whose condition starts with it, in question order. */
   questions: QuestionId[];
+  /** The body it's about, for the wheel's pulse (8.11): a station's or sign
+      change's planet, "Moon" for her phases, a lunar eclipse and her signs,
+      "Sun" for a solar eclipse, "Venus" for Venus and Mars in harmony. */
+  body: string | null;
 }
 
 export const COMING_UP_DAYS = 45;
@@ -31,20 +36,22 @@ export function comingUp(now: number, days = COMING_UP_DAYS, max = COMING_UP_MAX
   const items: ComingUp[] = [];
 
   for (const w of retrogradeWindows) {
-    if (soon(uts(w.start))) items.push({ time: uts(w.start), kind: "station", text: `${w.body} stations retrograde in ${w.sign}`, questions: [] });
-    if (soon(uts(w.end))) items.push({ time: uts(w.end), kind: "station", text: `${w.body} stations direct in ${w.signAtDirect}`, questions: [] });
+    if (soon(uts(w.start))) items.push({ time: uts(w.start), kind: "station", text: `${w.body} stations retrograde in ${w.sign}`, questions: [], body: w.body });
+    if (soon(uts(w.end))) items.push({ time: uts(w.end), kind: "station", text: `${w.body} stations direct in ${w.signAtDirect}`, questions: [], body: w.body });
   }
   for (const w of signWindows) {
     if (!["Sun", "Mercury", "Venus", "Mars"].includes(w.body) || !soon(uts(w.start))) continue;
-    items.push({ time: uts(w.start), kind: "sign", text: `${w.body === "Sun" ? "The Sun" : w.body} enters ${w.sign}`, questions: [] });
+    items.push({ time: uts(w.start), kind: "sign", text: `${w.body === "Sun" ? "The Sun" : w.body} enters ${w.sign}`, questions: [], body: w.body });
   }
   const eclipses = eclipseEvents.filter((e) => soon(uts(e.peak)));
-  for (const e of eclipses) items.push({ time: uts(e.peak), kind: "eclipse", text: `${capital(e.kind)} eclipse`, questions: [] });
+  for (const e of eclipses) {
+    items.push({ time: uts(e.peak), kind: "eclipse", text: `${capital(e.kind)} eclipse`, questions: [], body: e.kind.endsWith("solar") ? "Sun" : "Moon" });
+  }
   for (const e of moonEvents) {
     const t = uts(e.peak);
     // An eclipse is a full or new moon too: it's listed once, as the eclipse.
     if (!soon(t) || eclipses.some((x) => Math.abs(uts(x.peak) - t) < 86_400)) continue;
-    items.push({ time: t, kind: "moon", text: `${e.phase === "full" ? "Full" : "New"} moon in ${e.sign}`, questions: [] });
+    items.push({ time: t, kind: "moon", text: `${e.phase === "full" ? "Full" : "New"} moon in ${e.sign}`, questions: [], body: "Moon" });
   }
 
   for (const q of QUESTIONS) {
@@ -64,7 +71,7 @@ export function comingUp(now: number, days = COMING_UP_DAYS, max = COMING_UP_MAX
         same.questions.push(q.id);
         continue;
       }
-      items.push({ time: w.start, kind: "condition", text: conditionText(q.id, w.sign), questions: [q.id] });
+      items.push({ time: w.start, kind: "condition", text: conditionText(q.id, w.sign), questions: [q.id], body: conditionBody(q.id) });
     }
   }
 
@@ -73,6 +80,14 @@ export function comingUp(now: number, days = COMING_UP_DAYS, max = COMING_UP_MAX
     .sort((a, b) => a.time - b.time)
     .slice(0, max)
     .map((i) => ({ ...i, questions: [...new Set(i.questions)].sort((a, b) => order.get(a)! - order.get(b)!) }));
+}
+
+/** The body a condition is about: its planet, the Moon for hers, Venus for
+    Venus and Mars. Storms and flares are never coming up. */
+function conditionBody(id: QuestionId): SkyBody | null {
+  if (id === "fullmoon" || id === "newmoon") return "Moon";
+  if (id === "venusmars") return "Venus";
+  return conditionFor(id)?.body ?? null;
 }
 
 /** A condition that starts on its own: the Moon's signs, Venus and Mars in harmony. */

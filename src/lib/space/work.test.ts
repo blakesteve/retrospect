@@ -671,6 +671,38 @@ describe("the daily sources and the backfill", () => {
     expect(progress.passes).toEqual([{ at: progress.updatedAt, ms: s.ms, fetches: s.fetches, wrote: s.wrote.length, failed: s.failed.length, done: s.done }]);
     expect(progress.left.epic).toEqual({ count: 0, at: progress.updatedAt });
     expect(Object.keys(progress.left).sort()).toEqual(["apod", "donki-flr", "donki-gst", "epic", "epic-priority", "jpl-cad", "jpl-fireball", "sdo"]);
+    expect(progress.running).toBeNull();
+  });
+
+  it("says a full pass is running from its first fetch, and keeps saying so if it never records", async () => {
+    // A pass records only at its end, up to 270 s later (3 Oct 2026: the
+    // file looked empty for about four minutes).
+    const seen: unknown[] = [];
+    const fetchFake = globalThis.fetch;
+    vi.stubGlobal("fetch", async (href: string) => {
+      if (seen.length === 0) seen.push(JSON.parse((await blobs.get(PROGRESS_KEY))?.toString("utf8") ?? "null"));
+      return fetchFake(href);
+    });
+    await runSpaceWork({ budgetMs: 600_000 });
+    expect(seen[0]).toEqual({ updatedAt: "2026-10-12T12:00:00.000Z", left: {}, passes: [], running: { since: "2026-10-12T12:00:00.000Z" } });
+    // A pass cut short (the store fails as it records): the marker stays.
+    resetSpaceWork();
+    later(HOUR);
+    const put = blobs.put.bind(blobs);
+    vi.spyOn(blobs, "put").mockImplementation(async (key, body) => {
+      if (key === PROGRESS_KEY && JSON.parse(body.toString("utf8")).running === null) throw new Error("cut short");
+      return put(key, body);
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await runSpaceWork({ budgetMs: 600_000 });
+    const p = JSON.parse((await blobs.get(PROGRESS_KEY))!.toString("utf8"));
+    expect(p.running).toEqual({ since: "2026-10-12T13:00:00.000Z" });
+    expect(p.passes).toHaveLength(1);
+  });
+
+  it("marks nothing running for a DONKI-only pass", async () => {
+    await runSpaceWork({ budgetMs: 60_000, only: ["donki-gst", "donki-flr"] });
+    expect(await blobs.get(PROGRESS_KEY)).toBeNull();
   });
 
   it("keeps the latest 30 passes, and the last count of a source a pass didn't reach", async () => {

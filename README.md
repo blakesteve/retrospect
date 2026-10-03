@@ -20,10 +20,13 @@ statistics is the answer.
 ## What it does
 
 - **Tonight**: tonight's real sky as a wheel, each planet at its longitude
-  with a halo for its dignity, the Moon with its phase, up to three chips for
-  what's happening (a station, a sign change, a planet at home or in
-  detriment), and which of the 12 questions' skies are overhead, with what
-  each one said about you.
+  with a halo for its dignity and a key for the halos on the wheel, then
+  "Tonight, for you": one list, each row the sky ("Venus is in Scorpio, in
+  her detriment") over what your listening did under skies like it, the
+  question named. Then the Moon, Earth from DSCOVR, and what's coming up,
+  where "Show on the wheel" sends the planets along their real paths to that
+  moment and back. Below a heading with the history's length come the 12
+  questions, your songs, wild nights, genres and habits.
 - **The 12 questions**: fixed, the same for everyone, each answered Yes,
   Maybe, Not clearly, No or Too early, in plain words, with how likely it is
   to be chance. The math is there for anyone who opens "Show the math".
@@ -36,6 +39,14 @@ statistics is the answer.
   time zone.
 - **A reveal and a guide**: four cards the first time on a browser, then three
   tips; "Replay the reveal" in the footer shows the cards again.
+- **Rows a mouse can move**: every sideways row is Roster's `Carousel`, so
+  touch swipes, a mouse drags, and arrows beside "See all" page it where a
+  pointer can hover.
+- **Motion where the sky moves**, never on a result: the wheel's travel, the
+  planets arriving on a first visit, a row lighting its planet, a heads-up
+  planet's three pulses, a Too early jar filling. Everything that starts on
+  its own stops within 5 seconds, holds still in a hidden tab, and under
+  reduced motion the page is complete at rest.
 - **Head-to-head**: two usernames side by side (rewritten in a later step).
 - **The landing** says what Retrospect does and asks for a username first,
   then shows NASA's photo of Earth during the Apr 8, 2024 eclipse as an
@@ -77,10 +88,15 @@ them on the way in.
 ### A note on form controls
 
 Controls come from Roster, not hand-rolled markup: sheets are Roster's
-`Sheet`, the view switcher its `LiquidNav`, and fields, buttons, pills,
-switches and disclosures its own. What Roster has nothing for is the app's own,
-in `src/components/listener/`: the sky wheel, the Moon, the jar, the meters'
-labels and the icon set. The threshold slider that used to be the exception is
+`Sheet`, rows its `Carousel`, the view switcher its `LiquidNav` (shown once
+there are two views), a page-level fatal state its `EmptyState`, and fields,
+buttons, pills, switches and disclosures its own. What Roster has nothing for
+is the app's own, in `src/components/listener/`: the sky wheel and its travel,
+the Moon, the jar, the meters' labels and the icon set. The pure pieces they
+use (which "for you" rows show, the fluke meter's fill, the wheel's path math,
+its glyph layout and the trip controller the Sky view will share) live in
+`src/lib/client/` and `src/lib/motion/`, where tests reach them, and import
+nothing that reaches the sky data. The threshold slider that used to be the exception is
 gone with the report.
 
 The UTC-offset field used to be the second exception, on the grounds that
@@ -323,8 +339,11 @@ and close asteroids and its last year), then the rest of APOD and EPIC, each
 newest first. Vercel's "Run" button on the cron job starts a pass by hand;
 a full pass holds a lease in the bucket while it runs, so a second press
 during one skips rather than writing over it. `/api/space/progress` shows
-each full pass's calls, writes and what's left by source, in a browser: wait
-for its `updatedAt` to change before pressing Run again. The answers route also runs a DONKI-only pass after its
+each full pass's calls, writes and what's left by source, in a browser, and
+`running` with the time a pass started while one is under way (a pass
+records itself only at its end): wait for `running` to clear and
+`updatedAt` to change before pressing Run again. A `running` that never
+clears is a pass the 300-second limit cut short. The answers route also runs a DONKI-only pass after its
 response when the log is missing or over 3 hours old, at most once per 5
 minutes per instance; the cron waits for one running on its instance rather
 than skip the day. CCMC limits DONKI to about 100 calls at once, refilled at
@@ -369,22 +388,31 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 
 | Endpoint | What it returns |
 |---|---|
-| `/api/user/{name}/nights?from=YYYY-MM&to=YYYY-MM` | Every night of up to a year: plays against a usual night of that weekday, after-midnight plays, songs first heard (with pairings), the Moon at 9 p.m., the questions whose condition held, the filters it lights, its wild title, its genre mix, and NASA's facts with its photos. Plus each filter's count over the whole history. |
-| `/api/user/{name}/songs` | Your 12 most-played songs with 5 plays or more first played after your first 90 days, plus your first scrobble; "See all" lists 50. Each with its genre, first play, highlight chip and pairing sentence. |
-| `/api/user/{name}/highlights` | The reveal: how long, the count-ups, the wildest nights as cards (plays against a usual night, the night's photo) and the song with the strangest sky. Plus the "Surprise me" pool: song skies with a chip, wild nights, and dated facts. |
+| `/api/user/{name}/nights?from=YYYY-MM&to=YYYY-MM` | Every night of up to a year: plays against a usual night of that weekday, after-midnight plays, songs first heard (with pairings), the Moon at 9 p.m., every sign change and station during the night with its time ("The Moon entered Cancer at 10:12 p.m. CDT."; Jupiter and Saturn to the day), the questions whose condition held, with when for one that began or ended that night ("from 10:12 p.m. CDT"), the filters it lights, its wild title, its genre mix, and NASA's facts with its photos. Plus each filter's count over the whole history. |
+| `/api/user/{name}/songs` | Your 12 most-played songs with 5 plays or more first played after your first 90 days, plus your first scrobble; "See all" lists 50. Each with its genre, first play, highlight chip, pairing sentence and the Moon's phase at that minute. |
+| `/api/user/{name}/highlights` | The reveal: how long, the count-ups, the wildest nights as cards (plays against a usual night, the night's photo, the Moon's phase at 9 p.m.), one card per event, the wildest night's date ("Friday, May 10, 2024") and line, and the song with the strangest sky. Plus the "Surprise me" pool: song skies with a chip, wild nights, and dated facts. |
 | `/api/user/{name}/profile` | Your habits, with the sentence for the ones still waiting built on the server, so no page imports the sky's windows. Noise is always left out. |
 | `/api/user/{name}/genres` | Up to 12 genres with 50 plays or more: share, top artists, "rising" and biggest night. "building" while the tags are fetched. |
 | `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
-| `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days. Plus Tonight's words: the heading by local time, the Moon's line ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), up to three chips, every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the line for a night with no question's sky overhead. |
+| `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days, each with the body it's about. Plus Tonight's words: the heading by local time, the time (with the weekday from midnight to 4 a.m.), the Moon's line with and without her sign ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), each held question's sky line ("Mercury is retrograde until Oct 13", "A solar storm tonight, Kp 7"), the sky facts that fill the "for you" rows ("Jupiter turns retrograde Saturday"), every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the row for a night with no question's sky overhead, with the next start. It still sends the old chips, which no page reads since the Tonight revision. |
+| `/api/sky/path?to=` | The wheel's path to a coming-up moment at most 45 days out: every body's longitude from now (down to the hour) to `to` (to the hour), the Moon hourly and the rest daily, both ends included, to 0.01°. Cached until the hour turns. |
 | `/api/sky/planet?body=&from=&to=` | A planet's sheet: tonight's sign and dignity, its dignity in every sign, its path through a history as a strip (the Moon's as a letter per night), its next station and sign change, and the questions about it. Jupiter and Saturn to the day, the others to the minute. |
 
 A night runs 4 a.m. to 4 a.m. local. A question's condition holds on every
 night its window touches, but the full- and new-moon filters light only the
 night of the exact instant, and an eclipse the night of greatest eclipse.
-Wild nights rank total solar, annular and total lunar eclipses, then G5 and
-G4 storms, flares of X5 or more and asteroids of about 50 m closer than the
+Wild nights rank total solar, annular and total lunar eclipses seen from the
+listener's zone, then G5 and G4 storms, then the eclipses the zone didn't
+see, then flares of X5 or more and asteroids of about 50 m closer than the
 Moon; a curated title (`src/data/space-events.json`) heads a night when one
-matches, and the log's words otherwise. Pairings are facts with a time and a
+matches, and the log's words otherwise. "Seen" means at least 10% of the Sun
+covered with the Sun up, or the Moon up at a lunar eclipse's greatest moment,
+at the zone's principal city from IANA's `zone1970.tab`, old names included
+through its `backward` links (tzdata 2026b, from github.com/eggert/tz at tag
+2026b, committed at `src/data/tz/`; `node scripts/zone-cities.mjs` turns them
+into `cities.json`). UTC and Etc zones see every eclipse. It's a ranking rule
+only, and no copy names the city. A storm that runs past 4 a.m. is one card,
+on the night of its higher reading, though both nights stay wild. Pairings are facts with a time and a
 date ("You first played Apple at 7:18 a.m. CDT on Oct 3, 2024, the minute an
 X9.0 flare peaked."), never a cause, and the answers carry each question's
 pairings.

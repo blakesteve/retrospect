@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { BODY_ORDER, C, R0, R1, RA, RP, VB, glyphAngles, glyphSize } from "@/lib/motion/wheelLayout";
 import type { Dignity, Planet } from "./api";
 
 /* The sky wheel and the Moon (spec 8.9). Drawn from the numbers the sky
@@ -19,7 +20,7 @@ const PLANET_GLYPHS: Record<string, string> = {
   Jupiter: "♃",
   Saturn: "♄",
 };
-export const BODY_ORDER = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"];
+export { BODY_ORDER };
 
 export const signGlyph = (sign: string) => `${SIGN_GLYPHS[SIGNS.indexOf(sign)] ?? ""}${VS}`;
 export const planetGlyph = (body: string) => `${PLANET_GLYPHS[body] ?? ""}${VS}`;
@@ -32,45 +33,6 @@ export const DIGNITY_COLOR: Record<Dignity, string | null> = {
   neutral: null,
 };
 
-interface Placed {
-  body: string;
-  lon: number;
-  a: number;
-  sz: number;
-}
-
-/** Push glyphs that would overlap apart along the circle, symmetrically, so
-    every planet stays readable; each keeps a tick at its true longitude. */
-function relax(items: Placed[], rp: number) {
-  const sep = (a: Placed, b: Placed) => (((a.sz + b.sz) / 2) * 1.28 * 180) / (rp * Math.PI);
-  for (let it = 0; it < 90 && items.length > 1; it++) {
-    items.sort((x, y) => x.a - y.a);
-    let moved = false;
-    for (let i = 0; i < items.length; i++) {
-      const A = items[i];
-      const B = items[(i + 1) % items.length];
-      let d = B.a - A.a;
-      if (i === items.length - 1) d += 360;
-      const need = sep(A, B);
-      if (d < need) {
-        const push = (need - d) / 2 + 0.05;
-        A.a -= push;
-        B.a += push;
-        moved = true;
-      }
-    }
-    for (const x of items) x.a = ((x.a % 360) + 360) % 360;
-    if (!moved) break;
-  }
-}
-
-const VB = 320;
-const C = VB / 2;
-const R0 = C - 3;
-const R1 = R0 * 0.8;
-const RP = R0 * 0.6;
-const RA = R0 * 0.36;
-
 /** 0° Aries at 9 o'clock, the zodiac running counterclockwise, as a chart
     is drawn. */
 const at = (lon: number, r: number): [number, number] => {
@@ -81,38 +43,56 @@ const f = (n: number) => n.toFixed(2);
 
 export interface SkyWheelProps {
   bodies: Planet[];
-  /** Rendered width in CSS pixels; the hit areas stay 44px at any size. */
+  /** Rendered width in CSS pixels; the hit areas stay 44px at any size. A
+      `className` size may override it (Tonight's 280px under 400px wide). */
   size: number;
   /** Tappable planets (Tonight, a song's sky); small wheels on cards are not. */
   onPlanet?: (body: string) => void;
   aspects?: { a: string; b: string; name: string }[];
   className?: string;
+  /** Bodies kept lit while the others dim to 40% (8.11 item 2). */
+  highlight?: readonly string[] | null;
+  /** Bodies that pulse `times` times; a new `key` starts it again (8.11). */
+  pulse?: { bodies: readonly string[]; times: number; key: string; delayMs?: number; onEnd?: () => void } | null;
+  /** The planets arrive: from 30% and transparent, 60ms apart (8.11 item 4). */
+  arrive?: boolean;
+  /** Traveling (8.11 item 1): the planets move by transform alone, so the
+      lines from a nudged glyph to its true longitude wait for the end. */
+  moving?: boolean;
+  /** Each glyph's angle while traveling, blended by the trip; otherwise laid out here. */
+  glyphs?: Record<string, number> | null;
+  /** The arrival has finished (its last planet's animation ended). */
+  onArrived?: () => void;
 }
 
-/**
- * The sky wheel: 12 sectors with their glyphs, each planet at its real
- * longitude with a halo colored by dignity (home over exalted, fall over
- * detriment, decided by the server). Interactive wheels are a group named
- * "Sky wheel" whose planets are buttons with roving tabindex, arrow keys
- * moving in angular order (11); a tap goes to the nearest planet within
- * 22 CSS pixels, so neighboring hit areas never fight.
- */
-export function SkyWheel({ bodies, size, onPlanet, aspects = [], className = "" }: SkyWheelProps) {
+export function SkyWheel({
+  bodies,
+  size,
+  onPlanet,
+  aspects = [],
+  className = "",
+  highlight = null,
+  pulse = null,
+  arrive = false,
+  moving = false,
+  glyphs = null,
+  onArrived,
+}: SkyWheelProps) {
   const uid = useId().replace(/:/g, "");
   const svgRef = useRef<SVGSVGElement>(null);
   const interactive = Boolean(onPlanet);
   const scale = size / VB;
   const hitR = 22 / scale + 0.5;
 
+  // Always in BODY_ORDER, so a planet's node never moves in the DOM (which
+  // would restart its arrival) when it passes another.
   const placed = useMemo(() => {
-    const gs = VB * 0.074;
-    const items: Placed[] = BODY_ORDER.flatMap((body) => {
+    const angles = glyphs ?? glyphAngles(bodies);
+    return BODY_ORDER.flatMap((body) => {
       const p = bodies.find((b) => b.body === body);
-      return p ? [{ body, lon: p.longitude, a: p.longitude, sz: body === "Sun" || body === "Moon" ? gs * 1.32 : gs }] : [];
+      return p ? [{ body, lon: p.longitude, a: angles[body] ?? p.longitude, sz: glyphSize(body) }] : [];
     });
-    relax(items, RP);
-    return items;
-  }, [bodies]);
+  }, [bodies, glyphs]);
 
   // Angular order for the arrow keys: by true longitude.
   const angular = useMemo(() => [...placed].sort((x, y) => x.lon - y.lon).map((p) => p.body), [placed]);
@@ -247,21 +227,23 @@ export function SkyWheel({ bodies, size, onPlanet, aspects = [], className = "" 
           />
         );
       })}
-      {placed.map((p) => {
+      {placed.map((p, index) => {
         const planet = byBody.get(p.body)!;
         const r = p.sz;
         const [gx, gy] = at(p.a, RP);
-        const [tx1, ty1] = at(p.lon, R1);
-        const [tx2, ty2] = at(p.lon, R1 - 7);
         const moved = Math.abs(((p.a - p.lon + 540) % 360) - 180) > 1.5;
         const [lx, ly] = at(p.lon, R1 - 7);
         const color = DIGNITY_COLOR[planet.dignity];
         const [rx, ry] = at(p.a, RP - r * 0.95);
         const focusable = interactive;
+        const dim = highlight !== null && highlight.length > 0 && !highlight.includes(p.body);
+        const pulsing = pulse !== null && pulse.bodies.includes(p.body);
         return (
           <g
             key={p.body}
             data-body={p.body}
+            style={{ opacity: dim ? 0.4 : 1 }}
+            className={`motion-safe:transition-opacity motion-safe:duration-200 ${focusable ? "outline-none [&:focus-visible_.pl-sel]:opacity-100" : ""}`}
             {...(focusable
               ? {
                   role: "button",
@@ -269,48 +251,81 @@ export function SkyWheel({ bodies, size, onPlanet, aspects = [], className = "" 
                   "aria-label": planet.name ?? `${p.body} in ${planet.sign}, ${planet.dignityPhrase}`,
                   onKeyDown: (e: KeyboardEvent<SVGGElement>) => onKey(e, p.body),
                   onFocus: () => setFocusBody(p.body),
-                  className: "outline-none [&:focus-visible_.pl-sel]:opacity-100",
                 }
               : {})}
           >
-            <line x1={f(tx1)} y1={f(ty1)} x2={f(tx2)} y2={f(ty2)} stroke="rgba(242,239,230,.6)" strokeWidth={1.6} />
-            {moved && <line x1={f(lx)} y1={f(ly)} x2={f(gx)} y2={f(gy)} stroke="rgba(242,239,230,.3)" strokeWidth={0.7} />}
-            {color ? (
-              <>
-                <circle cx={f(gx)} cy={f(gy)} r={(r * 0.74).toFixed(1)} fill={color} opacity={0.5} filter={`url(#${uid}bl)`} />
-                <circle cx={f(gx)} cy={f(gy)} r={(r * 0.62).toFixed(1)} fill={color} fillOpacity={0.2} stroke={color} strokeWidth={1.2} />
-              </>
-            ) : (
-              <circle cx={f(gx)} cy={f(gy)} r={(r * 0.56).toFixed(1)} fill="rgba(242,239,230,.04)" stroke="rgba(242,239,230,.2)" strokeWidth={0.8} />
-            )}
-            {focusable && (
-              <>
-                {/* Two-tone focus ring (11): sky inside gold. */}
-                <circle className="pl-sel" cx={f(gx)} cy={f(gy)} r={(r * 0.86).toFixed(1)} fill="none" stroke="var(--sky)" strokeWidth={5} opacity={0} />
-                <circle className="pl-sel" cx={f(gx)} cy={f(gy)} r={(r * 0.86 + 2.5).toFixed(1)} fill="none" stroke="var(--gold)" strokeWidth={2.2} opacity={0} />
-              </>
-            )}
-            <text
-              x={f(gx)}
-              y={f(gy)}
-              fontSize={r.toFixed(1)}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="var(--text-primary)"
-              className="font-glyph"
-              aria-hidden
-            >
-              {planetGlyph(p.body)}
-            </text>
-            {planet.retrograde && (
-              <text x={f(rx)} y={f(ry)} fontSize={(r * 0.42).toFixed(1)} textAnchor="middle" dominantBaseline="central" fill="var(--text-secondary)" aria-hidden>
-                {"℞"}
-              </text>
-            )}
+            {/* The tick at the true longitude, turned into place. */}
+            <line x1={f(C - R1)} y1={C} x2={f(C - R1 + 7)} y2={C} transform={`rotate(${f(-p.lon)} ${C} ${C})`} stroke="rgba(242,239,230,.6)" strokeWidth={1.6} />
+            {moved && !moving && <line x1={f(lx)} y1={f(ly)} x2={f(gx)} y2={f(gy)} stroke="rgba(242,239,230,.3)" strokeWidth={0.7} />}
+            <g transform={`translate(${f(gx)} ${f(gy)})`}>
+              <g
+                className={arrive ? "pl-arrive" : undefined}
+                style={arrive ? ({ "--i": index } as CSSProperties) : undefined}
+                onAnimationEnd={arrive && index === placed.length - 1 ? (e) => e.animationName === "pl-in" && onArrived?.() : undefined}
+              >
+                <g
+                  key={pulsing ? pulse!.key : "still"}
+                  className={pulsing ? "pl-pulse" : undefined}
+                  style={pulsing ? ({ "--pulse-n": pulse!.times, "--pulse-delay": `${pulse!.delayMs ?? 0}ms` } as CSSProperties) : undefined}
+                  onAnimationEnd={pulsing ? () => pulse!.onEnd?.() : undefined}
+                >
+                  {color ? (
+                    <>
+                      <circle r={(r * 0.74).toFixed(1)} fill={color} opacity={0.5} filter={`url(#${uid}bl)`} />
+                      <circle r={(r * 0.62).toFixed(1)} fill={color} fillOpacity={0.2} stroke={color} strokeWidth={1.2} />
+                    </>
+                  ) : (
+                    <circle r={(r * 0.56).toFixed(1)} fill="rgba(242,239,230,.04)" stroke="rgba(242,239,230,.2)" strokeWidth={0.8} />
+                  )}
+                  {focusable && (
+                    <>
+                      {/* Two-tone focus ring (11): sky inside gold. */}
+                      <circle className="pl-sel" r={(r * 0.86).toFixed(1)} fill="none" stroke="var(--sky)" strokeWidth={5} opacity={0} />
+                      <circle className="pl-sel" r={(r * 0.86 + 2.5).toFixed(1)} fill="none" stroke="var(--gold)" strokeWidth={2.2} opacity={0} />
+                    </>
+                  )}
+                  <text fontSize={r.toFixed(1)} textAnchor="middle" dominantBaseline="central" fill="var(--text-primary)" className="font-glyph" aria-hidden>
+                    {planetGlyph(p.body)}
+                  </text>
+                  {planet.retrograde && (
+                    <text x={f(rx - gx)} y={f(ry - gy)} fontSize={(r * 0.42).toFixed(1)} textAnchor="middle" dominantBaseline="central" fill="var(--text-secondary)" aria-hidden>
+                      {"℞"}
+                    </text>
+                  )}
+                </g>
+              </g>
+            </g>
           </g>
         );
       })}
     </svg>
+  );
+}
+
+const KEY: { dignity: Dignity; word: string }[] = [
+  { dignity: "home", word: "At home" },
+  { dignity: "exalted", word: "Exalted" },
+  { dignity: "detriment", word: "In detriment" },
+  { dignity: "fall", word: "In fall" },
+];
+
+/**
+ * The line under a wheel whose planets open something (8.9): "Tap any
+ * planet." and a key for the halo colors on that wheel right now, and only
+ * those, each a dot with its word.
+ */
+export function WheelKey({ bodies, className = "" }: { bodies: Planet[]; className?: string }) {
+  const shown = KEY.filter((k) => bodies.some((b) => b.dignity === k.dignity));
+  return (
+    <p className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-ink-2 ${className}`}>
+      <span className="text-ink">Tap any planet.</span>
+      {shown.map((k) => (
+        <span key={k.dignity} className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="size-2 rounded-full" style={{ background: DIGNITY_COLOR[k.dignity] ?? undefined }} />
+          {k.word}
+        </span>
+      ))}
+    </p>
   );
 }
 

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@blakesteve/roster";
 import { isValidUsername } from "@/lib/username";
-import { invalidProps } from "@/components/UsernameForm";
 
 /* "Compare two listeners" (spec 8.1 item 7): a quiet link that opens the
    compare form, two names and "Compare", going to `/vs/{a}/{b}` (8.8). */
@@ -73,7 +72,7 @@ export function CompareForm() {
               setA(e.target.value);
               setErrors((x) => ({ ...x, a: undefined }));
             }}
-            {...invalidProps(Boolean(errors.a))}
+            aria-invalid={errors.a ? true : undefined}
             errorMessage={errors.a}
             {...field}
           />
@@ -86,7 +85,7 @@ export function CompareForm() {
               setB(e.target.value);
               setErrors((x) => ({ ...x, b: undefined }));
             }}
-            {...invalidProps(Boolean(errors.b))}
+            aria-invalid={errors.b ? true : undefined}
             errorMessage={errors.b}
             {...field}
           />

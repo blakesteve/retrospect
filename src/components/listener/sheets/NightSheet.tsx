@@ -9,7 +9,7 @@ import { getJson, type Nights } from "../api";
 import { genreMix, nightTitle, nightWeekday, songIndex, tonightDate, utsAtLocal } from "../format";
 import { SheetLink } from "../cards";
 import { sheetFrom } from "../sheetUrl";
-import { AnswerPill, Icon, SheetFailed, SheetSkeleton, Terms } from "../pieces";
+import { AnswerPill, Chevron, Icon, SheetFailed, SheetSkeleton, Term } from "../pieces";
 import { DIGNITY_COLOR, SkyWheel, planetGlyph } from "../sky";
 import { Gallery, NightFacts, useNight, useSkyAt } from "./nightParts";
 
@@ -101,15 +101,17 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
       <Gallery night={night} />
 
       <h3 className={H3}>Your night</h3>
-      <Terms names={["A night"]} />
+      {/* "39 plays that night · a usual Friday is 46", with "that night" (or
+          "tonight", "so far") as the term (8.7.2, 9.4). */}
       <p className="mt-2 text-[17px] text-ink">
-        {night.plays.toLocaleString("en-US")} play{night.plays === 1 ? "" : "s"}
+        {night.plays.toLocaleString("en-US")} play{night.plays === 1 ? "" : "s"}{" "}
+        <Term name="A night" label={sofar ? "tonight" : "that night"} className="text-inherit" />
         {sofar}
         {night.usualForWeekday !== null ? ` · a usual ${nightWeekday(night.date)} is ${night.usualForWeekday.toLocaleString("en-US")}` : ""}
       </p>
       {night.afterMidnight > 0 && (
         <p className="mt-1 text-ink-2">
-          {night.afterMidnight.toLocaleString("en-US")} after midnight{sofar}
+          {night.afterMidnight.toLocaleString("en-US")} of them after midnight{sofar}
         </p>
       )}
       {mix && <p className="mt-1 text-ink-2">{mix}</p>}
@@ -118,14 +120,17 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
           {night.firstPlays.map((fp) => (
             <li key={fp.songId}>
               {songs.has(fp.songId) ? (
-                <SheetLink to={{ kind: "song", value: fp.songId }} className="block rounded-xl border border-[var(--hairline)] px-3 py-2.5 hover:border-[var(--gold)]">
-                  <span className="block text-ink">
-                    First heard {fp.track} by {fp.artist}
+                <SheetLink to={{ kind: "song", value: fp.songId }} className="group flex items-center gap-3 rounded-xl bg-[rgba(242,239,230,.04)] px-3 py-2.5 hover:bg-[rgba(242,239,230,.08)]">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-ink">
+                      First heard {fp.track} by {fp.artist}
+                    </span>
+                    {fp.pairing && <span className="mt-1 block text-[14px] text-ink-2">{fp.pairing}</span>}
                   </span>
-                  {fp.pairing && <span className="mt-1 block text-[14px] text-ink-2">{fp.pairing}</span>}
+                  <Chevron />
                 </SheetLink>
               ) : (
-                <div className="rounded-xl border border-[var(--line)] px-3 py-2.5">
+                <div className="rounded-xl px-3 py-2.5">
                   <span className="block text-ink">
                     First heard {fp.track} by {fp.artist}
                   </span>
@@ -148,6 +153,15 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
           <div className="skeleton size-[260px] rounded-full" aria-hidden />
         )}
       </div>
+      {/* The wheel shows one minute and the night lasts 24 hours, so every
+          sign change and station in it is named, with its time (8.7.2). */}
+      {night.changes && night.changes.length > 0 && (
+        <ul className="mt-3 space-y-1 text-center text-[14px] text-ink">
+          {night.changes.map((c) => (
+            <li key={`${c.time}-${c.body}`}>{c.text}</li>
+          ))}
+        </ul>
+      )}
       {sky && sky !== "failed" && (
         <ul className="mt-3 divide-y divide-[var(--line)]">
           {sky.bodies.map((b) => (
@@ -172,11 +186,13 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
               const a = answers?.questions.find((x) => x.id === q.id);
               return (
                 <li key={q.id}>
-                  <SheetLink to={{ kind: "q", value: q.id }} className="flex min-h-11 items-center justify-between gap-3 py-2.5">
-                    <span className="text-[15px] text-ink">
+                  <SheetLink to={{ kind: "q", value: q.id }} className="group flex min-h-11 items-center gap-3 py-2.5">
+                    <span className="min-w-0 flex-1 text-[15px] text-ink">
                       Question {q.number}: {q.shortName}
+                      {night.conditionNotes?.[q.id] ? <span className="text-ink-2"> · {night.conditionNotes[q.id]}</span> : null}
                     </span>
                     {a && <AnswerPill word={a.word} />}
+                    <Chevron />
                   </SheetLink>
                 </li>
               );

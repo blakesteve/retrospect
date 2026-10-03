@@ -8,7 +8,7 @@ import type { SheetBodyProps } from "../SheetHost";
 import { nightShort, songIndex, weekdayShortAt } from "../format";
 import { SheetLink } from "../cards";
 import { Icon, SheetFailed, SheetSkeleton } from "../pieces";
-import { SkyWheel } from "../sky";
+import { SkyWheel, WheelKey } from "../sky";
 import { Gallery, NightFacts, useNight, useSkyAt } from "./nightParts";
 
 /* The sky of a song (spec 8.7.1). */
@@ -58,8 +58,10 @@ export default function SongSheet({ value, setTitle, setBusy, invalid, retry }: 
         {sky && sky !== "failed" ? (
           <>
             <SkyWheel bodies={sky.bodies} size={300} onPlanet={setTapped} aspects={sky.aspects} />
-            <p className="mt-2 min-h-11 text-center text-[14px] text-ink-2" aria-live="polite">
-              {tappedPlanet ? (tappedPlanet.detail ?? tappedPlanet.line ?? `${tappedPlanet.body} in ${tappedPlanet.sign}`) : "Tap any planet."}
+            {/* "Tap any planet." and the halo key, then the tapped planet's line (8.7.1, 8.9). */}
+            <WheelKey bodies={sky.bodies} className="mt-2" />
+            <p className="mt-1 min-h-11 text-center text-[14px] text-ink" aria-live="polite">
+              {tappedPlanet ? (tappedPlanet.detail ?? tappedPlanet.line ?? `${tappedPlanet.body} in ${tappedPlanet.sign}`) : ""}
             </p>
           </>
         ) : sky === "failed" ? (
@@ -87,9 +89,10 @@ export default function SongSheet({ value, setTitle, setBusy, invalid, retry }: 
       {held && (
         <p className="mt-4">
           <SheetLink to={{ kind: "q", value: held.id }} className="inline-flex min-h-11 items-center gap-1 text-gold underline underline-offset-4">
+            {/* A question is named with its subject, never its number alone (9.2). */}
             {heldWord === "Too early"
-              ? `Coincidence or pattern? Question ${held.number} needs more nights to say.`
-              : `Coincidence or pattern? Question ${held.number} has the answer.`}
+              ? `Coincidence or pattern? Question ${held.number}, on ${held.subject}, needs more nights to say.`
+              : `Coincidence or pattern? Question ${held.number}, on ${held.subject}, has the answer.`}
           </SheetLink>
         </p>
       )}

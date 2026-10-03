@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+/* Loaded with the host, not with each sheet: a sheet loads on demand
+   (13), and Turbopack copies any module its parent hasn't loaded into that
+   sheet's own chunk. Without this, the Carousel the sheets' rows use was
+   copied into every sheet's chunk, 10 copies of about 12 kB in all. */
+import "@/components/listener/rail";
 import { useSearchParams } from "next/navigation";
 import { Sheet } from "@blakesteve/roster";
 import { useListener, VIEW_HEADING } from "./Shell";
@@ -43,8 +48,9 @@ function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>): boo
 
 export interface SheetBodyProps {
   value: string;
-  /** Refines the provisional title once the content knows it. */
-  setTitle: (title: string) => void;
+  /** Refines the provisional title once the content knows it. A node is
+      fine: Roster's `Sheet` keeps the title's text as its name (5.2.0). */
+  setTitle: (title: ReactNode) => void;
   setBusy: (busy: boolean) => void;
   /** The parameter points at nothing in this history (8.7). */
   invalid: () => void;
@@ -77,7 +83,7 @@ export function SheetHost({ onInvalid, lead }: { onInvalid: () => void; lead: { 
   const L = useListener();
   // What the sheet shows, kept through the leave so it never slides out empty.
   const [shown, setShown] = useState<SheetRef | null>(ref);
-  const [title, setTitle] = useState(ref ? PROVISIONAL[ref.kind] : "");
+  const [title, setTitle] = useState<ReactNode>(ref ? PROVISIONAL[ref.kind] : "");
   const [busy, setBusy] = useState(true);
   // A sheet the app didn't push arrived by a link: focus returns to the
   // view's heading when it closes (8.7, Roster's returnFocus).

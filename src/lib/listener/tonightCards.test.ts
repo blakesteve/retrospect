@@ -202,6 +202,11 @@ describe("the wild night cards (spec 8.4)", () => {
         line: "1 song · a usual Monday is 1",
         dateLine: "Mon, Apr 8, 2024",
         kind: "eclipse",
+        /* The Moon at 9 p.m. CDT, never a made-up one (8.9). The published
+           phases: new Apr 8, 18:21 UT (the eclipse, 7.6 hours before) and May
+           8, 03:22 UT; new Oct 2, 18:49 UT (the annular eclipse, near apogee,
+           so slow); last quarter Jun 28, 21:53 UT. */
+        moonPhase: 4.45,
         // No EPIC that day: the curated photo leads.
         photo: {
           url: "https://images-assets.nasa.gov/image/GRC-2024-C-02616/GRC-2024-C-02616~large.jpg",
@@ -220,6 +225,7 @@ describe("the wild night cards (spec 8.4)", () => {
         line: "39 songs · a usual Friday is 50",
         dateLine: "Fri, May 10, 2024",
         kind: "storm",
+        moonPhase: 38.43,
         // EPIC's Earth before SDO's Sun, though it's a storm night with both:
         // of the day's two, the one facing Chicago's standard longitude (-90°).
         photo: {
@@ -239,6 +245,7 @@ describe("the wild night cards (spec 8.4)", () => {
         line: "3 songs · a usual Thursday is 3",
         dateLine: "Thu, Oct 3, 2024",
         kind: "flare",
+        moonPhase: 14.04,
         // No EPIC and no curated photo: SDO's Sun, on an X-flare night.
         photo: {
           url: "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/10/03/20241003_121800_1024_0171.jpg",
@@ -257,6 +264,7 @@ describe("the wild night cards (spec 8.4)", () => {
         line: "3 songs · a usual Saturday is 3",
         dateLine: "Sat, Jun 29, 2024",
         kind: "asteroid",
+        moonPhase: 285.37,
         photo: {
           url: "https://images-assets.nasa.gov/image/PIA26383/PIA26383~large.jpg",
           credit: "NASA/JPL-Caltech",

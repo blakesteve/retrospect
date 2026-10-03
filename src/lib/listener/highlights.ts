@@ -1,6 +1,7 @@
 import { kpLabel, stormGrade } from "@/lib/space/kp";
 import { SPACE_EVENTS, type SpaceEvent } from "@/lib/space/curated";
 import { dignitiesOf, type SkyAt, type SkyBody } from "@/lib/sky/sky";
+import { eclipseVisible } from "@/lib/sky/visibility";
 import type { ZoneClock } from "@/lib/zone";
 import { flareSize, type Asteroid } from "./spaceNights";
 import { aboutMeters, dateIn, spelled, timeIn } from "./words";
@@ -34,9 +35,13 @@ export const WILD_ASTEROID_METERS = 50;
 
 export interface WildNight {
   night: number;
-  /** 0 total solar eclipse, 1 annular, 2 total lunar, 3 G5 storm, 4 G4 storm,
-      5 X5-or-bigger flare, 6 asteroid of about 50 m closer than the Moon. */
+  /** What heads it: 0 total solar eclipse, 1 annular, 2 total lunar, 3 G5
+      storm, 4 G4 storm, 5 X5-or-bigger flare, 6 asteroid of about 50 m closer
+      than the Moon. The row's order also reads `visible` (`wildOrder`). */
   rank: number;
+  /** An eclipse seen from the zone's principal city (7.5); always true for
+      the rest. Missing from a version 2 record, which reads as true. */
+  visible?: boolean;
   /** Within a rank, bigger first: the Kp, the flare's size or the meters. */
   size: number;
   title: string;
@@ -44,18 +49,33 @@ export interface WildNight {
   story: string | null;
   /** The curated event, when the title is curated. */
   eventId: string | null;
+  /** A storm-headed night's best other reason (a flare, say). When the
+      storm's card is another night's, this heads the night's own (7.5). */
+  then?: WildNight | null;
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const article = (word: string) => (/^[aeiou]|^X/i.test(word) ? "an" : "a");
 
+/**
+ * The row's order (7.5, changed 2 Oct 2026): total solar, annular and total
+ * lunar eclipses seen from the zone; G5 storms; G4 storms; then the eclipses
+ * not seen from it, in the same order; then X5 flares; then asteroids.
+ */
+export function wildOrder(rank: number, visible = true): number {
+  if (rank <= 2) return visible ? rank : rank + 5;
+  return rank <= 4 ? rank : rank + 3;
+}
+
 /** A night's wild reason, headed by its highest-ranked event (7.5), or null. */
 export function wildNight(e: NightEvents, clock: ZoneClock, events: SpaceEvent[] = SPACE_EVENTS): WildNight | null {
   if (e.plays < 1) return null;
-  const reasons: { rank: number; size: number; kind: SpaceEvent["kind"]; logTitle: string }[] = [];
-  const add = (rank: number, size: number, kind: SpaceEvent["kind"], logTitle: string) => reasons.push({ rank, size, kind, logTitle });
+  const reasons: { rank: number; size: number; visible: boolean; kind: SpaceEvent["kind"]; logTitle: string }[] = [];
+  const add = (rank: number, size: number, kind: SpaceEvent["kind"], logTitle: string, visible = true) =>
+    reasons.push({ rank, size, visible, kind, logTitle });
   if (e.eclipse && e.eclipse.kind in ECLIPSE_RANK) {
-    add(ECLIPSE_RANK[e.eclipse.kind], 0, "eclipse", `${capital(article(e.eclipse.kind))} ${e.eclipse.kind} eclipse`);
+    const visible = eclipseVisible(clock.zone, e.eclipse.kind, e.eclipse.time);
+    add(ECLIPSE_RANK[e.eclipse.kind], 0, "eclipse", `${capital(article(e.eclipse.kind))} ${e.eclipse.kind} eclipse`, visible);
   }
   if (e.kp !== null) {
     const grade = stormGrade(e.kp);
@@ -67,20 +87,56 @@ export function wildNight(e: NightEvents, clock: ZoneClock, events: SpaceEvent[]
     add(6, e.asteroid.meters, "asteroid", `An asteroid ${aboutMeters(e.asteroid.meters)} wide, closer than the Moon`);
   }
   if (reasons.length === 0) return null;
-  const head = reasons.sort((a, b) => a.rank - b.rank || b.size - a.size)[0];
-  const curated = events.find((ev) => ev.kind === head.kind && clock.nightOf(Date.parse(ev.at) / 1000) === e.night);
-  return {
-    night: e.night,
-    rank: head.rank,
-    size: head.size,
-    title: curated?.title ?? head.logTitle,
-    story: curated?.story ?? null,
-    eventId: curated?.id ?? null,
+  const ordered = reasons.sort((a, b) => wildOrder(a.rank, a.visible) - wildOrder(b.rank, b.visible) || b.size - a.size);
+  const card = (r: (typeof reasons)[number]): WildNight => {
+    const curated = events.find((ev) => ev.kind === r.kind && clock.nightOf(Date.parse(ev.at) / 1000) === e.night);
+    return {
+      night: e.night,
+      rank: r.rank,
+      visible: r.visible,
+      size: r.size,
+      title: curated?.title ?? r.logTitle,
+      story: curated?.story ?? null,
+      eventId: curated?.id ?? null,
+    };
   };
+  const head = card(ordered[0]);
+  // A storm can head two nights in a row; if this one's card goes to the
+  // other night, the night keeps its next reason (7.5).
+  const other = ordered[0].kind === "storm" ? ordered.find((r) => r.kind !== "storm") : undefined;
+  return other ? { ...head, then: card(other) } : head;
 }
 
-/** Rank order, bigger first within a rank, then newest first (7.5). */
-export const byWildness = (a: WildNight, b: WildNight) => a.rank - b.rank || b.size - a.size || b.night - a.night;
+/** The row's order, bigger first within a rank, then newest first (7.5). */
+export const byWildness = (a: WildNight, b: WildNight) =>
+  wildOrder(a.rank, a.visible ?? true) - wildOrder(b.rank, b.visible ?? true) || b.size - a.size || b.night - a.night;
+
+const isStorm = (w: WildNight) => w.rank === 3 || w.rank === 4;
+
+/**
+ * One event, one card (7.5, changed 2 Oct 2026). A storm that runs on past 4
+ * a.m. heads two nights in a row, or more; its card is the night with the
+ * higher reading, on a tie the night with a curated title, then the earlier.
+ * Only a storm can: an eclipse, a flare's peak and an asteroid's closest
+ * approach are each one instant, so one night. A night whose storm card goes
+ * to another night keeps a card for its next reason, if it has one (an X5.8
+ * flare the same night). Every night stays wild for the glow and the filter;
+ * this is the row and the reveal, in the row's order (7.5).
+ */
+export function oneCardPerEvent(wild: WildNight[]): WildNight[] {
+  const storms = new Map(wild.filter(isStorm).map((w) => [w.night, w]));
+  const keep = new Set<number>();
+  for (const w of storms.values()) {
+    if (storms.has(w.night - 1)) continue; // not the first night of its run
+    let best = w;
+    for (let n = w.night + 1; storms.has(n); n++) {
+      const x = storms.get(n)!;
+      if (x.size > best.size || (x.size === best.size && x.eventId !== null && best.eventId === null)) best = x;
+    }
+    keep.add(best.night);
+  }
+  return wild.flatMap((w) => (!isStorm(w) || keep.has(w.night) ? [w] : w.then ? [w.then] : [])).sort(byWildness);
+}
 
 /* ---- Song chips, scores and pairings ------------------------------------- */
 

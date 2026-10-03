@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button, Disclosure, Switch } from "@blakesteve/roster";
 import { QUESTIONS } from "@/lib/answers/questions";
 import { Histogram } from "@/components/Histogram";
@@ -10,8 +10,12 @@ import type { SheetBodyProps } from "../SheetHost";
 import { songIndex } from "../format";
 import { SongCard } from "../cards";
 import { FlukeMeter, Icon, Jar, SheetFailed, SheetSkeleton, WORD_COLOR } from "../pieces";
+import { Rail } from "../rail";
 
 /* A question (spec 8.7.3). Every sentence is the answers payload's. */
+
+/** Pairings show at most 8 in their row; "See all" opens the rest (8.7.3). */
+const PAIRINGS_IN_ROW = 8;
 
 const HOW_WE_KNOW =
   "We slide your whole sky calendar along your history by a random amount, 2,000 times, keeping the spacing between stretches, and see how often a swing this big turns up anyway.";
@@ -22,6 +26,7 @@ export default function QuestionSheet({ value, setTitle, setBusy, invalid, retry
   const answers = L.answers.state === "ready" && L.answers.data.status !== "computing" ? L.answers.data : null;
   const q = answers?.questions.find((x) => x.id === value) ?? null;
   const showMath = useShowPValues();
+  const [allPairings, setAllPairings] = useState(false);
 
   useEffect(() => {
     if (!question) invalid();
@@ -49,7 +54,11 @@ export default function QuestionSheet({ value, setTitle, setBusy, invalid, retry
   const tested = q.status === "tested" && !q.updating;
   const early = !q.notChecked && !q.updating && q.status !== "tested";
   const songs = songIndex(L.songs.state === "ready" ? L.songs.data : undefined);
-  const pairings = q.pairings.map((id) => songs.get(id)).filter((s) => s !== undefined);
+  // Each card wears this question's condition at its first play (8.7.3).
+  const pairings = q.pairings.flatMap((p) => {
+    const song = songs.get(p.songId);
+    return song ? [{ song, chip: p.conditionText }] : [];
+  });
   const color = WORD_COLOR[q.word];
 
   return (
@@ -104,7 +113,7 @@ export default function QuestionSheet({ value, setTitle, setBusy, invalid, retry
       {early && (
         <div className="mt-5">
           <div className="flex items-center gap-4">
-            <Jar fill={q.status === "too-few-events" ? q.events / 6 : q.inPlays / 500} color="var(--word-early)" width={46} />
+            <Jar fill={q.status === "too-few-events" ? q.events / 6 : q.inPlays / 500} color="var(--word-early)" width={46} fills />
             <p className="leading-relaxed text-ink">{q.phrases.tooEarly}</p>
           </div>
           {q.phrases.earlyReadRows.length > 0 && (
@@ -123,15 +132,38 @@ export default function QuestionSheet({ value, setTitle, setBusy, invalid, retry
 
       {pairings.length > 0 && (
         <section className="mt-8" aria-labelledby="pairings-h">
-          <h3 id="pairings-h" className="text-[13px] font-semibold uppercase tracking-[0.12em] text-gold">
-            Pairings under this sky
-          </h3>
-          <p className="mt-1 text-[13px] text-ink-2">Facts, not proof: songs you first played under this sky.</p>
-          <ul className="rail mt-3">
-            {pairings.map((s) => (
-              <SongCard key={s.songId} song={s} width={200} />
-            ))}
-          </ul>
+          {allPairings ? (
+            <>
+              <PairingsHead action={<SeeAll open onToggle={() => setAllPairings(false)} />} />
+              <ul className="mt-3 grid grid-cols-2 gap-3">
+                {pairings.map((p) => (
+                  <li key={p.song.songId}>
+                    <SongCard song={p.song} chip={p.chip} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <Rail
+              label="Pairings under this sky"
+              noun="pairings"
+              gutter={20}
+              head={(arrows) => (
+                <PairingsHead
+                  action={
+                    <>
+                      {pairings.length > PAIRINGS_IN_ROW && <SeeAll open={false} onToggle={() => setAllPairings(true)} />}
+                      {arrows}
+                    </>
+                  }
+                />
+              )}
+            >
+              {pairings.slice(0, PAIRINGS_IN_ROW).map((p) => (
+                <SongCard key={p.song.songId} song={p.song} chip={p.chip} />
+              ))}
+            </Rail>
+          )}
         </section>
       )}
 
@@ -145,3 +177,23 @@ export default function QuestionSheet({ value, setTitle, setBusy, invalid, retry
     </div>
   );
 }
+
+function PairingsHead({ action }: { action: ReactNode }) {
+  return (
+    <div className="flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h3 id="pairings-h" className="text-[13px] font-semibold uppercase tracking-[0.12em] text-gold">
+          Pairings under this sky
+        </h3>
+        <p className="mt-1 text-[13px] text-ink-2">Facts, not proof: songs you first played under this sky.</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">{action}</div>
+    </div>
+  );
+}
+
+const SeeAll = ({ open, onToggle }: { open: boolean; onToggle: () => void }) => (
+  <Button size="lg" variant="outline" onClick={onToggle} aria-expanded={open}>
+    {open ? "Show fewer" : "See all"}
+  </Button>
+);

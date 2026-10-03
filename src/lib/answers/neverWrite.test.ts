@@ -42,7 +42,13 @@ const OPENERS = new Set([
   // The sky, the measures, and the stories' adjectives.
   "venus", "mars", "mercury", "storms", "flares", "solar", "xclass", "nasa's", "full", "new", "strong", "old",
   "first", "listening", "counted", "checking", "big", "bold", "comfort", "dignified", "opposite",
-  // An interface verb (9.6): "You've lived through two; see how your listening went."
+  // The pairing chips (8.7.3): "Moon in Taurus · exalted", "Kp 7 storm night", "X5.8 flare night".
+  "moon", "kp", "x", "xflare", "storm",
+  // 6.5's "At an ordinary time, a stretch this long usually swings…".
+  "at",
+  // Naming a question (9.2): "The first to arrive: Question 1: Mercury retrograde, …".
+  "question",
+  // An interface verb (9.6): "You've lived through two. See how your listening went." (8.4)
   "see",
   // 8.7.3's own sentence, a thought experiment rather than advice: "Shuffle
   // the sky and a swing this big, up or down, turns up about 3 times in 10."
@@ -261,16 +267,20 @@ describe("never write (spec 9.6)", () => {
       /^Checking 12 questions/,
       /^Yes\. .*, and it holds up after allowing for asking \d+ questions at once\.$/,
       /^Yes\. [^]*\. (Very unlikely|Unlikely) to be chance\.$/,
-      /^Yes: .*, even allowing for \d+ questions\.$/,
-      /^Yes: [^,]*\.$/,
+      // Tonight's lines (9.2, 2 Oct 2026): the word line's first sentence, then the likelihood.
+      /^(Around|While|On) .*: (very )?unlikely to be chance, even allowing for \d+ questions\.$/,
+      /^(Around|While|On) .*: (very )?unlikely to be chance\.$/,
+      /^(Around|While|On) .*: (very )?unlikely to be chance on its own, but not after allowing for \d+ questions\.$/,
+      /^(Around|While|On) [^.]*, which could be chance\.$/,
+      /^(Around|While|On) [^.]*, which could easily be chance\.$/,
+      / barely moved: less than 1% either way, which could easily be chance\.$/,
       /^Maybe\. .* On its own that's (very )?unlikely to be chance, but after allowing/,
       /^Maybe\. .*, which could be chance\.$/,
-      /^Maybe: .*, unlikely on its own but not after allowing/,
-      /^Maybe: .*, which could be chance\.$/,
+
       /^Not clearly\. /,
-      /^Not clearly: /,
+
       /^No\. /,
-      /^No: /,
+
       /^The real change is likely between /,
       /^The real change is likely (a )?barely /,
       /^On its own, the change looks like somewhere /,
@@ -285,17 +295,19 @@ describe("never write (spec 9.6)", () => {
       /Only this one could be tested so far/,
       /^Counted from your second year: it takes a year/,
       /^Counted from your second year: in your first year/,
-      /, across .* in your /,
+      /^Counted across [\d,]+ .* in your /,
       /^Too early\. There's nothing to compare yet/,
-      /^Too early: nothing to compare yet\.$/,
+      /^Nothing to compare yet\.$/,
       /^Not checked: something went wrong on our side\.$/,
       /^Not checked yet: NASA's log didn't load\.$/,
+      /^NASA's log didn't load\.$/,
+      /^Something went wrong on our side\.$/,
       /^Too early\. .* start counting in /,
       /^Too early\. .* start counting a year after your history starts\.$/,
-      /^Too early: .* start counting in /,
-      /^Too early: .* start counting after your first year\.$/,
+      /^(Old favorites|First listens) start counting in \w+ \d{4}\.$/,
       /^Too early\. .* plays a verdict needs .* How soon depends/,
-      /^Too early: .* plays a verdict needs\.$/,
+      /^[\d,]+ of the 500 plays a verdict needs .*\.$/,
+      /^[\d,]+ of the 6 .* a verdict needs\.$/,
       /One .* can't show a pattern\./,
       /can't show a pattern yet\./,
       /come when the Sun sends them/,
@@ -308,12 +320,12 @@ describe("never write (spec 9.6)", () => {
       /^Mostly no\. Here's exactly how, and the (one maybe|\w+ maybes)\.$/,
       /^No, as far as we can tell\. Here's exactly how much\.$/,
       /^Too early for most\. Here's what .* already says\.$/,
-      /^Too early for all 12\. The first to arrive: .*, around \w+ \d{4}\.$/,
+      /^Too early for all 12\. The first to arrive: Question \d+: .*, around \w+ \d{4}\.$/,
       /^Too early for all 12\. They arrive as more of your listening falls under each sky\.$/,
       /^\w+ not checked yet$/,
       /: no plays to compare\.$/,
       /\(in progress\)\.$/,
-      /^One ordinary stretch this long/,
+      /^At an ordinary time, a stretch this long usually swings .* by up to about \d+% either way, so one .* can't show a pattern\.$/,
       /counts once: /,
       /^Mercury turns retrograde /,
       /^Venus turns retrograde /,
@@ -324,7 +336,11 @@ describe("never write (spec 9.6)", () => {
       /^Venus and Mars come into (trine|sextile) /,
       /It'll be your first\.$/,
       /You've lived through one, in your first year, before .* count\.$/,
-      /You've lived through \w+; see how your listening went\.$/,
+      /^You've lived through \w+\. See how your listening went\.$/,
+      // The pairing chips (8.7.3).
+      /^(Venus|Moon|Mars) in \w+ · (at home|exalted|in her detriment|a water sign)$/,
+      /^(Mercury|Venus|Mars) retrograde$/,
+      /^Kp \d[+-]? storm night$/,
     ];
     const missing = markers.filter((m) => !texts.some((t) => m.test(t)));
     expect(missing.map(String)).toEqual([]);
@@ -371,7 +387,8 @@ describe("never write (spec 9.6)", () => {
     expect(() =>
       check([
         "Venus turns retrograde Saturday. You've lived through one; see how your listening went.",
-        "Too early: 1 of the 6 retrogrades a verdict needs.",
+        "You've lived through one. See how your listening went.",
+        "1 of the 6 retrogrades a verdict needs.",
         "Does a full moon change how late you listen?",
       ]),
     ).not.toThrow();

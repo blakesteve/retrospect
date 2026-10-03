@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -21,6 +21,35 @@
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### The Tonight revision (3 October 2026)
+
+- **One list for you.** The chip row is gone. "Tonight, for you" sits under
+  the wheel: each row the sky ("Venus is in Scorpio, in her detriment") over
+  the answer and when it was measured, the question named ("Question 10:
+  Venus in detriment"), never a bare number. Sky facts fill it to three. On a
+  375 by 812 phone its first row starts at 586px, 680px in the spec's worst
+  case; it was 864px.
+- **Two halves.** Tonight's sky, the Moon, Earth, "All seven" and coming up,
+  then "{Length} under the sky" over the 12, songs, wild nights, genres and
+  habits. No switcher until there are two views.
+- **Facts look like facts.** Labels are solid; rows carry a chevron and cards
+  lift; the wheel says "Tap any planet." with a key for its halos; drawn
+  skies show the real Moon or none; the fluke meter fills from the left and
+  left the grid.
+- **Rows a mouse can move**, as Roster 5.2.0's `Carousel`, with arrows beside
+  "See all"; the night's photos one at a time with "2 of 5".
+- **Motion, 8.11's six.** The wheel travels to a coming-up moment and back
+  along the planets' real paths (`/api/sky/path`); rows light their planet;
+  the heads-up planet pulses three times; the planets arrive; "Surprise me"
+  fades in on a phone once the list is above it; a Too early jar fills.
+- **The server's half**: sky lines, the heads-up's two lines, pairing chips
+  that name the question's sky, a night's sign changes and stations with
+  their times, eclipses the zone couldn't see ranked below G4 and G5 storms
+  (from IANA's zone tables, tzdata 2026b), one card per event, and the
+  wildest night's date.
+- **The fill says when it's running**: `/api/space/progress` shows `running`
+  from a pass's start, since a pass records itself only at its end.
 
 ### NASA's fill, by priority (2 October 2026)
 
