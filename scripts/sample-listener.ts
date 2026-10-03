@@ -37,7 +37,7 @@ import type { Scrobble } from "@/lib/analysis/nostalgia";
 import { mulberry32 } from "@/lib/analysis/rng";
 import { writeTagStore } from "@/lib/genres";
 import { emptyCompact, writeCompact, type DonkiCompact } from "@/lib/space/compact";
-import { forgetFinalMonths, SPACE_PREFIX, writeMonth, writeSpaceJson, type SpaceMonth, type SpaceSource } from "@/lib/space/store";
+import { forgetFinalMonths, monthsBetween, SPACE_PREFIX, writeMonth, writeSpaceJson, type SpaceMonth, type SpaceSource } from "@/lib/space/store";
 import { getBlobStore, MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
 import { getStore } from "@/lib/store/jsonStore";
 import { intlOffset } from "@/lib/zone";
@@ -417,6 +417,59 @@ export function sampleHistory(): Scrobble[] {
 
 type Route = (req: Request, ctx: { params: Promise<{ name: string }> }) => Promise<Response>;
 
+/**
+ * The sample listener and NASA's data for it, written into whatever blob
+ * store is current: its history, its artists' tags, NASA's log and photos,
+ * and a ready sync state. The samples write it to a memory store; the
+ * browser checks (`e2e/`) to a fresh folder, never a real store.
+ *
+ * `freshAt` stamps NASA's log as read at that moment, so a server reading
+ * it never refreshes it from NASA; the months after the fixture's last read
+ * count as quiet. Without it the log keeps the fixture's own stamp, so the
+ * samples read the same every time.
+ */
+export async function writeSampleListener(username = SAMPLE_USERNAME, freshAt?: Date): Promise<Scrobble[]> {
+  // The fixture predates the log's storm starts; the rest is the log as NASA had it.
+  const fixture = donki as unknown as Partial<DonkiCompact>;
+  const log: DonkiCompact = { ...emptyCompact(), ...fixture };
+  if (freshAt) {
+    // Copies: the imported fixture stays as committed for anything else in this process.
+    log.kp = { ...log.kp };
+    log.xflares = { ...log.xflares };
+    log.kpAt = { ...log.kpAt };
+    log.xflaresAt = { ...log.xflaresAt };
+    const stamp = freshAt.toISOString();
+    for (const m of monthsBetween(log.refreshedAt.slice(0, 7), stamp.slice(0, 7))) {
+      log.kp[m] ??= [];
+      log.xflares[m] ??= [];
+      log.kpAt[m] = log.xflaresAt[m] = stamp;
+    }
+    log.refreshedAt = stamp;
+  }
+  await writeCompact(log);
+  // NASA's months for the sample, and EPIC's list of its days, as the
+  // fill's own index keeps it: a day EPIC doesn't list reads "none" (7.3).
+  for (const file of space.months) await writeMonth(file as SpaceMonth<SpaceSource>);
+  await writeSpaceJson(`${SPACE_PREFIX}epic-done.json`, { days: space.epicListed, available: space.epicListed });
+  const history = sampleHistory();
+  await getStore().appendScrobbles(username, history);
+  const artists = [...new Set(history.map((p) => p.artist))];
+  await writeTagStore(username, {
+    artists: Object.fromEntries(artists.map((a) => [a.toLowerCase(), [ARTISTS[a].tag]])),
+  });
+  await getStore().setSyncState({
+    username,
+    status: "ready",
+    pagesDone: 1,
+    totalPages: 1,
+    totalScrobbles: history.length,
+    newestUts: history[history.length - 1].uts,
+    oldestUts: history[0].uts,
+    updatedAt: Date.now(),
+  });
+  return history;
+}
+
 /** Every committed file, by name, as the JSON text written to `public/samples/`. */
 export async function generateSamples(): Promise<Map<string, string>> {
   const memory = new MemoryBlobStore();
@@ -427,28 +480,7 @@ export async function generateSamples(): Promise<Map<string, string>> {
   forgetFinalMonths();
   try {
     inMemory();
-    // The fixture predates the log's storm starts; the rest is the log as NASA had it.
-    await writeCompact({ ...emptyCompact(), ...(donki as unknown as Partial<DonkiCompact>) });
-    // NASA's months for the sample, and EPIC's list of its days, as the
-    // fill's own index keeps it: a day EPIC doesn't list reads "none" (7.3).
-    for (const file of space.months) await writeMonth(file as SpaceMonth<SpaceSource>);
-    await writeSpaceJson(`${SPACE_PREFIX}epic-done.json`, { days: space.epicListed, available: space.epicListed });
-    const history = sampleHistory();
-    await getStore().appendScrobbles(SAMPLE_USERNAME, history);
-    const artists = [...new Set(history.map((p) => p.artist))];
-    await writeTagStore(SAMPLE_USERNAME, {
-      artists: Object.fromEntries(artists.map((a) => [a.toLowerCase(), [ARTISTS[a].tag]])),
-    });
-    await getStore().setSyncState({
-      username: SAMPLE_USERNAME,
-      status: "ready",
-      pagesDone: 1,
-      totalPages: 1,
-      totalScrobbles: history.length,
-      newestUts: history[history.length - 1].uts,
-      oldestUts: history[0].uts,
-      updatedAt: Date.now(),
-    });
+    const history = await writeSampleListener();
 
     const call = async (route: Route, query = "") => {
       inMemory();

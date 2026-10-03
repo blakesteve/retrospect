@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -21,6 +21,18 @@
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Browser checks in CI (3 October 2026)
+
+- **Playwright on the built app**, served from a fresh folder holding only the
+  landing's made-up sample listener; the checks refuse to run beside env files
+  or with R2's variables set.
+- **What it checks**: the fold on a phone, "Surprise me" against every "for
+  you" row at 375, 639, 640, 800, 1123, 1124 and 1280px, 44px targets with a
+  planet tapped 21px from its center, and the selected tab's contrast (ClickUp
+  86e3h9mca).
+- **CI builds the app now**, so both bundle guards run on every pull request.
+  The CSS ceiling goes to 192,000 bytes (183,362 measured).
 
 ### The Tonight revision (3 October 2026)
 

@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+# the browser checks: their network log, results and report (e2e/.data is .data/ below)
+/e2e/.offline/
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
