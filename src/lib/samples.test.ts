@@ -12,7 +12,10 @@ import {
   SAMPLE_USERNAME,
   SAMPLE_ZONE,
   sampleHistory,
+  writeSampleListener,
 } from "../../scripts/sample-listener";
+import { GET as nightsRoute } from "@/app/api/user/[name]/nights/route";
+import { MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
 import { openSheet, sheetDepth } from "@/components/listener/sheetUrl";
 import space from "../../scripts/sample-space.json";
 import { dropSample, openSample, SAMPLE_LABEL, SAMPLE_USER, SAMPLE_ZONE as LANDING_ZONE, sampleFile } from "@/components/landing/sampleUrls";
@@ -158,7 +161,12 @@ describe("the committed sample", () => {
     // and JPL's asteroids (300,397 at 29597fc). 3 Oct 2026: 415,214 once each
     // night carried its sign changes and stations and when its conditions
     // began or ended, and the answers their Tonight lines and pairing chips;
-    // re-baselined from 400,000. One sheet fetches one file.
+    // re-baselined from 400,000. 499,035 once every nights file carried each
+    // filter's and genre's nights per month (about 9,200 characters a file,
+    // 8.5's year strip), the first night and NASA's state; re-baselined from
+    // 440,000; 502,567 at 6b51845. 416,480 once those counts came once a
+    // visit, with the calendar's first year, and left the month files (8.5);
+    // back to 440,000. One sheet fetches one file.
     expect(sizes.reduce((a, b) => a + b, 0)).toBeLessThan(440_000);
     expect(Math.max(...sizes)).toBeLessThan(80_000);
   });
@@ -200,7 +208,8 @@ describe("the sample is a made-up listener (8.1: never a real person's listening
     const asteroids: string[] = [];
     for (const f of committedNames()) {
       const parsed = JSON.parse(committed(f), (k, v) => {
-        if (k !== "asteroid" || !v || typeof v !== "object") return v;
+        // An asteroid, not the asteroid filter's months.
+        if (k !== "asteroid" || !v || typeof v !== "object" || !("name" in v)) return v;
         asteroids.push(v.name);
         const rest = { ...v };
         delete rest.name;
@@ -237,6 +246,99 @@ describe("the sample opens what the landing promises (8.1)", () => {
     expect(may10.firstPlays.map((f) => f.pairing)).toContain(
       "You first played Good Luck, Babe! at 10:22 p.m. CDT on May 10, 2024, during the strongest geomagnetic storm in about 20 years.",
     );
+  });
+
+  it("keeps the May 10, 2024 storm one card, on May 10, while both its nights glow (7.5)", () => {
+    const wild = json<{ wild: { date: string; rank: number }[] }>("highlights.json").wild.map((w) => w.date);
+    expect(wild).toContain("2024-05-10");
+    expect(wild).not.toContain("2024-05-11");
+    expect(night("2024-05-10")!.wild).toMatchObject({ rank: 3, visible: true });
+    expect(night("2024-05-11")!.wild).toMatchObject({ rank: 3, visible: true, title: "A G5 storm, Kp 9" });
+  });
+
+  it("says which wild nights' eclipses Chicago saw (7.5's measurements)", () => {
+    expect(night("2024-04-08")!.wild).toMatchObject({ rank: 0, visible: true });
+    // Oct 2, 2024's annular eclipse wasn't visible from Chicago at all.
+    expect(night("2024-10-02")!.wild).toEqual({ rank: 1, visible: false, title: "An annular solar eclipse", story: null });
+  });
+
+  it("counts the X flares NASA logged in the history, for the filter dock (8.5)", () => {
+    // The fixture's X flares peaking from the first play (Sept 28, 2023) to the
+    // last (Sept 28, 2026): Dec 14, 2023's X2.8 to Jul 4, 2026's X1.3.
+    expect(json<{ counts: { xflares: number } }>("highlights.json").counts.xflares).toBe(87);
+  });
+
+  type Counts = { filterCounts: Record<string, number>; genreCounts: Record<string, number>;
+    filterMonths: Record<string, Record<string, number>>; genreMonths: Record<string, Record<string, number>> };
+  /** What the nights route answers: the counts asked for, or a filter and a genre's nights. */
+  type Answer = Counts & { count: number; months: Record<string, number> };
+  /** The sample's own nights route, answering in a memory store at the samples' clock. */
+  async function withSample<T>(fn: (nights: (query: string) => Promise<Answer>) => Promise<T>): Promise<T> {
+    setBlobStore(new MemoryBlobStore());
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(SAMPLE_NOW));
+    try {
+      await writeSampleListener();
+      return await fn(async (query) => {
+        const url = `http://sample.local/api/user/${SAMPLE_USERNAME}/nights?tz=${encodeURIComponent(SAMPLE_ZONE)}&${query}`;
+        return (await nightsRoute(new Request(url), { params: Promise.resolve({ name: SAMPLE_USERNAME }) })).json();
+      });
+    } finally {
+      vi.useRealTimers();
+      setBlobStore(new MemoryBlobStore());
+    }
+  }
+
+  it("gives each filter's and genre's nights per month once, the same nights the doors light (8.5)", async () => {
+    const whole: Counts = await withSample((nights) => nights("from=2024-05&to=2024-05&counts=1"));
+    // May 2, 10, 11, 12, 15 and 17, 2024.
+    expect(whole.filterMonths.storm["2024-05"]).toBe(6);
+    const sum = (m: Record<string, number>) => Object.values(m).reduce((a, b) => a + b, 0);
+    expect(sum(whole.filterMonths.storm)).toBe(whole.filterCounts.storm);
+    for (const f of Object.keys(whole.filterCounts)) expect(sum(whole.filterMonths[f]), f).toBe(whole.filterCounts[f]);
+    for (const g of Object.keys(whole.genreCounts)) expect(sum(whole.genreMonths[g]), g).toBe(whole.genreCounts[g]);
+    // The month files carry their first night and NASA's state but never the
+    // counts, which the calendar asks for once, with its first year; and
+    // each month's doors light exactly the nights the counts' months say.
+    const files = committedNames().filter((f) => f.startsWith("nights-"));
+    let checked = 0;
+    for (const f of files) {
+      const body = json<{ first: string; nasa: string; nights: { date: string; filters: string[]; genreFilters: string[] }[] }>(f);
+      expect(body, f).toMatchObject({ first: "2023-09-28", nasa: "ok" });
+      for (const k of ["filterCounts", "filterMonths", "genreCounts", "genreMonths"]) expect(body, `${f} ${k}`).not.toHaveProperty(k);
+      const month = f.slice(7, 14);
+      for (const id of Object.keys(whole.filterCounts)) {
+        expect(whole.filterMonths[id][month] ?? 0, `${id} ${month}`).toBe(body.nights.filter((n) => n.filters.includes(id)).length);
+        checked++;
+      }
+      for (const g of Object.keys(whole.genreCounts)) {
+        expect(whole.genreMonths[g][month] ?? 0, `${g} ${month}`).toBe(body.nights.filter((n) => n.genreFilters.includes(g)).length);
+      }
+    }
+    expect(checked).toBe(12 * 9);
+  });
+
+  it("counts the nights one sky filter and one genre light together (8.5, 7.6)", async () => {
+    await withSample(async (nights) => {
+      const pair = (filter: string, genre: string) => nights(`filter=${filter}&genre=${encodeURIComponent(genre)}`);
+      /* Every first-play night is in a committed month: of the 41, those
+         with 3 plays or more of shoegaze are 2 in Apr 2024, 4 in Oct 2024
+         and 2 in Aug 2025. */
+      expect(await pair("firstplay", "shoegaze")).toEqual({
+        status: "ready",
+        zone: "America/Chicago",
+        zoneFellBack: false,
+        filter: "firstplay",
+        genre: "shoegaze",
+        count: 8,
+        months: { "2024-04": 2, "2024-10": 4, "2025-08": 2 },
+      });
+      // Storm nights with indie rock: May 2, 10, 11, 12 and 15, 2024, among the rest.
+      const storms = await pair("storm", "indie rock");
+      expect(storms.months["2024-05"]).toBe(5);
+      expect(Object.values(storms.months).reduce((a, b) => a + b, 0)).toBe(storms.count);
+      expect(storms.count).toBeLessThan((await nights("from=2024-05&to=2024-05&counts=1")).filterCounts.storm);
+    });
   });
 
   it("has the hero's night of Apr 8, 2024, the eclipse", () => {

@@ -3,7 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { Button, Pill, SegmentBar } from "@blakesteve/roster";
 import type { AnswerWord } from "@/lib/answers/words";
-import { FLUKE_LABELS, flukeFill } from "@/lib/client/fluke";
+import { FLUKE_CAPTION, FLUKE_LABELS, flukeFill } from "@/lib/client/fluke";
 import { Jar, WORD_COLOR } from "./jar";
 
 /* The shared pieces (spec 8.9): answer pills, the fluke meter, the storm
@@ -36,12 +36,13 @@ export function FlukeMeter({ likelihood, word }: { likelihood: string; word: Ans
   const fill = flukeFill(likelihood);
   return (
     <div aria-hidden className="w-full">
+      <p className="mb-2 text-[13px] leading-snug text-ink-2">{FLUKE_CAPTION}</p>
       <SegmentBar
         showLegend={false}
         size="md"
         segments={FLUKE_LABELS.map((label, i) => ({ key: label, label, value: 1, color: i < fill ? WORD_COLOR[word] : OFF }))}
       />
-      <div className="mt-1.5 grid grid-cols-4 text-[11px] leading-tight text-ink-2">
+      <div className="mt-1.5 grid grid-cols-4 gap-1.5 text-[11px] leading-tight text-ink-2">
         {FLUKE_LABELS.map((l, i) => (
           <span key={l} className={i === fill - 1 ? "font-semibold text-ink" : ""}>
             {l}
@@ -125,6 +126,14 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   chev: <path d="M9 5l7 7-7 7" />,
+  up: <path d="M12 19V5M5.5 11.5L12 5l6.5 6.5" />,
+  note: (
+    <>
+      <path d="M9 17.5V5.5l10-2v12" />
+      <circle cx="6.5" cy="17.5" r="2.5" />
+      <circle cx="16.5" cy="15.5" r="2.5" />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof PATHS;

@@ -5,10 +5,10 @@ import { userKey } from "@/lib/store/userKeys";
 import { getStore } from "@/lib/store/jsonStore";
 import { writeTagStore } from "@/lib/genres";
 import { synthHistory } from "@/lib/answers/synthHistory";
-import { writeCompact } from "@/lib/space/compact";
+import { COMPACT_KEY, writeCompact } from "@/lib/space/compact";
 import { synthCompact } from "@/lib/space/synthLog";
 import { forgetFinalMonths, writeMonth } from "@/lib/space/store";
-import { readListener, type SongEntry } from "./record";
+import { readListener, type ListenerRecord, type SongEntry } from "./record";
 
 /* The listener routes end to end: a made-up history (no real account), a
    NASA log with the May 2024 storm and the Oct 2024 X9.0 flare, and JPL's
@@ -155,7 +155,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
 
   it("gives every night of the months asked for, with the storm, the Moon and the filters", async () => {
     await seed("may");
-    const { body } = await call(nightsRoute, "may", "tz=America/Chicago&from=2024-05&to=2024-06");
+    const { body } = await call(nightsRoute, "may", "tz=America/Chicago&from=2024-05&to=2024-06&counts=1");
     expect(body.nights).toHaveLength(61);
     expect(body.nights[0].date).toBe("2024-05-01");
     const may10 = body.nights.find((n: { date: string }) => n.date === "2024-05-10");
@@ -165,9 +165,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
     expect(may10.filters).toContain("storm");
     expect(may10.wild).toMatchObject({ rank: 3, title: "The strongest geomagnetic storm in about 20 years" });
     // What changed that night, and when the strong Moon began (8.7.2, finding 10).
-    expect(may10.changes).toEqual([
-      { time: at("2024-05-11T03:12:57Z"), body: "Moon", kind: "sign", text: "The Moon entered Cancer at 10:12 p.m. CDT." },
-    ]);
+    expect(may10.changes).toEqual([{ time: at("2024-05-11T03:12:57Z"), body: "Moon", kind: "sign", text: "The Moon entered Cancer at 10:12 p.m. CDT." }]);
     expect(may10.conditions).toContain("moonstrong");
     expect(may10.conditionNotes).toEqual({ moonstrong: "from 10:12 p.m. CDT" });
     // A night the Moon is in Cancer throughout says nothing about her.
@@ -193,8 +191,169 @@ describe("the nights route (spec 7.4, 8.5)", () => {
     expect(silent.length).toBeGreaterThan(0);
     for (const n of silent) expect(n.filters).toEqual([]);
     expect(Object.keys(body.filterCounts)).toEqual([
-      "storm", "xflare", "eclipse", "fullmoon", "newmoon", "firstplay", "wild", "venushome", "marshome", "moonstrong", "asteroid", "fireball",
+      "storm",
+      "xflare",
+      "eclipse",
+      "fullmoon",
+      "newmoon",
+      "firstplay",
+      "wild",
+      "venushome",
+      "marshome",
+      "moonstrong",
+      "asteroid",
+      "fireball",
     ]);
+    // Each filter's lit nights per month, over the whole history (8.5): the
+    // log's only storm covers 1 to 10 p.m. CDT on May 10, one night.
+    expect(Object.keys(body.filterMonths)).toEqual(Object.keys(body.filterCounts));
+    expect(body.filterMonths.storm).toEqual({ "2024-05": 1 });
+    expect(body.filterCounts.storm).toBe(1);
+    // A genre's months add up to its count, and the months asked for agree with their nights.
+    expect(Object.keys(body.genreMonths).sort()).toEqual(["dream pop", "shoegaze"]);
+    for (const [g, months] of Object.entries(body.genreMonths as Record<string, Record<string, number>>)) {
+      expect(
+        Object.values(months).reduce((a, b) => a + b, 0),
+        g,
+      ).toBe(body.genreCounts[g]);
+      for (const m of ["2024-05", "2024-06"]) {
+        const lit = body.nights.filter((n: { date: string; genreFilters: string[] }) => n.date.startsWith(m) && n.genreFilters.includes(g)).length;
+        expect(months[m] ?? 0, `${g} ${m}`).toBe(lit);
+      }
+    }
+    expect(body.nasa).toBe("ok");
+  });
+
+  it("sends the whole history's counts only when asked (counts=1), never with every year (8.5)", async () => {
+    await seed("once");
+    const COUNTS = ["filterCounts", "filterMonths", "genreCounts", "genreMonths"];
+    const year = (await call(nightsRoute, "once", "tz=America/Chicago&from=2024-01&to=2024-12")).body;
+    // A year without them: its nights, its first night and NASA's state.
+    expect(year.nights.length).toBeGreaterThan(100);
+    expect(year).toMatchObject({ first: expect.any(String), nasa: "ok" });
+    for (const k of COUNTS) expect(year, k).not.toHaveProperty(k);
+    // The same year asked with them: the same nights, and the four counts.
+    const first = (await call(nightsRoute, "once", "tz=America/Chicago&from=2024-01&to=2024-12&counts=1")).body;
+    expect(first.nights).toEqual(year.nights);
+    for (const k of COUNTS) expect(first[k], k).toEqual(expect.any(Object));
+    expect(first.filterCounts.storm).toBe(1);
+    for (const q of ["counts=0", "counts=true", "counts="]) {
+      expect(await call(nightsRoute, "once", `tz=America/Chicago&from=2024-05&to=2024-05&${q}`), q).toEqual({
+        status: 400,
+        body: { error: "counts must be 1, or left out" },
+      });
+    }
+  });
+
+  it("says whether the zone saw each wild night's eclipse, which ranks it (7.5)", async () => {
+    await seed("seen");
+    // Dec 4, 2021, 07:33 UT, over Antarctica: 1:33 a.m. CST, Dec 3's night, not seen from Chicago.
+    const dec = (await call(nightsRoute, "seen", "tz=America/Chicago&from=2021-12&to=2021-12")).body;
+    expect(dec.nights.find((n: { date: string }) => n.date === "2021-12-03").wild).toEqual({
+      rank: 0,
+      visible: false,
+      title: "A total solar eclipse",
+      story: null,
+    });
+    const apr = (await call(nightsRoute, "seen", "tz=America/Chicago&from=2024-04&to=2024-04")).body;
+    expect(apr.nights.find((n: { date: string }) => n.date === "2024-04-08").wild).toMatchObject({
+      rank: 0,
+      visible: true,
+      title: "A total solar eclipse across North America",
+    });
+  });
+
+  it("says tonight, not that night, for tonight's quiet night (8.7.2)", async () => {
+    await seed("tonight");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2024-05-03T01:00:00Z")); // 8 p.m. on May 2, Central
+    const { body } = await call(nightsRoute, "tonight", "tz=America/Chicago&from=2024-05&to=2024-05");
+    expect(body.nights.at(-1).date).toBe("2024-05-02");
+    expect(body.nights.at(-1).space.stormLine).toBe("No storm in NASA's log tonight");
+    expect(body.nights.find((n: { date: string }) => n.date === "2024-05-01").space.stormLine).toBe("No storm in NASA's log that night");
+  });
+
+  it("says when NASA's log didn't read, so the page can hide its filters (8.5)", async () => {
+    await getBlobStore().del(COMPACT_KEY);
+    await seed("nonasa");
+    const { status, body } = await call(nightsRoute, "nonasa", "tz=America/Chicago&from=2024-05&to=2024-05&counts=1");
+    expect(status).toBe(200);
+    expect(body.nasa).toBe("unavailable");
+    expect(body.filterCounts.storm).toBe(0);
+    expect(body.nights.find((n: { date: string }) => n.date === "2024-05-10").space.kp).toBeNull();
+  });
+
+  it("counts the nights one sky filter and one genre light together, over the whole history (8.5, 7.6)", async () => {
+    await seed("pair");
+    const may = (await call(nightsRoute, "pair", "tz=America/Chicago&from=2024-05&to=2024-05&counts=1")).body;
+    const may10 = may.nights.find((n: { date: string }) => n.date === "2024-05-10");
+    // Artist 3's three evening plays light Artist 3's genre that night.
+    expect(may10.genreFilters.length).toBeGreaterThan(0);
+    const pair = async (filter: string, genre: string) => call(nightsRoute, "pair", `tz=America/Chicago&filter=${filter}&genre=${encodeURIComponent(genre)}`);
+    for (const genre of ["dream pop", "shoegaze"]) {
+      const { status, body } = await pair("storm", genre);
+      expect(status).toBe(200);
+      // The one storm night, May 10, when it held 3 plays of the genre.
+      const lit = may10.genreFilters.includes(genre);
+      expect(body).toEqual({
+        status: "ready",
+        zone: "America/Chicago",
+        zoneFellBack: false,
+        filter: "storm",
+        genre,
+        count: lit ? 1 : 0,
+        months: lit ? { "2024-05": 1 } : {},
+      });
+    }
+    // The full moons lit with a genre are among each's own, month by month.
+    const both = (await pair("fullmoon", "shoegaze")).body;
+    expect(both.count).toBeLessThanOrEqual(may.filterCounts.fullmoon);
+    expect(Object.values(both.months as Record<string, number>).reduce((a, b) => a + b, 0)).toBe(both.count);
+    for (const [m, n] of Object.entries(both.months as Record<string, number>)) {
+      expect(n).toBeLessThanOrEqual(Math.min(may.filterMonths.fullmoon[m], may.genreMonths.shoegaze[m]));
+    }
+    // One shape per request, a filter that exists, and a genre you have.
+    for (const q of [
+      "filter=storm&genre=shoegaze&from=2024-05&to=2024-05",
+      "filter=storm&genre=shoegaze&from=2024-05",
+      "filter=storm&genre=shoegaze&counts=1",
+      "filter=storms&genre=shoegaze",
+      "filter=storm&genre=polka",
+      "filter=storm&genre=constructor",
+      "filter=storm",
+      "genre=shoegaze",
+    ]) {
+      expect((await call(nightsRoute, "pair", `tz=America/Chicago&${q}`)).status, q).toBe(400);
+    }
+  });
+
+  it("serves a version 3 record while it's rebuilt: no months, no pairs, and its X flares counted", async () => {
+    await seed("v3");
+    await call(nightsRoute, "v3", "tz=America/Chicago&from=2024-05&to=2024-05");
+    const fresh = (await readListener("v3", "America/Chicago"))!;
+    const putOld = async () => {
+      const old: Partial<ListenerRecord> = { ...fresh, version: 3, counts: { ...fresh.counts } };
+      delete old.filterMonths;
+      delete old.genreMonths;
+      delete old.filterNights;
+      delete old.counts!.xflares;
+      await getBlobStore().put(userKey("listener", "v3"), gzipSync(Buffer.from(JSON.stringify({ records: [old] }))));
+    };
+    await putOld();
+    const months = (await call(nightsRoute, "v3", "tz=America/Chicago&from=2024-05&to=2024-05&counts=1")).body;
+    // Not known yet, which the page reads as such: {} would read as nothing lit.
+    expect(months).toMatchObject({ status: "updating", filterMonths: null, genreMonths: null });
+    await Promise.all(background.splice(0));
+    await putOld();
+    expect((await call(nightsRoute, "v3", "tz=America/Chicago&filter=storm&genre=shoegaze")).body).toEqual({
+      status: "computing",
+      zone: "America/Chicago",
+      zoneFellBack: false,
+    });
+    await Promise.all(background.splice(0));
+    await putOld();
+    // The log's one X flare, Oct 3, 2024, inside the history.
+    expect((await call(highlightsRoute, "v3")).body).toMatchObject({ status: "updating", counts: { xflares: 1 } });
   });
 });
 
@@ -210,7 +369,11 @@ describe("the nights route at the edges", () => {
     expect(body.nights).toHaveLength(19);
     expect(body.nights.at(-1).date).toBe("2026-10-19");
     const early = await call(nightsRoute, "edges", "tz=UTC&from=2015-06&to=2016-02");
-    expect(early.body.nights[0].date).toBe(new Date(plays[0].uts * 1000 - 4 * 3_600_000).toISOString().slice(0, 10));
+    const firstNight = new Date(plays[0].uts * 1000 - 4 * 3_600_000).toISOString().slice(0, 10);
+    expect(early.body.nights[0].date).toBe(firstNight);
+    // Every request names the history's first night, months after it too.
+    expect(early.body.first).toBe(firstNight);
+    expect(body.first).toBe(firstNight);
   });
 });
 
@@ -222,6 +385,8 @@ describe("the highlights route (spec 7.5, 8.3)", () => {
     // Every artist is "Artist N", so nothing is noise: every play counts.
     expect(plays.every((p) => /^Artist \d+$/.test(p.artist))).toBe(true);
     expect(body.counts.plays).toBe(plays.length);
+    // The log's one X flare, Oct 3, 2024, and no storm starts: it keeps none.
+    expect(body.counts).toMatchObject({ storms: 0, xflares: 1 });
     expect(body.wild.length).toBeLessThanOrEqual(10);
     /* 7.5's order, from Chicago (changed 2 Oct 2026): the total solar,
        annular and total lunar eclipses seen there, newest first in each;

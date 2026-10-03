@@ -1,44 +1,14 @@
 "use client";
 
-import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 import { Card, Pill } from "@blakesteve/roster";
 import { AlbumArt } from "@/components/AlbumArt";
-import { useListener } from "./Shell";
 import type { SongEntry, WildNight } from "./api";
-import type { SheetRef } from "./sheetUrl";
 import { Icon } from "./pieces";
 import { MoonDrawing } from "./sky";
+import { SheetLink } from "./sheetLink";
 
-/** A link that opens a sheet: a real `href` (so it can open in a new tab),
-    a pushState on a plain click (4). */
-export function SheetLink({
-  to,
-  children,
-  className = "",
-  lead,
-  ...rest
-}: {
-  to: SheetRef;
-  children: ReactNode;
-  className?: string;
-  lead?: string;
-} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick" | "children" | "className">) {
-  const L = useListener();
-  // Keeps a shared `tz` in force, as the view switcher does (7.1).
-  const tz = useSearchParams().get("tz");
-  const href = `?${tz ? `tz=${encodeURIComponent(tz)}&` : ""}${to.kind}=${encodeURIComponent(to.value)}`;
-  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    L.open(to, lead);
-  };
-  return (
-    <a href={href} onClick={onClick} className={className} {...rest}>
-      {children}
-    </a>
-  );
-}
+export { SheetLink };
 
 /** A starry square standing in for missing art (8.4: "album art or the
     drawn sky"), with the Moon only at that minute's or night's real phase,

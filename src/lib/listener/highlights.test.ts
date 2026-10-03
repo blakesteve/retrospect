@@ -169,6 +169,8 @@ describe("wild nights an eclipse unseen from the zone heads (7.5, changed 2 Oct 
 });
 
 describe("one event, one card (7.5, changed 2 Oct 2026)", () => {
+  /* Without a storm run, as in a version 3 record, a run is read from the
+     neighboring storm-headed nights; the first five cases are those. */
   const w = (date: string, rank: number, size: number, eventId: string | null = null): WildNight => ({
     night: night(date),
     rank,
@@ -176,6 +178,11 @@ describe("one event, one card (7.5, changed 2 Oct 2026)", () => {
     title: date,
     story: null,
     eventId,
+  });
+  /** A storm-headed night with its storm's run, by the run's first night (6.2). */
+  const s = (date: string, rank: number, size: number, run: string, eventId: string | null = null): WildNight => ({
+    ...w(date, rank, size, eventId),
+    stormRun: night(run),
   });
 
   it("keeps the night of a storm's higher reading", () => {
@@ -217,6 +224,41 @@ describe("one event, one card (7.5, changed 2 Oct 2026)", () => {
     ]);
     // Without another event, the night has no card of its own.
     expect(oneCardPerEvent([w("2024-10-10", 3, 9), w("2024-10-09", 4, 8.67)]).map((x) => x.title)).toEqual(["2024-10-10"]);
+  });
+
+  it("takes a storm's run from NASA's log: a night between with no plays doesn't split it (3 Oct 2026)", () => {
+    // Mar 17 to 19, 2015, logged all three nights; Mar 18 had no plays, so it isn't wild.
+    expect(oneCardPerEvent([s("2015-03-17", 4, 8, "2015-03-17"), s("2015-03-19", 4, 8.33, "2015-03-17")]).map((x) => x.title)).toEqual([
+      "2015-03-19",
+    ]);
+    // Read from the neighbors alone, the same two nights were two cards.
+    expect(oneCardPerEvent([w("2015-03-17", 4, 8), w("2015-03-19", 4, 8.33)])).toHaveLength(2);
+  });
+
+  it("isn't split by a night an eclipse heads, which keeps its own card", () => {
+    const run = [s("2024-04-07", 4, 8, "2024-04-07"), w("2024-04-08", 0, 0), s("2024-04-09", 4, 8.33, "2024-04-07")];
+    expect(oneCardPerEvent(run).map((x) => x.title)).toEqual(["2024-04-08", "2024-04-09"]);
+  });
+
+  it("keeps the tie rules within a run: a curated title, then the earlier", () => {
+    // The sample's May 10 and 11, 2024: one run, both Kp 9, May 10 curated.
+    expect(
+      oneCardPerEvent([s("2024-05-11", 3, 9, "2024-05-10"), s("2024-05-10", 3, 9, "2024-05-10", "storm-2024-05-10")]).map((x) => x.title),
+    ).toEqual(["2024-05-10"]);
+    expect(oneCardPerEvent([s("2024-05-11", 3, 9, "2024-05-10", "x"), s("2024-05-10", 3, 9, "2024-05-10")]).map((x) => x.title)).toEqual([
+      "2024-05-11",
+    ]);
+    expect(oneCardPerEvent([s("2024-09-17", 4, 8, "2024-09-16"), s("2024-09-16", 4, 8, "2024-09-16")]).map((x) => x.title)).toEqual([
+      "2024-09-16",
+    ]);
+    // Two runs, two cards, however close.
+    expect(oneCardPerEvent([s("2024-05-10", 3, 9, "2024-05-10"), s("2024-05-12", 4, 8, "2024-05-12")])).toHaveLength(2);
+  });
+
+  it("gives a night whose storm card went elsewhere in its run a card for its other event", () => {
+    const flare: WildNight = { ...w("2024-10-08", 5, 508), title: "An X5.8 flare" };
+    const cards = oneCardPerEvent([s("2024-10-10", 3, 9, "2024-10-08"), { ...s("2024-10-08", 4, 8.67, "2024-10-08"), then: flare }]);
+    expect(cards.map((x) => x.title)).toEqual(["2024-10-10", "An X5.8 flare"]);
   });
 });
 

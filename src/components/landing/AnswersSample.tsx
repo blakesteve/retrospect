@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { SheetBodyProps } from "@/components/listener/SheetHost";
-import { QuestionsGrid } from "@/components/listener/Tonight";
+import { QuestionsGrid } from "@/components/listener/shared";
 
 /* The 12 answers tile's sample (spec 8.1): the sample listener's questions,
    each opening its own sheet. */

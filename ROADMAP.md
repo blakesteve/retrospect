@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -16,11 +16,50 @@
   confidence (28 Sept) · A young history gets a real report (28 Sept) · The
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The redesign: Every night (3b), Sky (3c), compare
-  and the share cards (3d)
+- **Next, product:** The redesign: Sky (3c), compare and the share cards
+  (3d)
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Every night (3 October 2026)
+
+- **`/u/{name}/nights`**, the second view: every night as a door, newest
+  month first, with the sky filters and "Your genres", a year strip that
+  becomes a histogram with a filter on, and a dock that names the count, the
+  question's own stretches for storms and flares, and the question that tests
+  the filter. Months fetch a year at a time as they near the screen.
+- **The switcher has two links**, Tonight and Every night. Its labels not
+  selected read 6.2:1 on the track (3.34:1 before), the selected 8.6:1, both
+  measured on the real switcher (ClickUp 86e3h9mca).
+- **The server's half**: wild nights carry whether the zone saw the eclipse;
+  a storm's stretch is question 7's own event, so the dock and the question
+  can't disagree; the X flares NASA logged join the counts; the nights route
+  sends each filter's and genre's nights per month once a visit, with the
+  first year the calendar loads (`counts=1`), not with every year, and a sky
+  filter with a genre over the whole history; the dead server chips are gone,
+  their day words tested through the sky facts. The landing's month files no
+  longer carry those counts: 416,480 characters, from 502,567.
+- **The landing sample's storm count shows**: NASA's log fixture gained its
+  storms' starts (DONKI read again 3 Oct, its readings unchanged), so the
+  reveal counts 63 solar storms, where it said 0.
+- **A night's sheet** steps between lit nights with a filter on, reads a year
+  the calendar already has, and opens tonight before its first play.
+- **The fluke meter says what it measures**: each notch is its phrase whole
+  ("Unlikely to be chance"), under a line asking whether it could be chance.
+- **From review**: the filter chips are a Roster `Carousel` with overlay
+  arrows; an invalid link says so in a Roster toast, loaded on first use; and
+  a night before the sync status's `oldestUts` (which can trail the first
+  play) no longer closes as it opens. The switcher and filter bar stay in
+  view as you scroll, with a "Back to top" button once a screen has gone by;
+  the whole header shows at rest, and scrolled, the wordmark's row goes up
+  and away: 165px stuck at 375 by 812 (at most 168px), from 245px. A Tab
+  onto the sticky top's controls no longer scrolls the page under them (it
+  moved about 400px a Tab), and the wordmark, scrolled away, comes back
+  while it has focus. A visit that runs past a month's end keeps its years.
+- **A filter dims the fill, not the date**: a dark night's fill, Moon and
+  badges go to 35% and its date stays whole, 12.54:1 at the lowest (4.5:1
+  needed), measured in the browser checks with every layer's opacity.
 
 ### Browser checks in CI (3 October 2026)
 

@@ -5,8 +5,10 @@ import dynamic from "next/dynamic";
 /* Loaded with the host, not with each sheet: a sheet loads on demand
    (13), and Turbopack copies any module its parent hasn't loaded into that
    sheet's own chunk. Without this, the Carousel the sheets' rows use was
-   copied into every sheet's chunk, 10 copies of about 12 kB in all. */
+   copied into every sheet's chunk, 10 copies of about 12 kB in all; the
+   nights cache the night and song sheets share would be copied the same way. */
 import "@/components/listener/rail";
+import "@/components/listener/nightsCache";
 import { useSearchParams } from "next/navigation";
 import { Sheet } from "@blakesteve/roster";
 import { useListener, VIEW_HEADING } from "./Shell";
@@ -25,12 +27,12 @@ function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>): boo
     case "planet":
       return !PLANETS.includes(ref.value);
     case "night":
-      // Not a date, in the future, or before the history's first night.
-      return (
-        !isNightDate(ref.value) ||
-        ref.value > tonightDate(L.zone) ||
-        (L.sync?.oldestUts != null && ref.value < tonightDate(L.zone, L.sync.oldestUts * 1000))
-      );
+      // Not a date, or in the future. A night before the history's first is
+      // the sheet's to refuse, from the route's own nights: the sync's
+      // oldestUts can be later than the first play (a sync state from before
+      // the field existed takes it from the next sync's newest scrobbles), and
+      // refusing by it shut the calendar's early doors as they opened.
+      return !isNightDate(ref.value) || ref.value > tonightDate(L.zone);
     case "song":
       return L.songs.state === "ready" && !songIndex(L.songs.data).has(ref.value);
     case "share": {

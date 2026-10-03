@@ -5,7 +5,8 @@ import { Button } from "@blakesteve/roster";
 import { QUESTIONS } from "@/lib/answers/questions";
 import { useListener } from "../Shell";
 import type { SheetBodyProps } from "../SheetHost";
-import { getJson, type Nights } from "../api";
+import { getJson, type Night, type Nights } from "../api";
+import { comboUrl, historySpan, isLit, litSelection, nightsCombo, nightsYear, withCounts } from "../nightsCache";
 import { genreMix, nightTitle, nightWeekday, songIndex, tonightDate, utsAtLocal } from "../format";
 import { SheetLink } from "../cards";
 import { sheetFrom } from "../sheetUrl";
@@ -35,8 +36,9 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
 
   useEffect(() => {
     if (load.state !== "ready") return;
-    // Outside the history, in the future, or a night with no plays (8.7).
-    if (!load.night || load.night.plays === 0) invalid();
+    // Outside the history, in the future, or a past night with no plays
+    // (8.7). Tonight opens before its first play (8.5).
+    if (!load.night || (load.night.plays === 0 && load.night.date !== tonight)) invalid();
     else setTitle(nightTitle(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once it loads
   }, [load.state]);
@@ -44,33 +46,79 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
 
   if (load.state === "failed") return <SheetFailed retry={retry} />;
   if (load.state === "loading") return <SheetSkeleton />;
-  if (!night || night.plays === 0) return null;
+  if (!night || (night.plays === 0 && night.date !== tonight)) return null;
 
-  // Previous and next night with listening, crossing months as needed.
+  // The previous and next night with listening (or tonight), or, with Every
+  // night's filters on, the previous and next lit night (8.5, 8.7.2 item 7).
   const step = async (dir: 1 | -1) => {
     if (stepping || load.state !== "ready") return;
     setStepping(true);
     try {
-      let month = value.slice(0, 7);
-      let list = load.month;
-      for (let i = 0; i < 13; i++) {
-        const candidates = list.filter((n) => n.plays > 0 && (dir > 0 ? n.date > value : n.date < value));
-        const next = dir > 0 ? candidates[0] : candidates[candidates.length - 1];
-        if (next) {
-          // The sheet may have closed while a month loaded.
-          if (sheetFrom(new URLSearchParams(window.location.search))?.value === value) L.open({ kind: "night", value: next.date });
-          return;
-        }
-        month = shiftMonth(month, dir);
-        if (dir > 0 && month > tonight.slice(0, 7)) return;
-        const data = await getJson<Nights>(L.listenerUrl("nights", `&from=${month}&to=${month}`));
-        list = data.nights ?? [];
-      }
+      const next = await stepFrom(dir);
+      // The sheet may have closed while a month or a year loaded.
+      if (next && sheetFrom(new URLSearchParams(window.location.search))?.value === value) L.open({ kind: "night", value: next });
     } catch {
       /* the arrows just don't move */
     } finally {
       setStepping(false);
     }
+  };
+  /** The nearest night that way in a list that passes, or null. */
+  const nearest = (list: Night[], dir: 1 | -1, ok: (n: Night) => boolean) => {
+    const c = list.filter((n) => ok(n) && (dir > 0 ? n.date > value : n.date < value));
+    return (dir > 0 ? c[0] : c[c.length - 1])?.date ?? null;
+  };
+  const stepFrom = async (dir: 1 | -1): Promise<string | null> => {
+    const params = new URLSearchParams(window.location.search);
+    // No filter: the nearest night with listening, month by month, as the
+    // landing's samples are served.
+    const byMonth = async () => {
+      const listened = (n: Night) => n.plays > 0 || n.date === tonight;
+      let month = value.slice(0, 7);
+      let list = load.month;
+      for (let i = 0; i < 13; i++) {
+        const next = nearest(list, dir, listened);
+        if (next) return next;
+        month = shiftMonth(month, dir);
+        if (dir > 0 && month > tonight.slice(0, 7)) return null;
+        list = (await getJson<Nights>(L.listenerUrl("nights", `&from=${month}&to=${month}`))).nights ?? [];
+      }
+      return null;
+    };
+    if (!params.get("filter") && !params.get("genre")) return byMonth();
+    // Filtered: the filters the calendar applies, checked the same way, and
+    // the months they light (the whole history), so a dark year is skipped.
+    const here = await nightsYear(L, Number(value.slice(0, 4)));
+    // With the whole history's counts, here once any year has loaded.
+    const meta = withCounts(L, here.meta);
+    // The route's own first night, not the sync's (see SheetHost).
+    const firstMonth = (meta.first ?? historySpan(L).first).slice(0, 7);
+    const { lastMonth } = historySpan(L);
+    const { filter, genre } = litSelection(params, meta);
+    if (!filter && !genre) return byMonth();
+    const ok = (n: Night) => isLit(n, filter, genre);
+    const inMonth = nearest(load.month, dir, ok);
+    if (inMonth) return inMonth;
+    const counts =
+      filter && genre ? (await nightsCombo(comboUrl(L, filter, genre))).months : filter ? meta.filterMonths?.[filter] : meta.genreMonths?.[genre!];
+    const month = value.slice(0, 7);
+    let candidates: string[];
+    if (counts) {
+      candidates = Object.keys(counts)
+        .filter((m) => counts[m] > 0 && (dir > 0 ? m > month : m < month))
+        .sort();
+      if (dir < 0) candidates.reverse();
+    } else {
+      // No monthly counts (a record being rebuilt): every month that way.
+      candidates = [];
+      for (let m = shiftMonth(month, dir); m >= firstMonth && m <= lastMonth; m = shiftMonth(m, dir)) candidates.push(m);
+    }
+    for (const m of candidates) {
+      const year = await nightsYear(L, Number(m.slice(0, 4)));
+      const next = nearest(year.nights.filter((n) => n.date.startsWith(m)), dir, ok);
+      if (next) return next;
+    }
+    return null;
   };
 
   const onPointerDown = (e: PointerEvent) => (swipe.current = { x: e.clientX, y: e.clientY });
@@ -143,7 +191,7 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
       )}
 
       <h3 className={H3}>The sky</h3>
-      <p className="mt-1 text-[13px] text-ink-2">At 9 p.m. that night.</p>
+      <p className="mt-1 text-[13px] text-ink-2">At 9 p.m. {sofar ? "tonight" : "that night"}.</p>
       <div className="mt-3 flex justify-center">
         {sky === "failed" ? (
           <SheetFailed retry={retry} />

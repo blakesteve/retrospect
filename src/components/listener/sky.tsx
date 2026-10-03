@@ -3,6 +3,7 @@
 import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { BODY_ORDER, C, R0, R1, RA, RP, VB, glyphAngles, glyphSize } from "@/lib/motion/wheelLayout";
 import type { Dignity, Planet } from "./api";
+import { moonLit, phaseName } from "@/lib/client/moon";
 
 /* The sky wheel and the Moon (spec 8.9). Drawn from the numbers the sky
    routes send; nothing here knows any sky data. Glyphs carry U+FE0E so they
@@ -329,20 +330,8 @@ export function WheelKey({ bodies, className = "" }: { bodies: Planet[]; classNa
   );
 }
 
-const PHASE_NAMES: [number, string][] = [
-  [12, "New moon"],
-  [78, "Waxing crescent"],
-  [102, "First quarter"],
-  [168, "Waxing gibbous"],
-  [192, "Full moon"],
-  [258, "Waning gibbous"],
-  [282, "Last quarter"],
-  [348, "Waning crescent"],
-  [360, "New moon"],
-];
-
-/** A name for a phase angle, for the Moon's own label when no line came with it. */
-export const phaseName = (phase: number) => PHASE_NAMES.find(([lim]) => ((phase % 360) + 360) % 360 < lim)![1];
+/** A name for a phase angle (`lib/client/moon.ts`), kept here for the sheets that import it. */
+export { phaseName };
 
 /**
  * The Moon, drawn from the phase angle (0 new, 180 full), lit on the right
@@ -353,15 +342,7 @@ export function MoonDrawing({ phaseAngle, size = 40, label }: { phaseAngle: numb
   const uid = useId().replace(/:/g, "");
   const r = 20;
   const c = 22;
-  const p = ((phaseAngle % 360) + 360) % 360;
-  const k = Math.cos((p * Math.PI) / 180);
-  const rx = Math.abs(k) * r;
-  const wax = p <= 180;
-  const limb = wax ? 1 : 0;
-  const term = wax ? (k > 0 ? 0 : 1) : k < 0 ? 0 : 1;
-  const lit = (1 - k) / 2;
-  const top = `${c} ${c - r}`;
-  const bot = `${c} ${c + r}`;
+  const lit = moonLit(phaseAngle, c, r);
   return (
     <svg
       width={size}
@@ -377,11 +358,7 @@ export function MoonDrawing({ phaseAngle, size = 40, label }: { phaseAngle: numb
         </radialGradient>
       </defs>
       <circle cx={c} cy={c} r={r} fill="#1e2448" stroke="rgba(242,239,230,.25)" strokeWidth={0.8} />
-      {lit > 0.995 ? (
-        <circle cx={c} cy={c} r={r} fill={`url(#${uid}m)`} />
-      ) : lit >= 0.005 ? (
-        <path d={`M${top}A${r} ${r} 0 0 ${limb} ${bot}A${rx.toFixed(2)} ${r} 0 0 ${term} ${top}Z`} fill={`url(#${uid}m)`} />
-      ) : null}
+      {lit === "full" ? <circle cx={c} cy={c} r={r} fill={`url(#${uid}m)`} /> : lit !== "none" ? <path d={lit} fill={`url(#${uid}m)`} /> : null}
     </svg>
   );
 }

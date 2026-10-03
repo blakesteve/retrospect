@@ -100,7 +100,7 @@ export interface Highlights {
   status: "ready" | "updating" | "computing";
   zone: string;
   length?: string;
-  counts?: { plays: number; venusSignChanges: number; storms: number; flybys: number };
+  counts?: { plays: number; venusSignChanges: number; storms: number; flybys: number; xflares?: number };
   wildCount?: number;
   wild?: WildNight[];
   /** `dateLine`: "Friday, May 10, 2024", the reveal card's eyebrow (8.3). */
@@ -121,10 +121,13 @@ export interface Songs {
 export interface NightSpace {
   known: { storms: boolean; flares: boolean; asteroids: boolean; fireballs: boolean };
   kp: number | null;
+  /** "Kp 6-" */
+  kpText?: string | null;
   stormGrade: string | null;
   stormLine: string | null;
   biggestFlare: string | null;
-  xFlare: string | null;
+  /** The biggest flare was X-class; `biggestFlare` is its class. */
+  xFlare: boolean;
   asteroid: { name: string; time: number; ld: number; meters: number; line: string } | null;
   fireballs: { time: number; kt: number | null; at: string }[];
   epic: { url: string; time: string; credit: string } | "none" | "unknown";
@@ -143,8 +146,11 @@ export interface Night {
   eclipse: { kind: string; time: number } | null;
   conditions: QuestionId[];
   filters: string[];
-  wild: { rank: number; title: string; story: string } | null;
+  /** `visible`: false for an eclipse not seen from the listener's zone, which ranks lower but still glows (7.5). */
+  wild: { rank: number; visible?: boolean; title: string; story: string } | null;
   genres: { genre: string; plays: number }[];
+  /** The listed genres the night lights in "Your genres": 3 plays or more (7.6). */
+  genreFilters?: string[];
   space: NightSpace;
   /** Every sign change and station during the night, with its sentence (8.7.2). */
   changes?: { time: number; body: string; kind: "sign" | "station"; text: string }[];
@@ -156,6 +162,34 @@ export interface Nights {
   status: "ready" | "updating" | "computing";
   zone: string;
   nights?: Night[];
+  /** The history's first night in the zone; null when every play is noise. */
+  first?: string | null;
+  /** "unavailable" when NASA's log couldn't be read (8.5). */
+  nasa?: "ok" | "unavailable";
+  /** The whole history's counts, on the one request that asked for them (counts=1). */
+  filterCounts?: NightsCounts["filterCounts"];
+  genreCounts?: NightsCounts["genreCounts"];
+  filterMonths?: NightsCounts["filterMonths"];
+  genreMonths?: NightsCounts["genreMonths"];
+}
+
+/** The whole history's lit nights (8.5), sent once a visit, with the first year asked for. */
+export interface NightsCounts {
+  /** Lit nights you listened on, for the whole history (7.5). */
+  filterCounts: Record<string, number>;
+  genreCounts: Record<string, number>;
+  /** The same, per month ("YYYY-MM"), months with none left out; null while a record is rebuilt. */
+  filterMonths: Record<string, Record<string, number>> | null;
+  genreMonths: Record<string, Record<string, number>> | null;
+}
+
+/** One sky filter and one genre together, for the whole history (7.6). */
+export interface NightsCombo {
+  status: "ready" | "updating" | "computing";
+  filter: string;
+  genre: string;
+  count: number;
+  months: Record<string, number>;
 }
 
 export interface Genres {

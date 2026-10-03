@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { oneCardPerEvent } from "@/lib/listener/highlights";
 import { lengthWords, longNightDate, strangestLine, WEEKDAYS, wildLine } from "@/lib/listener/sentences";
+import { xflaresIn } from "@/lib/listener/record";
 import { guarded, loadListener } from "@/lib/listener/serve";
 import { firstPhotos, surprisePool, wildCards, type CardPhoto } from "@/lib/listener/tonightCards";
 import { skyAt } from "@/lib/sky/sky";
@@ -15,9 +16,10 @@ const WILD_ROW = 10;
 /**
  * GET /api/user/:name/highlights?tz=America/Chicago: the reveal, the wild
  * nights row and the Surprise me pool (spec 7.5, 8.3, 8.4). The count-ups (a
- * count of 0 is the client's to leave out), the wildest nights as cards
- * (title, plays against the usual, date, the event's kind, the night's first
- * photo and the Moon's phase at 9 p.m.), one card per event, the wildest
+ * count of 0 is the client's to leave out; storms and X flares also feed the
+ * filter dock, 8.5), the wildest nights as cards (title, plays against the
+ * usual, date, the event's kind, the night's first photo and the Moon's phase
+ * at 9 p.m.), one card per storm run or other event, the wildest
  * night's date and line, the song with the strangest sky with its line, and
  * the pool: songs with a highlight chip, every wild night, and dated facts.
  * Every sentence is built here; the client lays them out.
@@ -72,7 +74,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
       zone,
       zoneFellBack,
       length: lengthWords(record.historyStart, record.historyEnd),
-      counts: record.counts,
+      // A version 3 record, served while it's rebuilt, counts no X flares yet.
+      counts: { ...record.counts, xflares: record.counts.xflares ?? xflaresIn(nasa, record.historyStart, record.historyEnd) },
       wildCount: record.wild.length,
       wild,
       wildest,

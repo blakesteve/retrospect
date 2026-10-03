@@ -585,24 +585,24 @@ describe("Tonight's heads-up (8.4)", () => {
     expect(answersPayload(rec, "ready", NOW).headsUp).toEqual({ id: "venusrx", skyLine: "Venus turns retrograde Saturday", line: "It'll be your first." });
   });
 
-  it("names the day as Tonight's chip does, counting from the heading's night between midnight and 4 a.m.", () => {
+  it("names the day as Tonight's sky fact does, counting from the heading's night between midnight and 4 a.m.", () => {
     // 1 a.m. CDT Friday, Oct 2, 2026: "Thursday night, Oct 1". Venus stations 2:09 a.m. Saturday.
     const now = Date.parse("2026-10-02T06:00:00Z");
     const p = answersPayload(record("venusrx", { status: "too-few-events", events: 1 }), "ready", now);
     expect(p.headsUp).toMatchObject({ skyLine: "Venus turns retrograde Saturday", line: "You've lived through one. See how your listening went." });
-    const chips = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).chips;
-    expect(chips[0]).toMatchObject({ kind: "station", text: "Venus turns retrograde Saturday" });
+    const facts = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).skyFacts;
+    expect(facts[0]).toMatchObject({ kind: "station", line: "Venus turns retrograde Saturday" });
   });
 
-  it("calls a station later the same small-hours night today, in the heads-up, the too-early line and the chip", () => {
+  it("calls a station later the same small-hours night today, in the heads-up, the too-early line and the sky fact", () => {
     // 1 a.m. CDT Saturday, Oct 3, 2026: "Friday night, Oct 2". Venus stations at 2:09 a.m.
     const now = Date.parse("2026-10-03T06:00:00Z");
     const rec = record("venusrx", { status: "too-few-events", events: 1 });
     const p = answersPayload(rec, "ready", now);
     expect(p.headsUp?.skyLine).toBe("Venus turns retrograde today");
     expect(p.questions.find((q) => q.id === "venusrx")!.phrases.tooEarly).toMatch(/ The next one begins today\.$/);
-    const chips = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).chips;
-    expect(chips[0]).toMatchObject({ kind: "station", text: "Venus turns retrograde today" });
+    const facts = tonightSky({ now: now / 1000, zone: "America/Chicago", sky: skyAt(new Date(now)), questionsHeld: [] }).skyFacts;
+    expect(facts[0]).toMatchObject({ kind: "station", line: "Venus turns retrograde today" });
   });
 
   it("is quiet when nothing starts within a week", () => {

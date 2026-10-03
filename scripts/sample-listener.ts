@@ -27,7 +27,8 @@
  * - Everything else is filler: songs played at most 11 times, which no route
  *   ever names. Their titles stay in this process.
  * - The sky is the real one, and NASA's log is the committed fixture
- *   (`src/lib/answers/testdata/donki-compact.json`, read 1 Oct 2026).
+ *   (`src/lib/answers/testdata/donki-compact.json`: its storms and flares
+ *   read 1 Oct 2026, its storms' starts 3 Oct 2026, the same storms).
  * - NASA's photos and JPL's flybys are real too, from
  *   `scripts/sample-space.json` (`node scripts/sample-space.mjs`): EPIC's
  *   Earth and SDO's Sun for the months the samples show, and close
@@ -429,19 +430,21 @@ type Route = (req: Request, ctx: { params: Promise<{ name: string }> }) => Promi
  * samples read the same every time.
  */
 export async function writeSampleListener(username = SAMPLE_USERNAME, freshAt?: Date): Promise<Scrobble[]> {
-  // The fixture predates the log's storm starts; the rest is the log as NASA had it.
+  // The log as NASA had it, storms' starts included (the reveal's "{n} solar storms").
   const fixture = donki as unknown as Partial<DonkiCompact>;
   const log: DonkiCompact = { ...emptyCompact(), ...fixture };
   if (freshAt) {
     // Copies: the imported fixture stays as committed for anything else in this process.
     log.kp = { ...log.kp };
     log.xflares = { ...log.xflares };
+    log.starts = { ...log.starts };
     log.kpAt = { ...log.kpAt };
     log.xflaresAt = { ...log.xflaresAt };
     const stamp = freshAt.toISOString();
     for (const m of monthsBetween(log.refreshedAt.slice(0, 7), stamp.slice(0, 7))) {
       log.kp[m] ??= [];
       log.xflares[m] ??= [];
+      log.starts[m] ??= [];
       log.kpAt[m] = log.xflaresAt[m] = stamp;
     }
     log.refreshedAt = stamp;
