@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import cities from "@/data/tz/cities.json";
 import { parseCoordinates, parseLinks, parseZoneTab } from "./tzTables";
-import { cityOf, eclipseView, eclipseVisible, findCity } from "./visibility";
+import { cityOf, eclipseView, eclipseVisible, findCity, lunarSeen, solarSeen } from "./visibility";
 
 /* The wild nights' eclipse ranking (spec 7.5, changed 2 Oct 2026). The
    expected numbers are 7.5's, measured from Chicago with astronomy-engine:
@@ -67,6 +67,27 @@ describe("each zone's principal city (zone.tab, then zone1970.tab, tzdata 2026b)
     expect(Object.keys(cities.cities).length).toBeGreaterThan(300);
     expect(Object.keys(cities.links).length).toBeGreaterThan(200);
     expect(cities.links["Asia/Calcutta"]).toBe("Asia/Kolkata");
+  });
+});
+
+describe("the decision itself (7.5: at least 10% of the Sun, or the Moon up)", () => {
+  /* Literal coverages and altitudes either side of each line, so the 10%
+     can't drift: the real eclipses below sit at 93.9%, 42.9% and 0.08%,
+     nowhere near it (architect's review, 3 Oct 2026). */
+  it("sees a solar eclipse covering 10% of the Sun, and not 9.9%", () => {
+    expect(solarSeen(0.1, 20)).toBe(true);
+    expect(solarSeen(0.099, 20)).toBe(false);
+    expect(solarSeen(0.2, 20)).toBe(true);
+  });
+  it("needs the Sun above the horizon at the peak, however much is covered", () => {
+    expect(solarSeen(0.95, 0.1)).toBe(true);
+    expect(solarSeen(0.95, 0)).toBe(false);
+    expect(solarSeen(0.95, -0.1)).toBe(false);
+  });
+  it("sees a lunar eclipse with the Moon just up, and not just down", () => {
+    expect(lunarSeen(0.1)).toBe(true);
+    expect(lunarSeen(0)).toBe(false);
+    expect(lunarSeen(-0.1)).toBe(false);
   });
 });
 

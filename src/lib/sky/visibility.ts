@@ -28,6 +28,15 @@ const LINKS = tz.links as Record<string, string>;
 
 /** At least this share of the Sun's disc covered, at the local peak. */
 export const MIN_OBSCURATION = 0.1;
+
+/** The decision for a solar eclipse (7.5): at least 10% of the Sun covered,
+    with the Sun above the horizon, both at the local peak. Degrees,
+    refraction included. */
+export const solarSeen = (obscuration: number, altitude: number) => obscuration >= MIN_OBSCURATION && altitude > 0;
+
+/** The decision for a lunar eclipse (7.5): the Moon above the horizon at
+    greatest eclipse. */
+export const lunarSeen = (altitude: number) => altitude > 0;
 const DAY = 86_400;
 
 const cities = new Map<string, { lat: number; lon: number } | null>();
@@ -86,13 +95,13 @@ export function eclipseView(zone: string, kind: string, peak: number): EclipseVi
       const e = SearchLocalSolarEclipse(from, observer);
       const same = Math.abs(e.peak.time.date.getTime() / 1000 - peak) < DAY;
       view = same
-        ? { obscuration: e.obscuration, altitude: e.peak.altitude, visible: e.obscuration >= MIN_OBSCURATION && e.peak.altitude > 0 }
+        ? { obscuration: e.obscuration, altitude: e.peak.altitude, visible: solarSeen(e.obscuration, e.peak.altitude) }
         : { obscuration: 0, altitude: null, visible: false };
     } else {
       const e = SearchLunarEclipse(from);
       const eq = Equator(Body.Moon, e.peak, observer, true, true);
       const altitude = Horizon(e.peak, observer, eq.ra, eq.dec, "normal").altitude;
-      view = { obscuration: null, altitude, visible: altitude > 0 };
+      view = { obscuration: null, altitude, visible: lunarSeen(altitude) };
     }
   }
   views.set(key, view);
