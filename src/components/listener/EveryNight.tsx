@@ -38,7 +38,7 @@ import {
 import { useListener, VIEW_HEADING } from "./Shell";
 import type { Night, Nights, NightsCombo } from "./api";
 import { tonightDate } from "./format";
-import { comboUrl, isLit, litSelection, nightsCombo, nightsYear, yearRange, type NightsYear } from "./nightsCache";
+import { comboUrl, isLit, litSelection, nightsCombo, nightsYear, withCounts, yearUrl as cacheYearUrl, type NightsYear } from "./nightsCache";
 import { replaceParams } from "./sheetUrl";
 import { SheetLink } from "./sheetLink";
 import { Chevron, Icon, type IconName } from "./pieces";
@@ -121,7 +121,10 @@ export function EveryNight() {
   const [years, setYears] = useState<Record<string, YearLoad>>({});
   const asked = useRef(new Set<string>());
   const { listenerUrl } = L;
-  const yearUrl = useCallback((y: number) => listenerUrl("nights", yearRange(y, lastMonth)), [listenerUrl, lastMonth]);
+  // What the year cache needs of the listener: its zone and its URLs.
+  const src = useMemo(() => ({ zone: L.zone, listenerUrl }), [L.zone, listenerUrl]);
+  // Keyed by the calendar's own tonight, so a visit past a month's end keeps its years.
+  const yearUrl = useCallback((y: number) => cacheYearUrl(src, y, lastMonth), [src, lastMonth]);
   const yearLoad = useCallback((y: number): YearLoad => years[yearUrl(y)] ?? LOADING, [years, yearUrl]);
   const want = useCallback(
     (y: number, again = false) => {
@@ -129,7 +132,7 @@ export function EveryNight() {
       if (asked.current.has(url) && !again) return;
       asked.current.add(url);
       setYears((s) => ({ ...s, [url]: LOADING }));
-      nightsYear(url).then(
+      nightsYear(src, y, lastMonth).then(
         (data) => {
           setYears((s) => ({ ...s, [url]: { state: "ready", data } }));
           if (data.meta.first) setServerFirst(data.meta.first);
@@ -137,17 +140,19 @@ export function EveryNight() {
         () => setYears((s) => ({ ...s, [url]: { state: "failed" } })),
       );
     },
-    [yearUrl],
+    [yearUrl, src, lastMonth],
   );
   const retry = useCallback((y: number) => want(y, true), [want]);
   const yearsNewestFirst = useMemo(() => [...newestOfYear.keys()].map(Number), [newestOfYear]);
+  // The newest loaded year's facts, with the whole history's counts, which
+  // came with the first year (nightsCache.ts).
   const meta: Nights | null = useMemo(() => {
     for (const y of yearsNewestFirst) {
       const l = yearLoad(y);
-      if (l.state === "ready") return l.data.meta;
+      if (l.state === "ready") return withCounts(src, l.data.meta);
     }
     return null;
-  }, [yearsNewestFirst, yearLoad]);
+  }, [yearsNewestFirst, yearLoad, src]);
 
   // The months near the viewport render their doors (8.5 item 3). While the
   // year strip is dragged, nothing loads: letting go asks for what's near.
@@ -312,13 +317,14 @@ export function EveryNight() {
   const dockRef = useRef<HTMLDivElement>(null);
   // The shell's header sticks above the bar on this view (Shell.tsx): the
   // bar hangs under it, and everything that clears the top clears both.
+  // Stuck, it shows only its height less what it sticks above the window.
   const [headH, setHeadH] = useState(0);
   const [barH, setBarH] = useState(0);
   const [dockH, setDockH] = useState(0);
   useEffect(() => {
     const head = document.querySelector<HTMLElement>("[data-listener-head]");
     const ro = new ResizeObserver(() => {
-      setHeadH(head?.offsetHeight ?? 0);
+      setHeadH(head ? head.offsetHeight + (parseFloat(getComputedStyle(head).top) || 0) : 0);
       setBarH(barRef.current?.offsetHeight ?? 0);
       setDockH(dockRef.current?.offsetHeight ?? 0);
     });
@@ -327,15 +333,16 @@ export function EveryNight() {
     if (dockRef.current) ro.observe(dockRef.current);
     return () => ro.disconnect();
   }, [filtering]);
-  // A focused door scrolls clear of the header and bar above and the dock below (11).
+  // A focused door scrolls clear of the header and bar above and the dock
+  // below (11). Above, through a variable globals.css reads, which drops it
+  // while focus is in the sticky top, so a Tab onto its controls moves nothing.
   useEffect(() => {
     const html = document.documentElement;
-    const top = html.style.scrollPaddingTop;
     const bottom = html.style.scrollPaddingBottom;
-    html.style.scrollPaddingTop = `${headH + barH + 8}px`;
+    html.style.setProperty("--clear-top", `${headH + barH + 8}px`);
     if (filtering && dockH) html.style.scrollPaddingBottom = `${dockH + 24}px`;
     return () => {
-      html.style.scrollPaddingTop = top;
+      html.style.removeProperty("--clear-top");
       html.style.scrollPaddingBottom = bottom;
     };
   }, [headH, barH, dockH, filtering]);
@@ -415,7 +422,7 @@ export function EveryNight() {
     const y = Number(m.slice(0, 4));
     want(y);
     try {
-      const data = await nightsYear(yearUrl(y));
+      const data = await nightsYear(src, y, lastMonth);
       const lit = data.nights.filter((n) => n.date.startsWith(m) && isLit(n, filter, genre));
       if (lit.length === 0) return;
       const d = lit[Math.floor(Math.random() * lit.length)].date;
@@ -446,7 +453,7 @@ export function EveryNight() {
       <div
         ref={barRef}
         style={{ top: headH }}
-        className="sticky z-20 -mx-4 border-b border-[var(--line)] bg-[rgba(11,16,38,.97)] pt-1 pb-1.5 backdrop-blur-md"
+        className="sticky z-20 -mx-4 border-b border-[var(--line)] bg-[rgba(11,16,38,.97)] pt-0.5 pb-1 backdrop-blur-md"
         data-nights-bar
       >
         {loadingBar ? (

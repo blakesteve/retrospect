@@ -166,12 +166,21 @@ export interface Nights {
   first?: string | null;
   /** "unavailable" when NASA's log couldn't be read (8.5). */
   nasa?: "ok" | "unavailable";
+  /** The whole history's counts, on the one request that asked for them (counts=1). */
+  filterCounts?: NightsCounts["filterCounts"];
+  genreCounts?: NightsCounts["genreCounts"];
+  filterMonths?: NightsCounts["filterMonths"];
+  genreMonths?: NightsCounts["genreMonths"];
+}
+
+/** The whole history's lit nights (8.5), sent once a visit, with the first year asked for. */
+export interface NightsCounts {
   /** Lit nights you listened on, for the whole history (7.5). */
-  filterCounts?: Record<string, number>;
-  genreCounts?: Record<string, number>;
+  filterCounts: Record<string, number>;
+  genreCounts: Record<string, number>;
   /** The same, per month ("YYYY-MM"), months with none left out; null while a record is rebuilt. */
-  filterMonths?: Record<string, Record<string, number>> | null;
-  genreMonths?: Record<string, Record<string, number>> | null;
+  filterMonths: Record<string, Record<string, number>> | null;
+  genreMonths: Record<string, Record<string, number>> | null;
 }
 
 /** One sky filter and one genre together, for the whole history (7.6). */

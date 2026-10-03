@@ -18,8 +18,9 @@ import { answerWords } from "./words";
  * `npm run null-test`, and at most 19% of the 100 quick ones in the suite.
  *
  * Questions 7 and 8 run against NASA's real storm and flare log, as DONKI
- * had it on 1 Oct 2026 (`testdata/donki-compact.json`, from `npm run space`),
- * so all 12 are in the count.
+ * had it on 1 Oct 2026 (`testdata/donki-compact.json`, from `npm run space`;
+ * its storms' starts were added 3 Oct 2026, the readings unchanged), so all
+ * 12 are in the count.
  */
 
 export const NASA_FIXTURE = nasaLogFrom(donki as unknown as DonkiCompact)!;

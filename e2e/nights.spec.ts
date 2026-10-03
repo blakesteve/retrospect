@@ -52,6 +52,82 @@ const focusClear = (page: Page) =>
     { bar: BAR, dock: DOCK },
   );
 
+/** How each layer of a door shows: its own opacity times every ancestor's.
+    The fill is the door's ::before (globals.css). */
+const layers = (page: Page, date: string) =>
+  page.locator(`${DOOR}[data-door='${date}']`).evaluate((door) => {
+    const shown = (el: Element | null, own = 1) => {
+      if (!el) return null;
+      let o = own;
+      for (let e: Element | null = el; e; e = e.parentElement) o *= Number(getComputedStyle(e).opacity);
+      return Math.round(o * 100) / 100;
+    };
+    return {
+      date: shown(door.querySelector(".door-dn")),
+      fill: shown(door, Number(getComputedStyle(door, "::before").opacity)),
+      moon: shown(door.querySelector(".door-moon")),
+      badges: shown(door.querySelector(".door-badges")),
+    };
+  });
+
+/** The lowest contrast of a door's date on its own fill (1.4.3), over the
+    doors `selector` finds, at every stop of the fill's gradient. Each layer
+    as it shows: the fill's colors times its opacity, over the page's sky,
+    and the date's ink times its own. */
+const dateContrast = (page: Page, selector: string) =>
+  page.evaluate((sel) => {
+    const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+    const rgba = (c: string) => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = c;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+      return [r, g, b, a / 255];
+    };
+    // One color over another, either of them translucent.
+    const over = (top: number[], under: number[]) => {
+      const a = top[3] + under[3] * (1 - top[3]);
+      return a === 0 ? [0, 0, 0, 0] : [0, 1, 2].map((i) => (top[i] * top[3] + under[i] * under[3] * (1 - top[3])) / a).concat(a);
+    };
+    const fade = (c: number[], k: number) => [c[0], c[1], c[2], c[3] * k];
+    const shown = (el: Element) => {
+      let o = 1;
+      for (let e: Element | null = el; e; e = e.parentElement) o *= Number(getComputedStyle(e).opacity);
+      return o;
+    };
+    const lum = ([r, g, b]: number[]) => {
+      const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const ratio = (x: number[], y: number[]) => {
+      const [a, b] = [lum(x), lum(y)].sort((m, n) => n - m);
+      return (a + 0.05) / (b + 0.05);
+    };
+    const sky = rgba(getComputedStyle(document.body).backgroundColor);
+    let worst = { ratio: 99, door: "" };
+    let measured = 0;
+    let painted = 0;
+    for (const door of document.querySelectorAll<HTMLElement>(sel)) {
+      // The fill is the ::before's alone: a door painting one of its own would go unmeasured.
+      const own = getComputedStyle(door);
+      if (own.backgroundColor !== "rgba(0, 0, 0, 0)" || own.backgroundImage !== "none") worst = { ratio: 0, door: `${door.dataset.door}'s own fill` };
+      const fill = getComputedStyle(door, "::before");
+      if (rgba(fill.backgroundColor)[3] > 0 || fill.backgroundImage !== "none") painted++;
+      const k = shown(door) * Number(fill.opacity);
+      const color = rgba(fill.backgroundColor);
+      const stops = [...fill.backgroundImage.matchAll(/rgba?\([^)]*\)/g)].map((m) => over(rgba(m[0]), color));
+      const date = door.querySelector(".door-dn")!;
+      const ink = fade(rgba(getComputedStyle(date).color), shown(date));
+      for (const layer of [color, ...stops]) {
+        const bg = over(fade(layer, k), sky);
+        const r = ratio(over(ink, bg), bg);
+        if (r < worst.ratio) worst = { ratio: Math.round(r * 100) / 100, door: door.dataset.door! };
+      }
+      measured++;
+    }
+    return { worst, measured, painted };
+  }, selector);
+
 for (const width of [375, 1280]) {
   test.describe(`at ${width}px`, () => {
     test.use({ viewport: { width, height: width === 375 ? 812 : 900 } });
@@ -64,9 +140,13 @@ for (const width of [375, 1280]) {
       await openNights(page);
       await settle(page);
       await settle(page);
-      expect(asked).toEqual(["?tz=America%2FChicago&from=2024-01&to=2024-05"]);
+      // With the whole history's counts, asked for once (8.5).
+      expect(asked).toEqual(["?tz=America%2FChicago&from=2024-01&to=2024-05&counts=1"]);
       // And the months far below draw no doors yet (8.5 item 3).
       await expect(page.locator(`[data-month='2023-10'] ${DOOR}`)).toHaveCount(0);
+      // The years below ask without the counts.
+      await renderAll(page);
+      expect(asked).toEqual(["?tz=America%2FChicago&from=2024-01&to=2024-05&counts=1", "?tz=America%2FChicago&from=2023-01&to=2023-12"]);
     });
 
     test("one door per night, every door at least 44 by 44px", async ({ page }) => {
@@ -79,41 +159,9 @@ for (const width of [375, 1280]) {
       // Every open door's date reads at 4.5:1 or more on its own fill (1.4.3),
       // at the brightest stop of its gradient. A night with no plays is
       // inactive (aria-disabled) and exempt.
-      const dates = await page.evaluate(() => {
-        const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
-        const rgba = (c: string) => {
-          ctx.clearRect(0, 0, 1, 1);
-          ctx.fillStyle = c;
-          ctx.fillRect(0, 0, 1, 1);
-          const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-          return [r, g, b, a / 255];
-        };
-        const over = (top: number[], under: number[]) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3])).concat(1);
-        const lum = ([r, g, b]: number[]) => {
-          const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-        };
-        const ratio = (x: number[], y: number[]) => {
-          const [a, b] = [lum(x), lum(y)].sort((m, n) => n - m);
-          return (a + 0.05) / (b + 0.05);
-        };
-        const sky = rgba(getComputedStyle(document.body).backgroundColor);
-        let worst = { ratio: 99, door: "" };
-        let measured = 0;
-        for (const door of document.querySelectorAll<HTMLElement>("[data-door]:not([aria-disabled])")) {
-          const cs = getComputedStyle(door);
-          const base = over(rgba(cs.backgroundColor), sky);
-          const stops = [...cs.backgroundImage.matchAll(/rgba?\([^)]*\)/g)].map((m) => over(rgba(m[0]), base));
-          const fg = over(rgba(getComputedStyle(door.querySelector(".door-dn")!).color), base);
-          for (const bg of [base, ...stops]) {
-            const r = ratio(fg, bg);
-            if (r < worst.ratio) worst = { ratio: Math.round(r * 100) / 100, door: door.dataset.door! };
-          }
-          measured++;
-        }
-        return { worst, measured };
-      });
+      const dates = await dateContrast(page, `${DOOR}:not([aria-disabled])`);
       expect(dates.measured).toBeGreaterThan(200);
+      expect(dates.painted).toBe(dates.measured);
       expect(dates.worst.ratio, dates.worst.door).toBeGreaterThanOrEqual(4.5);
       test.info().annotations.push({ type: "measured", description: `the lowest date contrast at ${width}px: ${dates.worst.ratio}:1 (${dates.worst.door})` });
       // The rest of May is drawn dashed, and isn't a door (8.5).
@@ -149,25 +197,62 @@ for (const width of [375, 1280]) {
       await expect(prev).toBeVisible();
     });
 
-    test("the sticky bar stays at most 112px tall, and stays", async ({ page }) => {
+    test("the sticky top: the whole header at rest, at most 168px once scrolled, the bar at most 112px", async ({ page }) => {
       await openNights(page);
       const at = async () => page.locator(BAR).evaluate((b) => [b.getBoundingClientRect().top, b.getBoundingClientRect().height]);
+      const head = async () => page.locator("[data-listener-head]").evaluate((h) => [h.getBoundingClientRect().top, h.getBoundingClientRect().bottom]);
+      const wordmark = page.locator("[data-listener-head]").getByRole("link", { name: "Retrospect" });
+      const views = page.getByRole("navigation", { name: "Views" });
+      // At rest, the whole header: the wordmark's row and the switcher.
+      const [restTop, rest] = await head();
+      expect(restTop).toBe(0);
+      await expect(wordmark).toBeInViewport({ ratio: 1 });
       const [, first] = await at();
       expect(first).toBeLessThanOrEqual(112);
       expect(first).toBeGreaterThan(88); // its two rows of 44px: it reached the chips and the strip
       await page.evaluate(() => window.scrollTo(0, 3000));
       await settle(page);
-      // The whole top stays (Blake, 3 Oct 2026): the header at the top, the bar right under it.
-      const head = await page.locator("[data-listener-head]").evaluate((h) => [h.getBoundingClientRect().top, h.getBoundingClientRect().bottom]);
-      expect(head[0]).toBe(0);
-      await expect(page.getByRole("navigation", { name: "Views" })).toBeInViewport();
-      const [top, height] = await at();
-      expect(Math.abs(top - head[1])).toBeLessThan(1);
+      // Scrolled, the top stays (Blake, 3 Oct 2026) but compacts (8.5): the
+      // wordmark's row has gone up and away, the switcher whole under the
+      // window's edge, the bar right under it, the two at most 168px.
+      const [top, bottom] = await head();
+      expect(top).toBeLessThan(0);
+      await expect(wordmark).not.toBeInViewport();
+      await expect(views).toBeInViewport({ ratio: 1 });
+      const [barTop, height] = await at();
+      expect(Math.abs(barTop - bottom)).toBeLessThan(1);
       expect(height).toBeLessThanOrEqual(112);
+      expect(barTop + height).toBeLessThanOrEqual(168);
+      expect(barTop + height).toBeLessThan(rest + first);
       test.info().annotations.push({
         type: "measured",
-        description: `the sticky top at ${width}px: ${Math.round(head[1] - head[0])} + ${Math.round(height)} = ${Math.round(head[1] - head[0] + height)}px`,
+        description: `the sticky top at ${width}px: ${Math.round(rest)} + ${Math.round(first)} at rest, ${Math.round(bottom)} + ${Math.round(height)} = ${Math.round(barTop + height)}px stuck`,
       });
+      // Its own controls take focus where they are (11): no Tab onto them
+      // scrolls the page, and the wordmark, gone up and away, brings the
+      // whole header back while it has focus.
+      const y = await page.evaluate(() => window.scrollY);
+      await page.getByRole("button", { name: "All nights" }).focus();
+      for (let i = 0; i < 6 && !(await wordmark.evaluate((e) => e === document.activeElement)); i++) {
+        expect(await page.evaluate(() => window.scrollY), `before Shift+Tab ${i + 1}`).toBe(y);
+        await page.keyboard.press("Shift+Tab");
+        await settle(page);
+      }
+      await expect(wordmark).toBeFocused();
+      await expect(wordmark).toBeInViewport({ ratio: 1 });
+      expect((await head())[0]).toBe(0);
+      expect(await page.evaluate(() => window.scrollY)).toBe(y);
+      await page.keyboard.press("Tab");
+      await settle(page);
+      expect((await head())[0]).toBeLessThan(0);
+      expect(await page.evaluate(() => window.scrollY)).toBe(y);
+      // Back at the top, the whole header again.
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await settle(page);
+      expect((await head())[0]).toBe(0);
+      await expect(wordmark).toBeInViewport({ ratio: 1 });
+      await page.evaluate(() => window.scrollTo(0, 3000));
+      await settle(page);
       // With a filter on, the strip's label gains its lit count: every month's, still one line each.
       await page.getByRole("button", { name: "Storm nights, 84" }).click();
       const strip = page.getByRole("slider", { name: "Month" });
@@ -184,7 +269,7 @@ for (const width of [375, 1280]) {
       expect(Math.max(...heights)).toBeLessThanOrEqual(112);
     });
 
-    test("a filter lights its nights, dims the rest to 35%, and the dock ties it to its question", async ({ page }) => {
+    test("a filter lights its nights, dims the rest's fill, Moon and badges to 35%, and the dock ties it to its question", async ({ page }) => {
       await openNights(page);
       const chip = page.getByRole("button", { name: "Storm nights, 84" });
       await expect(chip).toHaveAttribute("aria-pressed", "false");
@@ -193,10 +278,21 @@ for (const width of [375, 1280]) {
       await expect(page).toHaveURL(/[?&]filter=storm(&|$)/);
       const lit = await page.locator(`[data-month='2024-05'] ${DOOR}[data-lit]`).evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.door));
       expect(lit).toEqual(["2024-05-02", "2024-05-10", "2024-05-11", "2024-05-12", "2024-05-15"]);
-      const opacity = (date: string) => page.locator(`${DOOR}[data-door='${date}']`).evaluate((e) => getComputedStyle(e).opacity);
-      // Once the fade has run.
-      await expect.poll(() => opacity("2024-05-09")).toBe("0.35");
-      expect(await opacity("2024-05-10")).toBe("1");
+      // Once the fade has run: a dark night's fill and Moon at 35%, its date whole; a lit night whole.
+      await expect.poll(() => layers(page, "2024-05-09")).toMatchObject({ date: 1, fill: 0.35, moon: 0.35 });
+      expect(await layers(page, "2024-05-10")).toEqual({ date: 1, fill: 1, moon: 1, badges: 1 });
+      // A dark night with badges dims them too.
+      const badged = await page
+        .locator(`${DOOR}:not([data-lit]):not([aria-disabled]):has(.door-badges)`)
+        .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.door!));
+      expect(badged.length).toBeGreaterThan(0);
+      await expect.poll(async () => (await layers(page, badged[0])).badges).toBe(0.35);
+      // And every dimmed door's date still reads at 4.5:1 or more on its dimmed fill (1.4.3).
+      const dimmed = await dateContrast(page, `${DOOR}:not([data-lit]):not([aria-disabled])`);
+      expect(dimmed.measured).toBeGreaterThan(20);
+      expect(dimmed.painted).toBe(dimmed.measured);
+      expect(dimmed.worst.ratio, dimmed.worst.door).toBeGreaterThanOrEqual(4.5);
+      test.info().annotations.push({ type: "measured", description: `the lowest dimmed date contrast at ${width}px: ${dimmed.worst.ratio}:1 (${dimmed.worst.door}), ${dimmed.measured} doors` });
       // A storm night's door says its storm and its flare by name (11).
       expect(await page.locator(`${DOOR}[data-door='2024-05-10']`).getAttribute("aria-label")).toBe(
         "Friday, May 10, 2024. 39 plays, 7 fewer than a usual Friday. Waxing crescent Moon. Solar storm, Kp 9. X5.8 flare. First heard Good Luck, Babe! by Chappell Roan. First heard May Ninth by Khruangbin. A wild night: The strongest geomagnetic storm in about 20 years. Lit by the filter.",
@@ -216,7 +312,7 @@ for (const width of [375, 1280]) {
       await expect(page.locator(DOCK)).toHaveCount(0);
       // Focus goes to "All nights", not the page, as the dock leaves.
       await expect(page.getByRole("button", { name: "All nights" })).toBeFocused();
-      await expect.poll(() => opacity("2024-05-09")).toBe("1");
+      await expect.poll(() => layers(page, "2024-05-09")).toMatchObject({ date: 1, fill: 1, moon: 1 });
     });
 
     test("the dock covers no door that can't scroll clear of it", async ({ page }) => {
@@ -398,6 +494,47 @@ test.describe("the states (8.5)", () => {
     await expect(line).toHaveCount(0);
   });
 
+  test("a first year that didn't load leaves the whole history's counts to the next year that does (8.5)", async ({ page }) => {
+    let fail = true;
+    const asked: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/user/sample/nights?")) asked.push(new URL(r.url()).search);
+    });
+    await page.route("**/api/user/sample/nights?*from=2024-01*", (r) => (fail ? r.fulfill({ status: 503, json: { error: "unavailable" } }) : r.fallback()));
+    await openNights(page, "", NOW, "text=2024 didn’t load.");
+    // 2024's months fold to its one line, so 2023 comes near: it asks for the counts too, and brings them.
+    await expect(page.getByRole("button", { name: "Storm nights, 84" })).toBeVisible();
+    fail = false;
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page.locator(`${DOOR}[data-tonight]`)).toBeVisible();
+    // The chips stay: 2024, newest now, came without the counts, which the page keeps from 2023.
+    await expect(page.getByRole("button", { name: "Storm nights, 84" })).toBeVisible();
+    // Once they're here, Try again asks for its year alone.
+    expect(asked).toEqual([
+      "?tz=America%2FChicago&from=2024-01&to=2024-05&counts=1",
+      "?tz=America%2FChicago&from=2023-01&to=2023-12&counts=1",
+      "?tz=America%2FChicago&from=2024-01&to=2024-05",
+    ]);
+  });
+
+  test("a visit that runs past the month's end keeps its years (8.5)", async ({ page }) => {
+    const asked: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/user/sample/nights?")) asked.push(new URL(r.url()).search);
+    });
+    await openNights(page);
+    await expect(page.locator(`[data-month='2024-05'] ${DOOR}`)).toHaveCount(15);
+    // 4:30 a.m. on June 1, Central: June's first night has begun. The visit
+    // goes on, the years below load, and back at the top May's doors are
+    // there, with 2024 never asked for again.
+    await page.clock.setFixedTime(new Date("2024-06-01T04:30:00-05:00"));
+    await renderAll(page);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await settle(page);
+    await expect(page.locator(`[data-month='2024-05'] ${DOOR}`)).toHaveCount(15);
+    expect(asked).toEqual(["?tz=America%2FChicago&from=2024-01&to=2024-05&counts=1", "?tz=America%2FChicago&from=2023-01&to=2023-12"]);
+  });
+
   test("under a filter, a year that didn't load still says so, at its newest month", async ({ page }) => {
     await page.route("**/api/user/sample/nights?*from=2023-01*", (r) => r.fulfill({ status: 503, json: { error: "unavailable" } }));
     // No eclipse in December 2023: its month would fold, and the line with it.
@@ -407,11 +544,23 @@ test.describe("the states (8.5)", () => {
     await expect(page.getByText("2023 didn’t load.", { exact: true })).toHaveCount(1);
   });
 
-  test("a filter or genre the page doesn't know lights nothing", async ({ page }) => {
+  test("a filter or genre the page doesn't know lights nothing, in the calendar and in a night's sheet", async ({ page }) => {
     await openNights(page, "?filter=bogus&genre=constructor");
     await expect(page.getByRole("button", { name: "All nights" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(DOCK)).toHaveCount(0);
     await expect(page.locator("[data-filtering]")).toHaveCount(0);
+    // A night of 2023, a year that came after the counts and so without them:
+    // its sheet knows the genre isn't the history's from the counts the page
+    // kept, and steps to the next night you listened on.
+    await renderAll(page);
+    const october = await page
+      .locator(`[data-month='2023-10'] ${DOOR}:not([aria-disabled])`)
+      .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.door!).filter((d) => d > "2023-10-14"));
+    expect(october.length).toBeGreaterThan(0);
+    await page.locator(`${DOOR}[data-door='2023-10-14']`).click();
+    await expect(page).toHaveURL(/[?&]night=2023-10-14(&|$)/);
+    await page.getByRole("dialog").getByRole("button", { name: "Next night" }).click();
+    await expect(page).toHaveURL(new RegExp(`[?&]night=${october[0]}(&|$)`));
   });
 
   test("a door before the sync's oldest scrobble still opens its night", async ({ page }) => {
@@ -581,12 +730,15 @@ test.describe("the bar's controls (8.5, 7.6, 11)", () => {
     expect(await focused(page)).toBe("2024-05-10");
     const door = page.locator(`${DOOR}[data-door='2024-05-10']`);
     await expect(door).toHaveAttribute("data-wild", "true");
-    const ring = await door.evaluate((e) => {
-      const cs = getComputedStyle(e);
-      return { outline: `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`, shadow: cs.boxShadow };
-    });
-    expect(ring.outline).toBe("solid 2px rgb(212, 175, 55)");
-    expect(ring.shadow).toBe("rgb(11, 16, 38) 0px 0px 0px 2px");
+    const ring = () =>
+      door.evaluate((e) => {
+        const cs = getComputedStyle(e);
+        return { outline: `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`, shadow: cs.boxShadow, glow: getComputedStyle(e, "::before").boxShadow };
+      });
+    expect(await ring()).toEqual({ outline: "solid 2px rgb(212, 175, 55)", shadow: "rgb(11, 16, 38) 0px 0px 0px 2px", glow: "none" });
+    // Its glow is back once focus moves on.
+    await page.keyboard.press("ArrowLeft");
+    expect((await ring()).glow).toContain("rgba(212, 175, 55, 0.75)");
   });
 
   test("a focused door a filter dimmed comes back to full strength, ring and all (11, 1.4.11)", async ({ page }) => {
@@ -597,11 +749,11 @@ test.describe("the bar's controls (8.5, 7.6, 11)", () => {
     expect(await focused(page)).toBe("2024-05-13");
     const door = page.locator(`${DOOR}[data-door='2024-05-13']`);
     await expect(door).not.toHaveAttribute("data-lit");
-    await expect.poll(() => door.evaluate((e) => getComputedStyle(e).opacity)).toBe("1");
+    await expect.poll(() => layers(page, "2024-05-13")).toEqual({ date: 1, fill: 1, moon: 1, badges: 1 });
     expect(await door.evaluate((e) => `${getComputedStyle(e).outlineStyle} ${getComputedStyle(e).outlineColor}`)).toBe("solid rgb(212, 175, 55)");
-    // And back to 35% once focus moves on.
+    // And its fill and Moon back to 35% once focus moves on, the date whole.
     await page.keyboard.press("ArrowLeft");
-    await expect.poll(() => door.evaluate((e) => getComputedStyle(e).opacity)).toBe("0.35");
+    await expect.poll(() => layers(page, "2024-05-13")).toEqual({ date: 1, fill: 0.35, moon: 0.35, badges: 0.35 });
   });
 
   test("a sky filter and a genre together light the nights both hold; the dock says genres aren't tested", async ({ page }) => {

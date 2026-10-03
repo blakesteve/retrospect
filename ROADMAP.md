@@ -35,9 +35,14 @@
 - **The server's half**: wild nights carry whether the zone saw the eclipse;
   a storm's stretch is question 7's own event, so the dock and the question
   can't disagree; the X flares NASA logged join the counts; the nights route
-  sends each filter's and genre's nights per month, and a sky filter with a
-  genre over the whole history; the dead server chips are gone, their day
-  words tested through the sky facts.
+  sends each filter's and genre's nights per month once a visit, with the
+  first year the calendar loads (`counts=1`), not with every year, and a sky
+  filter with a genre over the whole history; the dead server chips are gone,
+  their day words tested through the sky facts. The landing's month files no
+  longer carry those counts: 416,480 characters, from 502,567.
+- **The landing sample's storm count shows**: NASA's log fixture gained its
+  storms' starts (DONKI read again 3 Oct, its readings unchanged), so the
+  reveal counts 63 solar storms, where it said 0.
 - **A night's sheet** steps between lit nights with a filter on, reads a year
   the calendar already has, and opens tonight before its first play.
 - **The fluke meter says what it measures**: each notch is its phrase whole
@@ -45,9 +50,16 @@
 - **From review**: the filter chips are a Roster `Carousel` with overlay
   arrows; an invalid link says so in a Roster toast, loaded on first use; and
   a night before the sync status's `oldestUts` (which can trail the first
-  play) no longer closes as it opens. The whole top (header, switcher and
-  filter bar) stays in view as you scroll, with a "Back to top" button once a
-  screen has gone by.
+  play) no longer closes as it opens. The switcher and filter bar stay in
+  view as you scroll, with a "Back to top" button once a screen has gone by;
+  the whole header shows at rest, and scrolled, the wordmark's row goes up
+  and away: 165px stuck at 375 by 812 (at most 168px), from 245px. A Tab
+  onto the sticky top's controls no longer scrolls the page under them (it
+  moved about 400px a Tab), and the wordmark, scrolled away, comes back
+  while it has focus. A visit that runs past a month's end keeps its years.
+- **A filter dims the fill, not the date**: a dark night's fill, Moon and
+  badges go to 35% and its date stays whole, 12.54:1 at the lowest (4.5:1
+  needed), measured in the browser checks with every layer's opacity.
 
 ### Browser checks in CI (3 October 2026)
 

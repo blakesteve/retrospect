@@ -155,7 +155,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
 
   it("gives every night of the months asked for, with the storm, the Moon and the filters", async () => {
     await seed("may");
-    const { body } = await call(nightsRoute, "may", "tz=America/Chicago&from=2024-05&to=2024-06");
+    const { body } = await call(nightsRoute, "may", "tz=America/Chicago&from=2024-05&to=2024-06&counts=1");
     expect(body.nights).toHaveLength(61);
     expect(body.nights[0].date).toBe("2024-05-01");
     const may10 = body.nights.find((n: { date: string }) => n.date === "2024-05-10");
@@ -224,6 +224,27 @@ describe("the nights route (spec 7.4, 8.5)", () => {
     expect(body.nasa).toBe("ok");
   });
 
+  it("sends the whole history's counts only when asked (counts=1), never with every year (8.5)", async () => {
+    await seed("once");
+    const COUNTS = ["filterCounts", "filterMonths", "genreCounts", "genreMonths"];
+    const year = (await call(nightsRoute, "once", "tz=America/Chicago&from=2024-01&to=2024-12")).body;
+    // A year without them: its nights, its first night and NASA's state.
+    expect(year.nights.length).toBeGreaterThan(100);
+    expect(year).toMatchObject({ first: expect.any(String), nasa: "ok" });
+    for (const k of COUNTS) expect(year, k).not.toHaveProperty(k);
+    // The same year asked with them: the same nights, and the four counts.
+    const first = (await call(nightsRoute, "once", "tz=America/Chicago&from=2024-01&to=2024-12&counts=1")).body;
+    expect(first.nights).toEqual(year.nights);
+    for (const k of COUNTS) expect(first[k], k).toEqual(expect.any(Object));
+    expect(first.filterCounts.storm).toBe(1);
+    for (const q of ["counts=0", "counts=true", "counts="]) {
+      expect(await call(nightsRoute, "once", `tz=America/Chicago&from=2024-05&to=2024-05&${q}`), q).toEqual({
+        status: 400,
+        body: { error: "counts must be 1, or left out" },
+      });
+    }
+  });
+
   it("says whether the zone saw each wild night's eclipse, which ranks it (7.5)", async () => {
     await seed("seen");
     // Dec 4, 2021, 07:33 UT, over Antarctica: 1:33 a.m. CST, Dec 3's night, not seen from Chicago.
@@ -255,7 +276,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
   it("says when NASA's log didn't read, so the page can hide its filters (8.5)", async () => {
     await getBlobStore().del(COMPACT_KEY);
     await seed("nonasa");
-    const { status, body } = await call(nightsRoute, "nonasa", "tz=America/Chicago&from=2024-05&to=2024-05");
+    const { status, body } = await call(nightsRoute, "nonasa", "tz=America/Chicago&from=2024-05&to=2024-05&counts=1");
     expect(status).toBe(200);
     expect(body.nasa).toBe("unavailable");
     expect(body.filterCounts.storm).toBe(0);
@@ -264,7 +285,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
 
   it("counts the nights one sky filter and one genre light together, over the whole history (8.5, 7.6)", async () => {
     await seed("pair");
-    const may = (await call(nightsRoute, "pair", "tz=America/Chicago&from=2024-05&to=2024-05")).body;
+    const may = (await call(nightsRoute, "pair", "tz=America/Chicago&from=2024-05&to=2024-05&counts=1")).body;
     const may10 = may.nights.find((n: { date: string }) => n.date === "2024-05-10");
     // Artist 3's three evening plays light Artist 3's genre that night.
     expect(may10.genreFilters.length).toBeGreaterThan(0);
@@ -295,6 +316,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
     for (const q of [
       "filter=storm&genre=shoegaze&from=2024-05&to=2024-05",
       "filter=storm&genre=shoegaze&from=2024-05",
+      "filter=storm&genre=shoegaze&counts=1",
       "filter=storms&genre=shoegaze",
       "filter=storm&genre=polka",
       "filter=storm&genre=constructor",
@@ -318,7 +340,7 @@ describe("the nights route (spec 7.4, 8.5)", () => {
       await getBlobStore().put(userKey("listener", "v3"), gzipSync(Buffer.from(JSON.stringify({ records: [old] }))));
     };
     await putOld();
-    const months = (await call(nightsRoute, "v3", "tz=America/Chicago&from=2024-05&to=2024-05")).body;
+    const months = (await call(nightsRoute, "v3", "tz=America/Chicago&from=2024-05&to=2024-05&counts=1")).body;
     // Not known yet, which the page reads as such: {} would read as nothing lit.
     expect(months).toMatchObject({ status: "updating", filterMonths: null, genreMonths: null });
     await Promise.all(background.splice(0));

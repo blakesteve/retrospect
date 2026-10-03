@@ -29,9 +29,10 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
  * ended that night), the filters it lights, its wild title (with whether the
  * zone saw its eclipse, which ranks it, 7.5), its genre mix, and NASA's facts
  * with the night's photos. Plus, on every request: the history's first night
- * in the zone, whether NASA's log read ("unavailable" hides its filters,
- * 8.5), and each filter's and genre's lit nights over the whole history, in
- * all and per month.
+ * in the zone, and whether NASA's log read ("unavailable" hides its filters,
+ * 8.5). With counts=1, each filter's and genre's lit nights over the whole
+ * history, in all and per month: the calendar asks once a visit, with its
+ * first year, never with every year (8.5).
  *
  * GET /api/user/:name/nights?filter=storm&genre=shoegaze&tz=America/Chicago,
  * with no months: the nights one sky filter and one listed genre light
@@ -47,6 +48,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
     if (!MONTH.test(from) || !MONTH.test(to) || from > to || monthsBetween(from, to).length > MAX_MONTHS) {
       return NextResponse.json({ error: `from and to must be months (YYYY-MM), at most ${MAX_MONTHS} apart` }, { status: 400 });
     }
+    const counts = url.searchParams.get("counts");
+    if (counts !== null && counts !== "1") return NextResponse.json({ error: "counts must be 1, or left out" }, { status: 400 });
     const loaded = await loadListener(req, (await params).name);
     if (loaded.kind === "response") return loaded.response;
     const { record, status, zone, zoneFellBack, nasa } = loaded;
@@ -66,12 +69,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
       first: record.plays > 0 ? nightName(clock.nightOf(record.historyStart)) : null,
       // As sky/now says it: the log didn't read, or isn't whole yet.
       nasa: nasa ? ("ok" as const) : ("unavailable" as const),
-      filterCounts: record.filterCounts,
-      // A version 3 record, served while it's rebuilt, has no months yet:
-      // null, which the page reads as not known, never as nothing lit.
-      filterMonths: record.filterMonths ?? null,
-      genreCounts: record.genreCounts,
-      genreMonths: record.genreMonths ?? null,
+      ...(counts === "1" && {
+        filterCounts: record.filterCounts,
+        // A version 3 record, served while it's rebuilt, has no months yet:
+        // null, which the page reads as not known, never as nothing lit.
+        filterMonths: record.filterMonths ?? null,
+        genreCounts: record.genreCounts,
+        genreMonths: record.genreMonths ?? null,
+      }),
     };
     if (last < first) return NextResponse.json({ ...base, nights: [] });
 
@@ -213,6 +218,9 @@ async function filterWithGenre(req: Request, name: string, url: URL): Promise<Ne
   const genre = url.searchParams.get("genre") ?? "";
   if (url.searchParams.has("from") || url.searchParams.has("to")) {
     return NextResponse.json({ error: "Ask for months (from and to) or for a filter with a genre, not both" }, { status: 400 });
+  }
+  if (url.searchParams.has("counts")) {
+    return NextResponse.json({ error: "counts comes with a year's months, not with a filter and a genre" }, { status: 400 });
   }
   if (!(FILTERS as readonly string[]).includes(filter)) {
     return NextResponse.json({ error: `filter must be one of ${FILTERS.join(", ")}` }, { status: 400 });

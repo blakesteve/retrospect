@@ -304,17 +304,27 @@ export function ListenerShell({ username, children }: { username: string; childr
   const revealShown = Boolean(ready && revealing && answers.state === "ready" && songs.state !== "loading" && highlights.state !== "loading");
 
   const view = VIEWS.find((v) => v.route && pathname?.endsWith(v.route))?.id ?? VIEWS[0].id;
-  // Every night keeps its whole top in view (Blake, 3 Oct 2026): the
-  // wordmark and the switcher stick, and the view's filter bar sticks under
-  // them. A sticky element stays only within its parent, so it's the
-  // column's own child, and the zone line, below it, scrolls away.
+  // Every night keeps its top in view (Blake, 3 Oct 2026): the switcher
+  // sticks, and the view's filter bar sticks under it. At rest the whole
+  // header shows; once the page scrolls, the wordmark's row goes up and away
+  // (8.5: the stuck top at most 168px at 375 by 812). The header sticks
+  // 72px above the window, its top padding, the row's 44px and the
+  // switcher's margin, less 4px kept over the switcher: no scroll handler,
+  // so nothing under it moves. A sticky element stays only within its
+  // parent, so it's the column's own child, and the zone line, below it,
+  // scrolls away.
   const stickyHead = view === "nights";
   const header = (
     <header
       data-listener-head
-      className={stickyHead ? "sticky top-0 z-30 -mx-4 bg-[rgba(11,16,38,.97)] px-4 pt-5 pb-2 backdrop-blur-md" : "pt-5"}
+      className={
+        stickyHead
+          ? "sticky -top-18 z-30 -mx-4 bg-[rgba(11,16,38,.97)] px-4 pt-5 pb-1 backdrop-blur-md has-[[data-head-row]_:focus-visible]:top-0"
+          : "pt-5"
+      }
     >
-      <div className="flex items-center justify-between gap-3">
+      {/* Focus on the wordmark brings the whole header back (11: focus never hidden). */}
+      <div data-head-row className="flex items-center justify-between gap-3">
         <Wordmark />
         <span className="min-w-0 truncate text-sm text-ink-2" title={username}>
           {username}

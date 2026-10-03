@@ -6,7 +6,7 @@ import { QUESTIONS } from "@/lib/answers/questions";
 import { useListener } from "../Shell";
 import type { SheetBodyProps } from "../SheetHost";
 import { getJson, type Night, type Nights } from "../api";
-import { comboUrl, historySpan, isLit, litSelection, nightsCombo, nightsYear, yearUrl } from "../nightsCache";
+import { comboUrl, historySpan, isLit, litSelection, nightsCombo, nightsYear, withCounts } from "../nightsCache";
 import { genreMix, nightTitle, nightWeekday, songIndex, tonightDate, utsAtLocal } from "../format";
 import { SheetLink } from "../cards";
 import { sheetFrom } from "../sheetUrl";
@@ -88,17 +88,19 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
     if (!params.get("filter") && !params.get("genre")) return byMonth();
     // Filtered: the filters the calendar applies, checked the same way, and
     // the months they light (the whole history), so a dark year is skipped.
-    const here = await nightsYear(yearUrl(L, Number(value.slice(0, 4))));
+    const here = await nightsYear(L, Number(value.slice(0, 4)));
+    // With the whole history's counts, here once any year has loaded.
+    const meta = withCounts(L, here.meta);
     // The route's own first night, not the sync's (see SheetHost).
-    const firstMonth = (here.meta.first ?? historySpan(L).first).slice(0, 7);
+    const firstMonth = (meta.first ?? historySpan(L).first).slice(0, 7);
     const { lastMonth } = historySpan(L);
-    const { filter, genre } = litSelection(params, here.meta);
+    const { filter, genre } = litSelection(params, meta);
     if (!filter && !genre) return byMonth();
     const ok = (n: Night) => isLit(n, filter, genre);
     const inMonth = nearest(load.month, dir, ok);
     if (inMonth) return inMonth;
     const counts =
-      filter && genre ? (await nightsCombo(comboUrl(L, filter, genre))).months : filter ? here.meta.filterMonths?.[filter] : here.meta.genreMonths?.[genre!];
+      filter && genre ? (await nightsCombo(comboUrl(L, filter, genre))).months : filter ? meta.filterMonths?.[filter] : meta.genreMonths?.[genre!];
     const month = value.slice(0, 7);
     let candidates: string[];
     if (counts) {
@@ -112,7 +114,7 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
       for (let m = shiftMonth(month, dir); m >= firstMonth && m <= lastMonth; m = shiftMonth(m, dir)) candidates.push(m);
     }
     for (const m of candidates) {
-      const year = await nightsYear(yearUrl(L, Number(m.slice(0, 4))));
+      const year = await nightsYear(L, Number(m.slice(0, 4)));
       const next = nearest(year.nights.filter((n) => n.date.startsWith(m)), dir, ok);
       if (next) return next;
     }

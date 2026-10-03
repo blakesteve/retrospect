@@ -279,6 +279,16 @@ body {
 html {
   scroll-padding-bottom: 96px;
 }
+/* Every night's sticky top covers the window's top (11): what takes focus
+   scrolls clear of it, by the height EveryNight sets. Not while focus is in
+   the sticky top itself, always in view: the padding scrolled the page
+   400px under it on every Tab. */
+html {
+  scroll-padding-top: var(--clear-top, 0px);
+}
+html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
+  scroll-padding-top: 0;
+}
 
 .font-glyph {
   font-family: var(--font-glyph);
@@ -407,23 +417,36 @@ html {
   container-type: inline-size;
 }
 .door {
-  border: 1px solid rgba(242, 239, 230, 0.07);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 55%), rgb(116 135 234 / var(--t, 0.1));
   color: var(--text-primary);
   /* Transform and opacity only (8.11). */
   transition:
     opacity 0.28s ease,
     transform 0.15s ease;
 }
+/* The door's fill, border and glow are a layer of their own, under its
+   date, so a filter can dim them and leave the date's ink whole (8.5). */
+.door::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(242, 239, 230, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 55%), rgb(116 135 234 / var(--t, 0.1));
+  transition: opacity 0.28s ease;
+}
 .door:hover:not([aria-disabled]) {
   transform: translateY(-1px);
+}
+.door:hover:not([aria-disabled])::before {
   border-color: rgba(242, 239, 230, 0.2);
 }
 .door[aria-disabled] {
-  background: transparent;
-  border-color: rgba(242, 239, 230, 0.06);
   opacity: 0.5;
   cursor: default;
+}
+.door[aria-disabled]::before {
+  background: transparent;
+  border-color: rgba(242, 239, 230, 0.06);
 }
 .door-future {
   border: 1px dashed rgba(242, 239, 230, 0.14);
@@ -448,6 +471,7 @@ html {
   top: 7%;
   right: 7%;
   width: clamp(13px, 28cqw, 26px);
+  transition: opacity 0.28s ease;
 }
 .door-badges {
   position: absolute;
@@ -457,21 +481,21 @@ html {
   display: flex;
   gap: 1px;
   overflow: hidden;
+  transition: opacity 0.28s ease;
 }
 .door-badge {
   width: clamp(8px, 17cqw, 15px);
   height: clamp(8px, 17cqw, 15px);
 }
-.door[data-wild] {
+.door[data-wild]::before {
   border-color: rgba(212, 175, 55, 0.8);
   box-shadow:
     0 0 0 1px rgba(212, 175, 55, 0.75),
     0 0 14px rgba(212, 175, 55, 0.5);
 }
-.door[data-tonight] {
+.door[data-tonight]::before {
   border: 1.5px solid var(--gold);
   background: linear-gradient(160deg, rgba(212, 175, 55, 0.35), rgba(116, 135, 234, 0.2));
-  opacity: 1;
 }
 .door-tag {
   position: absolute;
@@ -484,11 +508,15 @@ html {
   text-transform: uppercase;
   color: var(--text-primary);
 }
-/* A filter on: the nights it lights in its color, the rest at 35% (8.5). */
-[data-filtering] .door:not([data-lit]) {
+/* A filter on: the nights it lights in its color; the rest keep their date
+   at full strength, 4.5:1 or more (1.4.3), with their fill, Moon and badges
+   at 35% (8.5). */
+[data-filtering] .door:not([data-lit])::before,
+[data-filtering] .door:not([data-lit]) .door-moon,
+[data-filtering] .door:not([data-lit]) .door-badges {
   opacity: 0.35;
 }
-[data-filtering] .door[data-lit] {
+[data-filtering] .door[data-lit]::before {
   border-color: var(--fc);
   box-shadow:
     0 0 0 1.5px var(--fc),
@@ -496,16 +524,27 @@ html {
 }
 /* The two-tone focus ring (11) on every focused door: over a glow (the sky
    ring replaces it), on a door dimmed by a filter (focus brings it to full
-   strength, or the ring would read about 2.1:1), and on the door that keeps
-   focus while a keyed night's year loads (its tabindex is -1 by then). */
+   strength), and on the door that keeps focus while a keyed night's year
+   loads (its tabindex is -1 by then). */
 .nights-cal .door:focus-visible {
   opacity: 1;
   outline: 2px solid var(--gold);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--sky);
 }
+.nights-cal .door:focus-visible::before {
+  box-shadow: none;
+}
+.nights-cal .door:focus-visible::before,
+.nights-cal .door:focus-visible .door-moon,
+.nights-cal .door:focus-visible .door-badges {
+  opacity: 1;
+}
 @media (prefers-reduced-motion: reduce) {
-  .door {
+  .door,
+  .door::before,
+  .door-moon,
+  .door-badges {
     transition: none;
   }
 }
