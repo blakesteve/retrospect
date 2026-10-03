@@ -121,9 +121,17 @@ const PKG = "@blakesteve/roster";
  * accessibility fixes) is 3,890 of it, and the redesign's own utilities,
  * net of the deleted components', the rest. The ceiling goes to 185,000,
  * 4.6% over, the slack it was set with.
+ *
+ * Raised 3 October 2026, CSS 185,000 to 192,000, measured on a clean build of
+ * bb/browser-tests over 5e5137c: CSS 183,362 bytes across 1 file (main at
+ * 0ff831a: 177,441). What grew: the Tonight revision (#29), Roster 5.2.0's
+ * Carousel and its own utilities, the motion keyframes, and Tonight's new
+ * layout. At 99.1% of the old ceiling, the next feature would have tripped
+ * it for ordinary growth. 192,000 restores 4.7% slack. JS stays: 1,601,883
+ * bytes, 3.8% under its ceiling.
  */
 const CLIENT_JS_CEILING = 1_665_000;
-const CLIENT_CSS_CEILING = 185_000;
+const CLIENT_CSS_CEILING = 192_000;
 
 const problems = [];
 

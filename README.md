@@ -85,6 +85,29 @@ All three of the first ones run in CI on every pull request, which is new — th
 lint errors they now catch had been sitting in the tree because nothing ran
 them on the way in.
 
+### Browser checks
+
+What Vitest can't see, because it needs layout and color, runs in Chromium
+on the built app (`e2e/`, Playwright):
+
+```bash
+npm run build           # also runs both bundle guards
+npm run test:browser    # seeds e2e/.data, serves on port 4317, runs the checks
+```
+
+The server reads a fresh folder, `e2e/.data`, holding only the landing's
+made-up sample listener (`writeSampleListener` in
+`scripts/sample-listener.ts`), never real data: the checks refuse to run
+beside any `.env*` file or with R2's variables set, so run them locally in a
+copy of the repo without your env files. Nothing reaches the network either:
+the page's requests off the machine are refused, and `e2e/offline.mjs`,
+preloaded into the server, refuses and logs the server's; setup proves the
+block is in force, and the run fails if anything else lands in that log. They
+check Tonight's fold on a phone, that "Surprise me" never covers a "for you"
+row at seven widths, 44px targets (a planet included), and the selected tab's
+contrast. CI runs them in the "Browser checks" job, after a build that also
+runs the bundle guards.
+
 ### A note on form controls
 
 Controls come from Roster, not hand-rolled markup: sheets are Roster's
