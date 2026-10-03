@@ -1,25 +1,5 @@
-import { expect, test as base, type Page } from "@playwright/test";
-
-/** The page never leaves this machine either: album art and NASA's photos
-    would come from the network, so every request off it is refused (the
-    cards keep their drawn skies). The hosts refused are noted on the test. */
-const test = base.extend<{ localOnly: string[] }>({
-  localOnly: [
-    async ({ context, baseURL }, use, info) => {
-      const refused: string[] = [];
-      await context.route(
-        (url: URL) => !url.href.startsWith(`${baseURL}/`),
-        (route) => {
-          refused.push(new URL(route.request().url()).host);
-          return route.abort();
-        },
-      );
-      await use(refused);
-      if (refused.length) info.annotations.push({ type: "refused", description: [...new Set(refused)].join(", ") });
-    },
-    { auto: true },
-  ],
-});
+import type { Page } from "@playwright/test";
+import { expect, returnVisit, selectedTabContrast, settle, smallTargets, test } from "./fixtures";
 
 /* Tonight in Chromium, on the seeded sample listener (`global-setup.ts`):
    the checks jsdom can't make, because they need layout and color. Each
@@ -30,21 +10,12 @@ const TONIGHT = "/u/sample";
 const ROWS = "section[aria-labelledby=foryou-h] li";
 
 async function openTonight(page: Page) {
-  // The reveal and the guide already seen, as on a return visit.
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem("retrospect:guide-done", "1");
-      localStorage.setItem("retrospect:reveal-seen:sample", "1");
-    } catch {}
-  });
+  await returnVisit(page);
   await page.goto(TONIGHT);
   await expect(page.locator(ROWS).first()).toBeVisible({ timeout: 30_000 });
   // The answers are in: no row still says "Checking…".
   await expect(page.locator("section[aria-labelledby=foryou-h]")).not.toContainText("Checking…", { timeout: 30_000 });
 }
-
-/** Two frames: IntersectionObserver callbacks and React have run. */
-const settle = (page: Page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
 
 test.describe("the first screen on a phone (spec 8.4 item 3, the fold test)", () => {
   test.use({
@@ -75,16 +46,20 @@ test.describe("the first screen on a phone (spec 8.4 item 3, the fold test)", ()
     }, ROWS);
     expect(covered).toEqual([]);
 
-    // The spec's worst case: "Wednesday night, Sept 30" (two lines), the
-    // switcher (Roster's LiquidNav at size lg: 44px tabs, 4px padding and a
-    // 1px border each side, 54px, under a 12px gap), and a four-entry halo key.
+    // The page measured has the real switcher (3b: Tonight and Every night),
+    // and so no eyebrow over the heading (8.4).
+    await expect(page.locator("nav[aria-label=Views] a")).toHaveCount(2);
+    expect(
+      await page
+        .locator("section[aria-labelledby=view-heading]")
+        .first()
+        .evaluate((s) => s.firstElementChild!.tagName),
+    ).toBe("H1");
+
+    // The spec's worst case: "Wednesday night, Sept 30" (two lines) and a
+    // four-entry halo key, under the real switcher.
     const worst = await page.evaluate((rows) => {
       document.querySelector("h1")!.textContent = "Wednesday night, Sept 30";
-      const switcher = document.createElement("div");
-      switcher.style.cssText = "height:54px;margin-top:12px";
-      document.querySelector("header")!.appendChild(switcher);
-      const eyebrow = document.querySelector("section[aria-labelledby=view-heading]")!.firstElementChild as HTMLElement;
-      if (eyebrow.tagName !== "H1") eyebrow.style.display = "none"; // with a switcher, no eyebrow (8.4)
       const key = document.querySelector("#tonight-wheel p")!;
       key.innerHTML =
         "<span>Tap any planet.</span>" +
@@ -162,26 +137,10 @@ test.describe("'Surprise me' never covers a 'for you' row (ruling, 3 Oct 2026)",
 });
 
 test.describe("targets of at least 44px (spec 10, 11)", () => {
-  const measure = (page: Page) =>
-    page.evaluate(() => {
-      const small: string[] = [];
-      let reached = 0;
-      for (const el of document.querySelectorAll("body a, body button, body input, body [role=button]")) {
-        // The wheel's planets: a tap goes to the nearest within 22px, checked below.
-        if (el.closest("[data-body]")) continue;
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0 || el.closest("[inert]") || getComputedStyle(el).visibility === "hidden") continue;
-        reached++;
-        if (r.width < 44 || r.height < 44)
-          small.push(`${Math.round(r.width)}x${Math.round(r.height)} ${(el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40)}`);
-      }
-      return { small, reached };
-    });
-
   test("at 1280px, every link, button and field", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await openTonight(page);
-    const { small, reached } = await measure(page);
+    const { small, reached } = await smallTargets(page);
     expect(small).toEqual([]);
     expect(reached).toBeGreaterThan(30);
   });
@@ -195,7 +154,7 @@ test.describe("targets of at least 44px (spec 10, 11)", () => {
 
     test("every link, button and field, and a planet tapped 22px from its center", async ({ page }) => {
       await openTonight(page);
-      const { small, reached } = await measure(page);
+      const { small, reached } = await smallTargets(page);
       expect(small).toEqual([]);
       expect(reached).toBeGreaterThan(30);
 
@@ -245,56 +204,20 @@ test.describe("targets of at least 44px (spec 10, 11)", () => {
 });
 
 test.describe("the selected tab's contrast on the rendered page (11; ClickUp 86e3h9mca)", () => {
-  test("its label reads at 4.5:1 or more on its pill", async ({ page }) => {
+  test("Tonight's label reads at 4.5:1 or more on its pill, and the other on the track, on the real switcher", async ({ page }) => {
     await openTonight(page);
-    const ratio = await page.evaluate(() => {
-      // Any CSS color (rgb, oklch, a token's hex) to 0-255 RGB and alpha, through a canvas.
-      const ctx = document.createElement("canvas").getContext("2d")!;
-      const rgba = (c: string) => {
-        ctx.clearRect(0, 0, 1, 1);
-        ctx.fillStyle = c;
-        ctx.fillRect(0, 0, 1, 1);
-        const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-        return [r, g, b, a / 255];
-      };
-      const lum = ([r, g, b]: number[]) => {
-        const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-      };
-      const contrast = (fg: number[], bg: number[]) => {
-        const [x, y] = [lum(fg), lum(bg)].sort((m, n) => n - m);
-        return (x + 0.05) / (y + 0.05);
-      };
-      // The switcher, when there is one: its active label on its pill.
-      const active = document.querySelector("nav[aria-label=Views] [aria-current=page]");
-      const pill = document.querySelector("nav[aria-label=Views] [data-testid=liquid-tabs-pill]");
-      // With one view there's no switcher (8.4 item 1), so the selected tab's
-      // own colors, as the page's stylesheet resolves them, on a stand-in.
-      const probe = document.createElement("span");
-      probe.textContent = "Tonight";
-      probe.style.cssText = "color: var(--roster-lt-text-active); background: var(--roster-lt-pill)";
-      document.querySelector("main")!.appendChild(probe);
-      const fg = rgba(getComputedStyle(active ?? probe).color);
-      const bg = rgba(getComputedStyle(pill ?? probe).backgroundColor);
-      probe.remove();
-      return {
-        switcher: Boolean(active),
-        nav: Boolean(document.querySelector("nav[aria-label=Views]")),
-        ratio: contrast(fg, bg),
-        bgAlpha: bg[3],
-        fg,
-        bg,
-      };
-    });
-    test.info().annotations.push({
-      type: "measured",
-      description: ratio.switcher ? "the switcher's selected tab" : "the selected tab's colors (one view: no switcher yet)",
-    });
-    // A switcher on the page is the one measured, never the stand-in.
-    expect(ratio.switcher).toBe(ratio.nav);
-    // It reached real colors: an opaque pill, a label of another color.
-    expect(ratio.bgAlpha).toBe(1);
-    expect(ratio.fg.slice(0, 3)).not.toEqual(ratio.bg.slice(0, 3));
-    expect(ratio.ratio).toBeGreaterThanOrEqual(4.5);
+    const tab = await selectedTabContrast(page);
+    // It reached the real switcher, its two links and real colors: an opaque pill, a label of another color.
+    expect(tab).not.toBeNull();
+    expect(tab!.label).toBe("Tonight");
+    expect(tab!.links).toBe(2);
+    expect(tab!.bg[3]).toBe(1);
+    expect(tab!.fg[3]).toBe(1);
+    expect(tab!.fg.slice(0, 3)).not.toEqual(tab!.bg.slice(0, 3));
+    test.info().annotations.push({ type: "measured", description: `Tonight selected: ${tab!.ratio}:1; ${tab!.other.label} unselected: ${tab!.other.ratio}:1` });
+    expect(tab!.ratio).toBeGreaterThanOrEqual(4.5);
+    // And the label not selected, on the track (1.4.3).
+    expect(tab!.other.label).toBe("Every night");
+    expect(tab!.other.ratio).toBeGreaterThanOrEqual(4.5);
   });
 });

@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -16,11 +16,38 @@
   confidence (28 Sept) · A young history gets a real report (28 Sept) · The
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The redesign: Every night (3b), Sky (3c), compare
-  and the share cards (3d)
+- **Next, product:** The redesign: Sky (3c), compare and the share cards
+  (3d)
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Every night (3 October 2026)
+
+- **`/u/{name}/nights`**, the second view: every night as a door, newest
+  month first, with the sky filters and "Your genres", a year strip that
+  becomes a histogram with a filter on, and a dock that names the count, the
+  question's own stretches for storms and flares, and the question that tests
+  the filter. Months fetch a year at a time as they near the screen.
+- **The switcher has two links**, Tonight and Every night. Its labels not
+  selected read 6.2:1 on the track (3.34:1 before), the selected 8.6:1, both
+  measured on the real switcher (ClickUp 86e3h9mca).
+- **The server's half**: wild nights carry whether the zone saw the eclipse;
+  a storm's stretch is question 7's own event, so the dock and the question
+  can't disagree; the X flares NASA logged join the counts; the nights route
+  sends each filter's and genre's nights per month, and a sky filter with a
+  genre over the whole history; the dead server chips are gone, their day
+  words tested through the sky facts.
+- **A night's sheet** steps between lit nights with a filter on, reads a year
+  the calendar already has, and opens tonight before its first play.
+- **The fluke meter says what it measures**: each notch is its phrase whole
+  ("Unlikely to be chance"), under a line asking whether it could be chance.
+- **From review**: the filter chips are a Roster `Carousel` with overlay
+  arrows; an invalid link says so in a Roster toast, loaded on first use; and
+  a night before the sync status's `oldestUts` (which can trail the first
+  play) no longer closes as it opens. The whole top (header, switcher and
+  filter bar) stays in view as you scroll, with a "Back to top" button once a
+  screen has gone by.
 
 ### Browser checks in CI (3 October 2026)
 

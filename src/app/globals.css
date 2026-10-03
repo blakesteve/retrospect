@@ -253,11 +253,15 @@ body {
   /* LiquidNav's active label on the gold pill. Roster 5.1.0 reads it from
      `--roster-primary-500-ink`, which this app already sets to deep indigo;
      named here so the view switcher doesn't depend on that coincidence
-     (ClickUp 86e3h9mca: white measured 2.1:1). */
+     (ClickUp 86e3h9mca: white measured 2.1:1). The labels not selected
+     read in the secondary ink: Roster's dark gray-400 on its gray-800 track
+     measured 3.34:1 once the switcher rendered (3b). */
   --roster-lt-text-active: var(--roster-gray-950);
+  --roster-lt-text-inactive: var(--text-secondary);
 }
 .dark {
   --roster-lt-text-active: var(--roster-gray-950);
+  --roster-lt-text-inactive: var(--text-secondary);
 }
 
 /* Spec 11: a 2px ring in the sky color inside a 2px gold ring, on every
@@ -370,5 +374,138 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
+  }
+}
+
+/* Every night's doors (spec 8.5, 10): 7 doors of at least 44px with 5px
+   gaps. A month not yet drawn keeps its exact height, so nothing jumps when
+   its doors arrive. A door scales its date, Moon and badges with its own
+   width (44px at 375, about 94px at 1280). */
+.nights-cal {
+  container-type: inline-size;
+}
+.door-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+.door-grid > [role="row"] {
+  display: contents;
+}
+.door-ph {
+  height: calc(var(--rows) * max(44px, (100cqw - 30px) / 7) + (var(--rows) - 1) * 5px);
+  border-radius: 9px;
+}
+.door,
+.door-future {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 44px;
+  border-radius: 9px;
+  container-type: inline-size;
+}
+.door {
+  border: 1px solid rgba(242, 239, 230, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 55%), rgb(116 135 234 / var(--t, 0.1));
+  color: var(--text-primary);
+  /* Transform and opacity only (8.11). */
+  transition:
+    opacity 0.28s ease,
+    transform 0.15s ease;
+}
+.door:hover:not([aria-disabled]) {
+  transform: translateY(-1px);
+  border-color: rgba(242, 239, 230, 0.2);
+}
+.door[aria-disabled] {
+  background: transparent;
+  border-color: rgba(242, 239, 230, 0.06);
+  opacity: 0.5;
+  cursor: default;
+}
+.door-future {
+  border: 1px dashed rgba(242, 239, 230, 0.14);
+}
+.door-dn {
+  position: absolute;
+  top: 6%;
+  left: 9%;
+  font-size: clamp(10px, 15cqw, 15px);
+  font-weight: 650;
+  line-height: 1;
+  /* The primary ink: 6.3:1 on the brightest fill, where the secondary ink
+     measured 3.6:1 and gold 3.5:1 (1.4.3). Gold marks a door by its glow
+     and outline instead. */
+  color: var(--text-primary);
+}
+.door-future .door-dn {
+  color: var(--text-muted);
+}
+.door-moon {
+  position: absolute;
+  top: 7%;
+  right: 7%;
+  width: clamp(13px, 28cqw, 26px);
+}
+.door-badges {
+  position: absolute;
+  left: 8%;
+  right: 4%;
+  bottom: 8%;
+  display: flex;
+  gap: 1px;
+  overflow: hidden;
+}
+.door-badge {
+  width: clamp(8px, 17cqw, 15px);
+  height: clamp(8px, 17cqw, 15px);
+}
+.door[data-wild] {
+  border-color: rgba(212, 175, 55, 0.8);
+  box-shadow:
+    0 0 0 1px rgba(212, 175, 55, 0.75),
+    0 0 14px rgba(212, 175, 55, 0.5);
+}
+.door[data-tonight] {
+  border: 1.5px solid var(--gold);
+  background: linear-gradient(160deg, rgba(212, 175, 55, 0.35), rgba(116, 135, 234, 0.2));
+  opacity: 1;
+}
+.door-tag {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 7%;
+  text-align: center;
+  font-size: clamp(7.5px, 12cqw, 11px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+/* A filter on: the nights it lights in its color, the rest at 35% (8.5). */
+[data-filtering] .door:not([data-lit]) {
+  opacity: 0.35;
+}
+[data-filtering] .door[data-lit] {
+  border-color: var(--fc);
+  box-shadow:
+    0 0 0 1.5px var(--fc),
+    0 0 18px color-mix(in srgb, var(--fc) 55%, transparent);
+}
+/* The two-tone focus ring (11) on every focused door: over a glow (the sky
+   ring replaces it), on a door dimmed by a filter (focus brings it to full
+   strength, or the ring would read about 2.1:1), and on the door that keeps
+   focus while a keyed night's year loads (its tabindex is -1 by then). */
+.nights-cal .door:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--sky);
+}
+@media (prefers-reduced-motion: reduce) {
+  .door {
+    transition: none;
   }
 }

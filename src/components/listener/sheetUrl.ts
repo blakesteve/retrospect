@@ -51,6 +51,17 @@ export function openSheet(ref: SheetRef) {
   window.history.pushState({ [MARK]: sheetDepth() + 1 }, "", urlWith(ref));
 }
 
+/** Set or drop a view's own parameters (Every night's `filter` and
+    `genre`) without a history entry, keeping any sheet and its depth. */
+export function replaceParams(next: Record<string, string | null>) {
+  const url = new URL(window.location.href);
+  for (const [k, v] of Object.entries(next)) {
+    if (v === null) url.searchParams.delete(k);
+    else url.searchParams.set(k, v);
+  }
+  window.history.replaceState({ [MARK]: sheetDepth() }, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
 /** Drop the sheet parameter without a history entry: a deep-linked sheet
     closing, or an invalid parameter (8.7). */
 export function dropSheet() {

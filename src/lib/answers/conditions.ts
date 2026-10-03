@@ -8,6 +8,7 @@ import {
 } from "@/lib/sky/windows";
 import type { Sign, SkyBody } from "@/lib/sky/sky";
 import type { ZoneClock } from "@/lib/zone";
+import { nightRuns } from "./nightRuns";
 import type { QuestionId } from "./questions";
 
 /**
@@ -142,17 +143,14 @@ const BUILDERS: Partial<Record<QuestionId, () => Condition>> = {
 
 /**
  * Questions 7 and 8: the listener's nights (4 a.m. to 4 a.m. in their zone)
- * as windows, one per night. Consecutive nights are one event (6.2, rule 3).
- * The days around them stay outside.
+ * as windows, one per night. Consecutive nights are one event (6.2, rule 3),
+ * by `nightRuns`, which the wild row's one-card rule reads too (7.5). The
+ * days around them stay outside.
  */
 export function nightsCondition(nights: number[], clock: ZoneClock): Condition {
-  const sorted = [...new Set(nights)].sort((a, b) => a - b);
-  let event = -1;
-  const windows = sorted.map((n, i) => {
-    if (i === 0 || sorted[i - 1] !== n - 1) event++;
-    return { start: clock.nightStart(n), end: clock.nightStart(n + 1) - 1, event };
-  });
-  return { kind: "nights", windows, eventCount: event + 1 };
+  const runs = nightRuns(nights);
+  const windows = runs.flatMap((run, event) => run.map((n) => ({ start: clock.nightStart(n), end: clock.nightStart(n + 1) - 1, event })));
+  return { kind: "nights", windows, eventCount: runs.length };
 }
 
 const built = new Map<QuestionId, Condition>();

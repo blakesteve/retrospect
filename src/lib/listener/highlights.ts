@@ -1,3 +1,4 @@
+import { runStarts } from "@/lib/answers/nightRuns";
 import { kpLabel, stormGrade } from "@/lib/space/kp";
 import { SPACE_EVENTS, type SpaceEvent } from "@/lib/space/curated";
 import { dignitiesOf, type SkyAt, type SkyBody } from "@/lib/sky/sky";
@@ -52,6 +53,12 @@ export interface WildNight {
   /** A storm-headed night's best other reason (a flare, say). When the
       storm's card is another night's, this heads the night's own (7.5). */
   then?: WildNight | null;
+  /** A storm-headed night's storm, as the first night of its run: the
+      consecutive nights NASA logged a storm on, plays or not, which are
+      question 7's events (6.2, rule 3, `nightRuns`). One card per run (7.5).
+      Missing from a version 3 record, whose runs are read from neighboring
+      storm-headed nights instead. */
+  stormRun?: number;
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -111,31 +118,33 @@ export function wildNight(e: NightEvents, clock: ZoneClock, events: SpaceEvent[]
 export const byWildness = (a: WildNight, b: WildNight) =>
   wildOrder(a.rank, a.visible ?? true) - wildOrder(b.rank, b.visible ?? true) || b.size - a.size || b.night - a.night;
 
-const isStorm = (w: WildNight) => w.rank === 3 || w.rank === 4;
+/** Headed by a G5 or G4 storm. */
+export const isStormHeaded = (w: Pick<WildNight, "rank">) => w.rank === 3 || w.rank === 4;
 
 /**
- * One event, one card (7.5, changed 2 Oct 2026). A storm that runs on past 4
- * a.m. heads two nights in a row, or more; its card is the night with the
- * higher reading, on a tie the night with a curated title, then the earlier.
- * Only a storm can: an eclipse, a flare's peak and an asteroid's closest
- * approach are each one instant, so one night. A night whose storm card goes
- * to another night keeps a card for its next reason, if it has one (an X5.8
+ * One event, one card (7.5, changed 2 Oct 2026). A storm is one event for as
+ * many nights in a row as NASA logged it (6.2, rule 3), the same runs
+ * question 7 counts, so a night with no plays, or one an eclipse heads,
+ * doesn't split it. Its card is the storm-headed night with the higher
+ * reading, on a tie the night with a curated title, then the earlier. Only a
+ * storm can: an eclipse, a flare's peak and an asteroid's closest approach
+ * are each one instant, so one night. A night whose storm card goes to
+ * another night keeps a card for its next reason, if it has one (an X5.8
  * flare the same night). Every night stays wild for the glow and the filter;
  * this is the row and the reveal, in the row's order (7.5).
  */
 export function oneCardPerEvent(wild: WildNight[]): WildNight[] {
-  const storms = new Map(wild.filter(isStorm).map((w) => [w.night, w]));
-  const keep = new Set<number>();
-  for (const w of storms.values()) {
-    if (storms.has(w.night - 1)) continue; // not the first night of its run
-    let best = w;
-    for (let n = w.night + 1; storms.has(n); n++) {
-      const x = storms.get(n)!;
-      if (x.size > best.size || (x.size === best.size && x.eventId !== null && best.eventId === null)) best = x;
-    }
-    keep.add(best.night);
+  const storms = wild.filter(isStormHeaded).sort((a, b) => a.night - b.night);
+  // A version 3 record carries no runs: its storm-headed neighbors make them.
+  const older = runStarts(storms.filter((w) => w.stormRun === undefined).map((w) => w.night));
+  const best = new Map<number, WildNight>();
+  for (const w of storms) {
+    const run = w.stormRun ?? older.get(w.night)!;
+    const b = best.get(run);
+    if (!b || w.size > b.size || (w.size === b.size && w.eventId !== null && b.eventId === null)) best.set(run, w);
   }
-  return wild.flatMap((w) => (!isStorm(w) || keep.has(w.night) ? [w] : w.then ? [w.then] : [])).sort(byWildness);
+  const keep = new Set([...best.values()].map((w) => w.night));
+  return wild.flatMap((w) => (!isStormHeaded(w) || keep.has(w.night) ? [w] : w.then ? [w.then] : [])).sort(byWildness);
 }
 
 /* ---- Song chips, scores and pairings ------------------------------------- */

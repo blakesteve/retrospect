@@ -4,7 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Apod } from "@/components/Apod";
 import { useListener } from "../Shell";
 import { getJson, type Night, type Nights, type SkyAt } from "../api";
-import { monthOf } from "../format";
+import { monthOf, tonightDate } from "../format";
+import { loadedYear, yearUrl } from "../nightsCache";
 import { Icon, StormMeter, Terms } from "../pieces";
 import { FactLabel } from "../cards";
 import { Rail } from "../rail";
@@ -21,14 +22,20 @@ const DONKI_FROM = "2010-04-03";
 
 export type NightLoad = { state: "loading" } | { state: "failed" } | { state: "ready"; night: Night | null; month: Night[] };
 
-/** One night, fetched with its month from the nights route (7.4). */
+/** One night, from its year when Every night has it (`nightsCache.ts`),
+    else fetched with its month from the nights route (7.4). */
 export function useNight(date: string | null): NightLoad {
   const L = useListener();
   // Keyed by date, so a new date reads as loading without resetting state.
   const [result, setResult] = useState<{ date: string; load: NightLoad } | null>(null);
   const setLoad = (load: NightLoad) => date && setResult({ date, load });
+  const year = date ? loadedYear(yearUrl(L, Number(date.slice(0, 4)))) : undefined;
+  const cached: NightLoad | null =
+    date && year
+      ? { state: "ready", night: year.nights.find((n) => n.date === date) ?? null, month: year.nights.filter((n) => n.date.startsWith(monthOf(date))) }
+      : null;
   useEffect(() => {
-    if (!date) return;
+    if (!date || cached) return;
     const ac = new AbortController();
     const m = monthOf(date);
     (async () => {
@@ -44,8 +51,9 @@ export function useNight(date: string | null): NightLoad {
       throw new Error("still computing");
     })().catch(() => !ac.signal.aborted && setLoad({ state: "failed" }));
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- setLoad closes over date
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setLoad closes over date; a cached year needs no fetch
   }, [date, L.listenerUrl]);
+  if (cached) return cached;
   return result && result.date === date ? result.load : { state: "loading" };
 }
 
@@ -78,11 +86,7 @@ export function Gallery({ night }: { night: Night }) {
     // "unknown" means the fill hasn't read that day yet: no line, rather
     // than words the spec doesn't have.
     const coverage =
-      night.date < EPIC_FROM
-        ? "DSCOVR's photos of Earth start in 2015."
-        : night.space.epic === "none"
-          ? "NASA has no DSCOVR photo for that day."
-          : null;
+      night.date < EPIC_FROM ? "DSCOVR's photos of Earth start in 2015." : night.space.epic === "none" ? "NASA has no DSCOVR photo for that day." : null;
     return (
       <div className="-mx-5 flex flex-col items-center bg-[var(--deep)] py-6">
         <MoonDrawing phaseAngle={night.moon.phaseAngle} size={96} />
@@ -95,7 +99,7 @@ export function Gallery({ night }: { night: Night }) {
   // One photo a view, with "2 of 5" (8.7.1, 12).
   return (
     <>
-      <Rail label="Photos of that night" noun="photo" gallery gutter={20}>
+      <Rail label={night.date === tonightDate(zone) ? "Photos of tonight" : "Photos of that night"} noun="photo" gallery gutter={20}>
         {photos.map((p) => (
           <figure key={p.url}>
             {/* eslint-disable-next-line @next/next/no-img-element -- NASA's own CDN, credited */}

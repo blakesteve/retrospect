@@ -150,69 +150,67 @@ describe("the Moon's line (spec 8.4)", () => {
   });
 });
 
-describe("the sky chips (spec 8.4)", () => {
-  it("takes a fresh sign change, then the dignities a question tests, at most three", () => {
+describe("stations and sign changes in the listener's days (spec 8.4; moved from the old sky chips, 3 Oct 2026)", () => {
+  /* The station and sign words the sky facts carry. These were the dead sky
+     chips' tests, the only cover for these words; each literal is kept. */
+  const facts = (iso: string, zone: string) =>
+    tonightAt(iso, zone).skyFacts.map((f) => ({ body: f.body, planet: f.planet, kind: f.kind, line: f.line }));
+
+  it("takes a fresh sign change and leaves out a station 4 days off and the Moon's sign", () => {
     /* Mars entered Leo under a day before. Venus's station is 4 days off,
-       too far. The Sun and Saturn are in their falls, but no question tests
-       them. The Moon changed sign 12 hours before, but she's left out. */
-    expect(tonightAt("2026-09-29T03:00:00Z", "America/Chicago").chips).toEqual([
-      { kind: "sign", body: "Mars", text: "Mars just entered Leo" },
-      { kind: "dignity", body: "Venus", dignity: "detriment", text: "Venus in Scorpio · in her detriment" },
-      { kind: "dignity", body: "Moon", dignity: "exalted", text: "Moon in Taurus · exalted" },
+       too far. The Moon changed sign 12 hours before, but she's left out. */
+    expect(facts("2026-09-29T03:00:00Z", "America/Chicago")).toEqual([
+      { body: "Mars", planet: "mars", kind: "sign", line: "Mars just entered Leo" },
     ]);
   });
 
   it("names a coming station's day as the heads-up does", () => {
-    // The spec's own chip: Venus stations 2:09 a.m. CDT Saturday, Oct 3.
-    expect(tonightAt("2026-09-30T20:00:00Z", "America/Chicago").chips).toEqual([
-      { kind: "station", body: "Venus", text: "Venus turns retrograde Saturday" },
-      { kind: "sign", body: "Mercury", text: "Mercury just entered Scorpio" },
-      { kind: "dignity", body: "Venus", dignity: "detriment", text: "Venus in Scorpio · in her detriment" },
+    // The spec's own example: Venus stations 2:09 a.m. CDT Saturday, Oct 3.
+    expect(facts("2026-09-30T20:00:00Z", "America/Chicago")).toEqual([
+      { body: "Venus", planet: "venus", kind: "station", line: "Venus turns retrograde Saturday" },
+      { body: "Mercury", planet: "mercury", kind: "sign", line: "Mercury just entered Scorpio" },
     ]);
-    expect(tonightAt("2026-09-30T20:00:00Z", "Australia/Sydney").chips[0].text).toBe("Venus turns retrograde Saturday");
-    expect(tonightAt("2026-10-02T12:00:00Z", "America/Chicago").chips[0].text).toBe("Venus turns retrograde tomorrow");
-    expect(tonightAt("2026-12-09T12:00:00Z", "America/Chicago").chips[0]).toEqual({
-      kind: "station",
+    // 6 a.m. Thursday in Sydney; the station is 5:10 p.m. Saturday there.
+    expect(facts("2026-09-30T20:00:00Z", "Australia/Sydney")[0].line).toBe("Venus turns retrograde Saturday");
+    expect(facts("2026-10-02T12:00:00Z", "America/Chicago")[0].line).toBe("Venus turns retrograde tomorrow");
+    // Saturn turns direct Dec 10, 23:23 UT: 5:23 p.m. CST the next day.
+    expect(facts("2026-12-09T12:00:00Z", "America/Chicago")[0]).toEqual({
       body: "Saturn",
-      text: "Saturn ends his retrograde tomorrow",
+      planet: "saturn",
+      kind: "station",
+      line: "Saturn ends his retrograde tomorrow",
     });
   });
 
   it("puts a station of the last 3 days in the past tense, in the listener's days", () => {
     // 10 p.m. Saturday in Chicago, the station was 2:09 a.m. that day; in Sydney it's Sunday afternoon.
-    expect(tonightAt("2026-10-04T03:00:00Z", "America/Chicago").chips[0].text).toBe("Venus turned retrograde today");
-    expect(tonightAt("2026-10-04T03:00:00Z", "Australia/Sydney").chips[0].text).toBe("Venus turned retrograde yesterday");
-    expect(tonightAt("2026-10-05T12:00:00Z", "America/Chicago").chips[0].text).toBe("Venus turned retrograde Saturday");
+    expect(facts("2026-10-04T03:00:00Z", "America/Chicago")[0].line).toBe("Venus turned retrograde today");
+    expect(facts("2026-10-04T03:00:00Z", "Australia/Sydney")[0].line).toBe("Venus turned retrograde yesterday");
+    expect(facts("2026-10-05T12:00:00Z", "America/Chicago")[0].line).toBe("Venus turned retrograde Saturday");
     // Both ended Friday the 13th in Chicago, Venus nearer now, so first.
-    expect(tonightAt("2026-11-15T18:00:00Z", "America/Chicago").chips).toEqual([
-      { kind: "station", body: "Venus", text: "Venus ended her retrograde Friday" },
-      { kind: "station", body: "Mercury", text: "Mercury ended its retrograde Friday" },
-      { kind: "dignity", body: "Venus", dignity: "home", text: "Venus in Libra · at home" },
+    expect(facts("2026-11-15T18:00:00Z", "America/Chicago")).toEqual([
+      { body: "Venus", planet: "venus", kind: "station", line: "Venus ended her retrograde Friday" },
+      { body: "Mercury", planet: "mercury", kind: "station", line: "Mercury ended its retrograde Friday" },
     ]);
     // Venus's station, 5 days back, is too old.
-    expect(tonightAt("2026-10-08T12:00:00Z", "America/Chicago").chips.map((c) => c.kind)).not.toContain("station");
+    expect(facts("2026-10-08T12:00:00Z", "America/Chicago").map((f) => f.kind)).not.toContain("station");
   });
 
-  it("says a planet backed into a sign, carries its dignity, and doesn't repeat it", () => {
+  it("says a planet backed into a sign", () => {
     // Mercury turned retrograde Saturday; Venus backed into Libra, her home, 27 hours ago.
-    // The full moon would be fourth.
-    expect(tonightAt("2026-10-26T12:00:00Z", "America/Chicago").chips).toEqual([
-      { kind: "station", body: "Mercury", text: "Mercury turned retrograde Saturday" },
-      { kind: "sign", body: "Venus", dignity: "home", text: "Venus just backed into Libra" },
-      { kind: "dignity", body: "Moon", dignity: "exalted", text: "Moon in Taurus · exalted" },
+    expect(facts("2026-10-26T12:00:00Z", "America/Chicago")).toEqual([
+      { body: "Mercury", planet: "mercury", kind: "station", line: "Mercury turned retrograde Saturday" },
+      { body: "Venus", planet: "venus", kind: "sign", line: "Venus just backed into Libra" },
     ]);
   });
 
-  it("ends with a full or new moon window when there's room", () => {
-    expect(tonightAt("2026-10-10T12:00:00Z", "America/Chicago").chips).toEqual([
-      { kind: "dignity", body: "Venus", dignity: "detriment", text: "Venus in Scorpio · in her detriment" },
-      { kind: "moon", text: "New moon" },
+  it("has no station or sign change where none happened", () => {
+    // 7 a.m. CDT on Oct 10: only the new moon at 10:50 a.m. that day.
+    expect(facts("2026-10-10T12:00:00Z", "America/Chicago")).toEqual([
+      { body: "Moon", planet: "moon", kind: "moon", line: "New moon today" },
     ]);
-    expect(tonightAt("2026-09-26T17:30:00Z", "UTC").chips).toEqual([
-      { kind: "dignity", body: "Venus", dignity: "detriment", text: "Venus in Scorpio · in her detriment" },
-      { kind: "dignity", body: "Mars", dignity: "fall", text: "Mars in Cancer · in his fall" },
-      { kind: "moon", text: "Full moon" },
-    ]);
+    // 41 minutes after the full moon of Sept 26: the next, new on Oct 10, is too far.
+    expect(facts("2026-09-26T17:30:00Z", "UTC")).toEqual([]);
   });
 });
 
@@ -430,7 +428,7 @@ describe("Tonight's words never break spec 9.6", () => {
   for (let t = at("2026-01-01T00:00:00Z"), i = 0; t < at("2028-01-01T00:00:00Z"); t += 11 * 3600, i++) {
     const sky = skyAt(new Date(t * 1000));
     const x = tonightSky({ now: t, zone: zones[i % 3], sky, questionsHeld: sky.conditions });
-    sentences.push(x.heading, x.timeLine, x.moon.label, x.moon.line, x.moon.lineNoSign, ...x.chips.map((c) => c.text), ...x.receptions);
+    sentences.push(x.heading, x.timeLine, x.moon.label, x.moon.line, x.moon.lineNoSign, ...x.receptions);
     sentences.push(...x.planets.flatMap((p) => [p.line, p.detail, p.name]));
     sentences.push(...Object.values(x.skyLines), ...x.skyFacts.map((f) => f.line));
     if (x.noneOverhead) sentences.push(x.noneOverhead.line, ...(x.noneOverhead.next ? [x.noneOverhead.next.line] : []));
@@ -453,8 +451,6 @@ describe("Tonight's words never break spec 9.6", () => {
       "Venus is in Scorpio, in her detriment", "Full moon ", "New moon ",
     ];
     expect(markers.filter((m) => !sentences.some((s) => s.includes(m)))).toEqual([]);
-    expect(sentences).toContain("Full moon");
-    expect(sentences).toContain("New moon");
   });
 
   it("uses none of the words 9.6 forbids, and opens on no verb", () => {
@@ -547,11 +543,9 @@ describe("GET /api/sky/now, with Tonight's words (spec 7.4, 8.4)", () => {
     expect(body.heading).toBe("Monday night, Sept 28");
     expect(body.timeLine).toBe("The sky right now, 10:00 p.m. CDT");
     expect(body.moon.line).toBe("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted");
-    expect(body.chips.map((c: { text: string }) => c.text)).toEqual([
-      "Mars just entered Leo",
-      "Venus in Scorpio · in her detriment",
-      "Moon in Taurus · exalted",
-    ]);
+    // The old sky chips are gone (3 Oct 2026): the sky facts carry their words.
+    expect(body).not.toHaveProperty("chips");
+    expect(body.skyFacts.map((f: { line: string }) => f.line)).toEqual(["Mars just entered Leo"]);
     expect(body.planets).toHaveLength(7);
     expect(body.planets[3]).toMatchObject({ body: "Venus", degreeText: "8°09′", detail: "Venus in her detriment · detriment in Scorpio, 8°09′" });
     expect(body.receptions).toEqual([]);

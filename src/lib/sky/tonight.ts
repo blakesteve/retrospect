@@ -22,10 +22,8 @@ import { moonEvents, retrogradeWindows, signWindows, type MoonEvent } from "./wi
  * The top of Tonight (spec 8.4, items 2 to 4): the heading, the time, the
  * Moon's line, each held question's sky line, the sky facts that fill the
  * "for you" rows, the "none overhead" row, every planet's words for the
- * wheel and the practitioners' disclosure, and any mutual reception. (The
- * three sky chips are still sent, but no page has read them since the
- * Tonight revision; their tests still cover the station and sign words the
- * sky facts share.) Every sentence is built here, so the client only lays it out.
+ * wheel and the practitioners' disclosure, and any mutual reception. Every
+ * sentence is built here, so the client only lays it out.
  * SERVER ONLY: it reads the generated sky windows.
  */
 
@@ -92,8 +90,8 @@ function quarterNear(phase: 90 | 270, t: number): boolean {
 
 /**
  * The phase's name. Full and new are the sky data's own windows, 36 hours
- * either side of the exact instant, so the Moon's line agrees with the "Full
- * moon" chip and with questions 2 and 3 for as long as they count it. In
+ * either side of the exact instant, so the Moon's line agrees with questions
+ * 2 and 3 for as long as they count it. In
  * those 36 hours her light stays within about 3 points of full or new. A
  * quarter has no question, and her light changes about three times as fast
  * there, so it's named for the day centered on its instant, 12 hours either
@@ -170,31 +168,15 @@ export function tonightMoon(t: number, moon: { phaseAngle: number; illumination:
   };
 }
 
-/* ---- The chips (8.4) ------------------------------------------------------- */
+/* ---- Stations and sign changes (8.4) --------------------------------------- */
 
-export interface TonightChip {
-  kind: "station" | "sign" | "dignity" | "moon";
-  body?: SkyBody;
-  /** The standing the halo shows, when the body has one. */
-  dignity?: Dignity;
-  text: string;
-}
-
-export const CHIPS_MAX = 3;
-/** A station this close, before or after now, gets a chip. */
-export const STATION_CHIP_SECONDS = 3 * DAY;
-/** A sign change this recent gets a chip. */
-export const SIGN_CHIP_SECONDS = 2 * DAY;
-/** Sign changes worth a chip. The Moon changes sign every two or three days,
-    so she'd always take one; her sign is in her line and her dignity chip. */
-const SIGN_CHIP_BODIES: readonly SkyBody[] = ["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"];
-/** The bodies a question tests, in the order spec 8.7.4 lists their questions. */
-const DIGNITY_CHIP_BODIES: readonly SkyBody[] = ["Venus", "Mars", "Moon", "Mercury"];
-
-const standing = (body: SkyBody, sign: Sign): Dignity | undefined => {
-  const d = haloDignity(body, sign);
-  return d === "neutral" ? undefined : d;
-};
+/** A station this close, before or after now, is a sky fact. */
+export const STATION_FACT_SECONDS = 3 * DAY;
+/** A sign change this recent is a sky fact. */
+export const SIGN_FACT_SECONDS = 2 * DAY;
+/** Sign changes worth a fact. The Moon changes sign every two or three days,
+    so she'd always have one; her sign is in her line. */
+const SIGN_FACT_BODIES: readonly SkyBody[] = ["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn"];
 
 /** A station within 3 days of `now`, either way, in the listener's days:
     "Jupiter turns retrograde Saturday", "Venus ended her retrograde Friday".
@@ -203,7 +185,7 @@ function stationsNear(zone: string, now: number): { t: number; body: SkyBody; te
   const out: { t: number; body: SkyBody; text: string }[] = [];
   for (const w of retrogradeWindows) {
     for (const [t, turn] of [[uts(w.start), "retrograde"], [uts(w.end), "direct"]] as const) {
-      if (Math.abs(t - now) > STATION_CHIP_SECONDS) continue;
+      if (Math.abs(t - now) > STATION_FACT_SECONDS) continue;
       const her = pronounOf(w.body);
       const text =
         t > now
@@ -219,7 +201,7 @@ function stationsNear(zone: string, now: number): { t: number; body: SkyBody; te
     just entered Leo", "Venus just backed into Libra". */
 function signsEntered(now: number): { t: number; body: SkyBody; sign: Sign; text: string }[] {
   return signWindows
-    .filter((w) => SIGN_CHIP_BODIES.includes(w.body) && uts(w.start) <= now && now - uts(w.start) <= SIGN_CHIP_SECONDS)
+    .filter((w) => SIGN_FACT_BODIES.includes(w.body) && uts(w.start) <= now && now - uts(w.start) <= SIGN_FACT_SECONDS)
     .sort((a, b) => uts(b.start) - uts(a.start))
     .map((w) => ({
       t: uts(w.start),
@@ -227,37 +209,6 @@ function signsEntered(now: number): { t: number; body: SkyBody; sign: Sign; text
       sign: w.sign,
       text: `${capital(bodyName(w.body))} ${w.retrogradeAtStart ? "just backed into" : "just entered"} ${w.sign}`,
     }));
-}
-
-/**
- * Up to three, in spec 8.4's old order: a station within 3 days either way;
- * a sign change in the last 2 days (the Moon's aside); Venus, Mars, the Moon
- * or Mercury at home, exalted, in detriment or in fall; a full or new moon
- * window. Stations nearest first, sign changes newest first. A body with a
- * sign chip doesn't get a dignity chip too: its sign chip carries the
- * dignity for the halo. Superseded on Tonight by `skyLines` and `skyFacts`
- * (2 Oct 2026); kept while a reader remains.
- */
-export function tonightChips(zone: string, now: number, sky: SkyAtWithWords): TonightChip[] {
-  const chips: TonightChip[] = stationsNear(zone, now).map((s) => ({ kind: "station", body: s.body, text: s.text }));
-
-  const entered = signsEntered(now);
-  for (const w of entered) {
-    const dignity = standing(w.body, w.sign);
-    chips.push({ kind: "sign", body: w.body, ...(dignity ? { dignity } : {}), text: w.text });
-  }
-
-  for (const body of DIGNITY_CHIP_BODIES) {
-    const b = sky.bodies.find((x) => x.body === body)!;
-    const dignity = standing(body, b.sign);
-    if (!dignity || entered.some((w) => w.body === body)) continue;
-    chips.push({ kind: "dignity", body, dignity, text: b.line });
-  }
-
-  if (inMoonWindow("full", now)) chips.push({ kind: "moon", text: "Full moon" });
-  if (inMoonWindow("new", now)) chips.push({ kind: "moon", text: "New moon" });
-
-  return chips.slice(0, CHIPS_MAX);
 }
 
 /* ---- The sky facts (8.4, item 3) ------------------------------------------- */
@@ -459,7 +410,6 @@ export interface Tonight {
       now, 1:12 a.m. CDT Tuesday". */
   timeLine: string;
   moon: TonightMoon;
-  chips: TonightChip[];
   /** Each held question's sky line (8.4). */
   skyLines: Partial<Record<QuestionId, string>>;
   /** Every qualifying sky fact, in 8.4's order. */
@@ -497,7 +447,6 @@ export function tonightSky({
     heading: tonightHeading(zone, now),
     timeLine: timeLine(zone, now),
     moon: tonightMoon(now, sky.moon),
-    chips: tonightChips(zone, now, sky),
     skyLines: skyLines(zone, now, sky, questionsHeld, nasaTonight),
     skyFacts: skyFacts(zone, now),
     planets: sky.bodies.map((b) => ({

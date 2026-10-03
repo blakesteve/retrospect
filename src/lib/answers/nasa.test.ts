@@ -4,6 +4,7 @@ import { nasaLogFrom, patchStorms } from "@/lib/space/compact";
 import { synthCompact } from "@/lib/space/synthLog";
 import { zoneClock } from "@/lib/zone";
 import { nightsCondition } from "./conditions";
+import { nightRuns, runStarts } from "./nightRuns";
 import { computeAnswers, nasaNights } from "./engine";
 import { answersPayload } from "./payload";
 
@@ -53,6 +54,19 @@ describe("NASA's nights (spec 7.3)", () => {
     const two = log([["2024-05-11T10:00:00Z", 9]]);
     expect(nasaNights("storms", two, chicago, night("2024-05-11"), night("2024-12-31"))).toEqual([night("2024-05-11")]);
     expect(nasaNights("storms", two, chicago, night("2024-01-01"), night("2024-05-10"))).toEqual([night("2024-05-10")]);
+  });
+
+  it("finds runs of consecutive nights, in any order, repeats allowed (6.2, rule 3)", () => {
+    const [a, b, c, d, e] = ["2024-05-10", "2024-05-11", "2024-05-12", "2024-05-14", "2024-05-16"].map(night);
+    expect(nightRuns([e, b, a, a, d, c])).toEqual([[a, b, c], [d], [e]]);
+    expect(nightRuns([])).toEqual([]);
+    expect([...runStarts([e, b, a, d, c])]).toEqual([
+      [a, a],
+      [b, a],
+      [c, a],
+      [d, d],
+      [e, e],
+    ]);
   });
 
   it("makes consecutive nights one event, each night a window from 4 a.m. to 4 a.m.", () => {

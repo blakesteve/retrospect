@@ -8,9 +8,14 @@ import { SyncScreen } from "@/components/SyncScreen";
 import { NoScrobbles } from "@/components/NoScrobbles";
 import { RemoveDataLink } from "@/components/RemoveDataLink";
 import { Wordmark } from "@/components/Wordmark";
+import { clearInvalidLink, sayInvalidLink } from "@/components/invalidLink";
 import { toVisitorErrorCode, visitorError, visitorErrorCodeOf, apiError, type VisitorErrorCode } from "@/lib/visitorErrors";
 import { getJson, userUrl, type AnswersPayload, type ComputingPayload, type Highlights, type SkyNow, type Songs, type SyncStatus } from "./api";
 import { SheetHost } from "./SheetHost";
+/* Loaded with the shell: Tonight and Every night both end with these rows,
+   and a module two routes share but their parent doesn't load is copied
+   into each route's chunk (13.2). */
+import "./shared";
 import { closeSheets, finishClose, openSheet, sheetFrom, type SheetRef } from "./sheetUrl";
 import { Reveal } from "./Reveal";
 
@@ -58,9 +63,12 @@ export function useListener(): Listener {
 /** The view's heading, where focus returns when a deep-linked sheet closes. */
 export const VIEW_HEADING = "view-heading";
 
-/** The views, in the switcher's order. Every night and Sky join as they're
-    built (3b, 3c); `route` is the path after `/u/{name}`. */
-export const VIEWS: { id: string; label: string; route: string }[] = [{ id: "tonight", label: "Tonight", route: "" }];
+/** The views, in the switcher's order. Sky joins when it's built (3c);
+    `route` is the path after `/u/{name}`. */
+export const VIEWS: { id: string; label: string; route: string }[] = [
+  { id: "tonight", label: "Tonight", route: "" },
+  { id: "nights", label: "Every night", route: "/nights" },
+];
 
 /** With one view there's no switcher: a lone gold item reads as a button
     that does nothing (8.4 item 1, 10). The view then names itself. */
@@ -252,12 +260,11 @@ export function ListenerShell({ username, children }: { username: string; childr
     setRevealing(true);
   }, []);
 
-  const [invalidLink, setInvalidLink] = useState(false);
   // A fact from "Surprise me" leads the night sheet it opens (7.5).
   const [lead, setLead] = useState<{ date: string; text: string } | null>(null);
   const listenerUrl = useCallback((route: string, extra = "") => userUrl(username, route, zone, extra), [username, zone]);
   const open = useCallback((ref: SheetRef, leadText?: string) => {
-    setInvalidLink(false);
+    clearInvalidLink();
     setLead(leadText && ref.kind === "night" ? { date: ref.value, text: leadText } : null);
     openSheet(ref);
   }, []);
@@ -296,8 +303,17 @@ export function ListenerShell({ username, children }: { username: string; childr
   // reshuffle under the reader.
   const revealShown = Boolean(ready && revealing && answers.state === "ready" && songs.state !== "loading" && highlights.state !== "loading");
 
+  const view = VIEWS.find((v) => v.route && pathname?.endsWith(v.route))?.id ?? VIEWS[0].id;
+  // Every night keeps its whole top in view (Blake, 3 Oct 2026): the
+  // wordmark and the switcher stick, and the view's filter bar sticks under
+  // them. A sticky element stays only within its parent, so it's the
+  // column's own child, and the zone line, below it, scrolls away.
+  const stickyHead = view === "nights";
   const header = (
-    <header className="pt-5">
+    <header
+      data-listener-head
+      className={stickyHead ? "sticky top-0 z-30 -mx-4 bg-[rgba(11,16,38,.97)] px-4 pt-5 pb-2 backdrop-blur-md" : "pt-5"}
+    >
       <div className="flex items-center justify-between gap-3">
         <Wordmark />
         <span className="min-w-0 truncate text-sm text-ink-2" title={username}>
@@ -312,7 +328,7 @@ export function ListenerShell({ username, children }: { username: string; childr
           fullWidth
           className="mt-3"
           linkComponent={NextNavLink}
-          activeTab={VIEWS.find((v) => v.route && pathname?.endsWith(v.route))?.id ?? VIEWS[0].id}
+          activeTab={view}
           items={VIEWS.map((v) => ({
             id: v.id,
             label: v.label,
@@ -320,9 +336,9 @@ export function ListenerShell({ username, children }: { username: string; childr
           }))}
         />
       )}
-      <ZoneLine urlTz={urlTz} browser={browser} serverFellBack={value.serverFellBack} />
     </header>
   );
+  const zoneLine = <ZoneLine urlTz={urlTz} browser={browser} serverFellBack={value.serverFellBack} />;
 
   let body: ReactNode;
   if (fatal === "no-scrobbles") {
@@ -345,10 +361,7 @@ export function ListenerShell({ username, children }: { username: string; childr
     <ListenerContext.Provider value={value}>
       <div className="mx-auto w-full max-w-[720px] px-4 pb-32" inert={revealShown}>
         {header}
-        {/* An invalid sheet parameter opens nothing and says so (8.7). */}
-        <p role="status" aria-live="polite" className="mt-3 text-sm text-ink-2 empty:hidden">
-          {invalidLink ? "That link points to something that isn't in this history." : ""}
-        </p>
+        {zoneLine}
         <main>{body}</main>
         <footer className="mt-12 border-t border-[var(--line)] pt-5 text-xs text-ink-2">
           <p>Sky computed with astronomy-engine. Space weather, asteroids and photos from NASA and JPL.</p>
@@ -363,7 +376,7 @@ export function ListenerShell({ username, children }: { username: string; childr
         </footer>
       </div>
       {revealShown && <Reveal onDone={endReveal} />}
-      {ready && <SheetHost onInvalid={() => setInvalidLink(true)} lead={lead} />}
+      {ready && <SheetHost onInvalid={sayInvalidLink} lead={lead} />}
     </ListenerContext.Provider>
   );
 }

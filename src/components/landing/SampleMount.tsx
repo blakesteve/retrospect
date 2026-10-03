@@ -3,6 +3,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Spinner } from "@blakesteve/roster";
+import { clearInvalidLink, sayInvalidLink } from "@/components/invalidLink";
 import { wantsSample } from "./sampleUrls";
 import type { SampleHostProps } from "./SampleHost";
 
@@ -22,7 +23,6 @@ export function preloadSamples(): Promise<Host> {
   return hostLoad;
 }
 
-const INVALID = "That link points to something that isn't in this history.";
 
 export function SampleMount() {
   const params = useSearchParams();
@@ -31,7 +31,6 @@ export function SampleMount() {
   const [failed, setFailed] = useState(false);
   const [slow, setSlow] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [invalid, setInvalid] = useState(false);
 
   const loading = wanted && !Host && !failed;
   useEffect(() => {
@@ -58,10 +57,9 @@ export function SampleMount() {
 
   return (
     <>
-      {/* An invalid sheet parameter opens nothing and says so (8.7); a sample
-          that couldn't load says that (8.1). */}
+      {/* A sample that couldn't load says that (8.1); an invalid sheet
+          parameter opens nothing and says so in a toast (8.7). */}
       <div role="status" aria-live="polite" className="empty:hidden">
-        {invalid && !failed && <p className="mt-3 text-sm text-ink-2">{INVALID}</p>}
         {failed && wanted && (
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <p className="text-sm text-ink">The sample didn&rsquo;t load.</p>
@@ -83,7 +81,7 @@ export function SampleMount() {
           <Spinner size="md" />
         </div>
       )}
-      {Host && <Host onInvalid={() => setInvalid(true)} onValid={() => setInvalid(false)} />}
+      {Host && <Host onInvalid={sayInvalidLink} onValid={clearInvalidLink} />}
     </>
   );
 }

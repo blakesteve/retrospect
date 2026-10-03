@@ -1,6 +1,7 @@
 import { gunzipSync, gzipSync } from "node:zlib";
 import type { Scrobble } from "@/lib/analysis/nostalgia";
-import { historyStamp } from "@/lib/answers/engine";
+import { historyStamp, nasaNights } from "@/lib/answers/engine";
+import { runStarts } from "@/lib/answers/nightRuns";
 import { isNoiseArtist } from "@/lib/noise";
 import { takeBackIfRemoved } from "@/lib/removal";
 import type { NasaLog } from "@/lib/space/compact";
@@ -14,6 +15,7 @@ import {
   byWildness,
   chipFor,
   chipText,
+  isStormHeaded,
   pairingFact,
   pairingSentence,
   strangeness,
@@ -43,8 +45,10 @@ import type { TagStore } from "@/lib/genres";
 
 /** Bump when anything stored here, sentences included, changes. 2: the
     Surprise facts' examples (`surpriseFacts`). 3: each song's Moon phase,
-    and wild nights ranked by whether the zone saw their eclipse (7.5). */
-export const LISTENER_VERSION = 3;
+    and wild nights ranked by whether the zone saw their eclipse (7.5). 4: a
+    storm-headed wild night's storm run (6.2, 7.5), the X flares in the
+    reveal's counts, and each filter's nights per month (8.5). */
+export const LISTENER_VERSION = 4;
 export const MAX_ZONES = 4;
 
 /** The Every night filters (8.5), each counting nights you listened. */
@@ -124,8 +128,20 @@ export interface ListenerRecord {
   /** Nights you listened on, per filter, and per listed genre (8.5). */
   filterCounts: Record<FilterId, number>;
   genreCounts: Record<string, number>;
-  /** The reveal's count-ups (8.3), within the history. */
-  counts: { plays: number; venusSignChanges: number; storms: number; flybys: number };
+  /** The same nights per month, by the month of the night's date ("2024-05"),
+      months with none left out: the year strip's histogram (8.5). Every
+      filter and listed genre has an entry, empty when it lights no night.
+      Missing from a version 3 record. */
+  filterMonths?: Record<FilterId, Record<string, number>>;
+  genreMonths?: Record<string, Record<string, number>>;
+  /** The nights each filter lights, in order: with `genreHits`, the nights
+      one sky filter and one genre light together (8.5, 7.6). Missing from a
+      version 3 record. */
+  filterNights?: Record<FilterId, number[]>;
+  /** The reveal's count-ups (8.3) and the filter dock's lines (8.5), within
+      the history: storms by their start, X flares by their peak. `xflares`
+      is missing from a version 3 record (`xflaresIn`). */
+  counts: { plays: number; venusSignChanges: number; storms: number; flybys: number; xflares?: number };
   /** What the Surprise facts name (7.5). Absent from a version 1 record,
       which is still served while it's rebuilt. */
   surpriseFacts?: FactSeeds;
@@ -186,7 +202,10 @@ export async function computeListener(
     genres: [],
     filterCounts: Object.fromEntries(FILTERS.map((f) => [f, 0])) as Record<FilterId, number>,
     genreCounts: {},
-    counts: { plays: 0, venusSignChanges: 0, storms: 0, flybys: 0 },
+    filterMonths: Object.fromEntries(FILTERS.map((f) => [f, {}])) as Record<FilterId, Record<string, number>>,
+    genreMonths: {},
+    filterNights: Object.fromEntries(FILTERS.map((f): [FilterId, number[]] => [f, []])) as Record<FilterId, number[]>,
+    counts: { plays: 0, venusSignChanges: 0, storms: 0, flybys: 0, xflares: 0 },
     surpriseFacts: NO_FACTS,
   };
   if (plays.length === 0) return empty;
@@ -271,10 +290,14 @@ export async function computeListener(
   }
   const strangest = best ? { songId: best.songId, score: best.score } : null;
 
-  // Wild nights you listened on.
+  /* Wild nights you listened on. A storm-headed one carries its storm's run:
+     the nights NASA logged a storm on, plays or not, binned as question 7
+     bins them, in runs as question 7 counts its events (6.2, 7.5). */
+  const stormRun = runStarts(nasa ? nasaNights("storms", nasa, clock, firstNight, lastNight) : []);
   const wild = [...tallies.keys()]
     .map((n) => wildNight(eventsOf(n), clock))
     .filter((w): w is WildNight => w !== null)
+    .map((w) => (isStormHeaded(w) ? { ...w, stormRun: stormRun.get(w.night) ?? w.night } : w))
     .sort(byWildness);
 
   // Door badges: the listed songs' first plays, by night.
@@ -284,36 +307,35 @@ export async function computeListener(
   const facts = genreFacts(plays, genres, tallies);
   const listened = (n: number) => (tallies.get(n)?.plays ?? 0) > 0;
   const surpriseFacts = factSeeds({ clock, first, last, listened, space, eclipses: sky.eclipse, xflares: nasa?.xflares ?? [] });
-  const countNights = (nights: Iterable<number>) => {
-    let c = 0;
-    for (const n of new Set(nights)) if (listened(n)) c++;
-    return c;
-  };
+  // The nights each filter lights (8.5): only nights you listened on.
+  const lit = (nights: Iterable<number>) => [...new Set(nights)].filter(listened).sort((a, b) => a - b);
   const spaceWhere = (pick: (s: NonNullable<ReturnType<typeof space.get>>) => boolean) =>
     [...space].filter(([, s]) => pick(s)).map(([n]) => n);
-  const filterCounts: Record<FilterId, number> = {
-    storm: countNights(spaceWhere((s) => s.kp !== null)),
-    xflare: countNights(xflareNights(nasa, clock)),
-    eclipse: countNights(sky.eclipse.keys()),
-    fullmoon: countNights(sky.fullMoon.keys()),
-    newmoon: countNights(sky.newMoon.keys()),
-    firstplay: countNights(Object.keys(firstPlays).map(Number)),
-    wild: wild.length,
-    venushome: countNights(sky.conditions.get("venushome")!),
-    marshome: countNights(sky.marsHome),
-    moonstrong: countNights(sky.conditions.get("moonstrong")!),
-    asteroid: countNights(spaceWhere((s) => !!s.asteroid && s.asteroid.ld < 1)),
-    fireball: countNights(spaceWhere((s) => s.fireballs.length > 0)),
+  const filterNights: Record<FilterId, number[]> = {
+    storm: lit(spaceWhere((s) => s.kp !== null)),
+    xflare: lit(xflareNights(nasa, clock)),
+    eclipse: lit(sky.eclipse.keys()),
+    fullmoon: lit(sky.fullMoon.keys()),
+    newmoon: lit(sky.newMoon.keys()),
+    firstplay: lit(Object.keys(firstPlays).map(Number)),
+    wild: lit(wild.map((w) => w.night)),
+    venushome: lit(sky.conditions.get("venushome")!),
+    marshome: lit(sky.marsHome),
+    moonstrong: lit(sky.conditions.get("moonstrong")!),
+    asteroid: lit(spaceWhere((s) => !!s.asteroid && s.asteroid.ld < 1)),
+    fireball: lit(spaceWhere((s) => s.fireballs.length > 0)),
   };
+  const filterCounts = Object.fromEntries(FILTERS.map((f) => [f, filterNights[f].length])) as Record<FilterId, number>;
+  const filterMonths = Object.fromEntries(FILTERS.map((f) => [f, nightsByMonth(filterNights[f])])) as Record<FilterId, Record<string, number>>;
   const genreCounts: Record<string, number> = {};
+  const genreMonths: Record<string, Record<string, number>> = {};
   const genreHits: Record<number, string[]> = {};
+  const nightsInOrder = [...tallies.values()].sort((a, b) => a.night - b.night);
   for (const g of facts) {
-    genreCounts[g.genre] = 0;
-    for (const t of tallies.values()) {
-      if ((t.genres.get(g.genre) ?? 0) < NIGHT_GENRE_PLAYS) continue;
-      genreCounts[g.genre]++;
-      (genreHits[t.night] ??= []).push(g.genre);
-    }
+    const hits = nightsInOrder.filter((t) => (t.genres.get(g.genre) ?? 0) >= NIGHT_GENRE_PLAYS).map((t) => t.night);
+    genreCounts[g.genre] = hits.length;
+    genreMonths[g.genre] = nightsByMonth(hits);
+    for (const n of hits) (genreHits[n] ??= []).push(g.genre);
   }
 
   const mixes: Record<number, { genre: string; plays: number }[]> = {};
@@ -326,7 +348,7 @@ export async function computeListener(
     ...base,
     historyStart: first,
     historyEnd: last,
-    nights: [...tallies.values()].sort((a, b) => a.night - b.night).map((t) => [t.night, t.plays, t.afterMidnight]),
+    nights: nightsInOrder.map((t) => [t.night, t.plays, t.afterMidnight]),
     mixes,
     firstPlays,
     genreHits,
@@ -337,14 +359,37 @@ export async function computeListener(
     genres: facts,
     filterCounts,
     genreCounts,
+    filterMonths,
+    genreMonths,
+    filterNights,
     counts: {
       plays: plays.length,
       venusSignChanges: signWindows.filter((w) => w.body === "Venus" && Date.parse(w.start) / 1000 > first && Date.parse(w.start) / 1000 <= last).length,
+      // "NASA logged {n} solar storms in this time" (8.5): storms that began between the first play and the last.
       storms: (nasa?.stormStarts ?? []).filter((t) => t >= first && t <= last).length,
       flybys: [...space.values()].reduce((n, s) => n + s.flybys, 0),
+      xflares: xflaresIn(nasa, first, last),
     },
     surpriseFacts,
   };
+}
+
+/** "NASA logged {n} X-class flares in this time" (8.5): the X flares that
+    peaked between the first play and the last, the span the storms count
+    uses. Also fills in a version 3 record's count while it's rebuilt. */
+export function xflaresIn(nasa: NasaLog | null, first: number, last: number): number {
+  return (nasa?.xflares ?? []).filter(([peak]) => peak >= first && peak <= last).length;
+}
+
+/** Nights per month, by the month of the night's date ("2024-05"), from
+    nights in order; months with none are left out. */
+export function nightsByMonth(nights: number[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const n of nights) {
+    const month = nightName(n).slice(0, 7);
+    out[month] = (out[month] ?? 0) + 1;
+  }
+  return out;
 }
 
 /** The nights of the log's X-flare peaks. */

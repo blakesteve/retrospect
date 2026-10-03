@@ -23,8 +23,7 @@ export const dynamic = "force-dynamic";
  * question's sky line, the sky facts that fill the "for you" rows, each
  * planet's words, mutual receptions, the latest photo of Earth from the last
  * 3 days (null without one, or when NASA's data can't be read), and the
- * "none overhead" row when no question's sky holds. The three sky chips are
- * still sent, though no page reads them since the Tonight revision.
+ * "none overhead" row when no question's sky holds.
  */
 export async function GET(req: Request) {
   try {
