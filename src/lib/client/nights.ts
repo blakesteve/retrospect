@@ -6,33 +6,15 @@
  */
 import type { QuestionId } from "@/lib/answers/questions";
 
-/** A night's date, "YYYY-MM-DD". */
-export type NightDate = string;
+import { addDays, dateText, daysIn, MONTHS, shiftMonth, weekdayOf, WEEKDAYS, type NightDate } from "./dates";
+export { addDays, daysIn, shiftMonth, weekdayOf, WEEKDAYS, dateText, type NightDate } from "./dates";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-const DAY = 86_400_000;
-const at = (date: NightDate) => Date.parse(`${date}T12:00:00Z`);
-export const addDays = (date: NightDate, n: number) => new Date(at(date) + n * DAY).toISOString().slice(0, 10);
-export const weekdayOf = (date: NightDate) => new Date(at(date)).getUTCDay();
-export const daysIn = (month: string) => {
-  const [y, m] = month.split("-").map(Number);
-  return new Date(Date.UTC(y, m, 0)).getUTCDate();
-};
-/** A month ("YYYY-MM") moved on, or back, by a number of months. */
-export function shiftMonth(month: string, by: number): string {
-  const [y, m] = month.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1 + by, 1)).toISOString().slice(0, 7);
-}
 
 /** "May 2024" */
 export const monthTitle = (month: string) => `${MONTHS_LONG[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
 /** "Sept 2024": the year strip's label, one line in its column (8.5). */
 export const monthShort = (month: string) => `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
-/** "May 10, 2024" */
-export const dateText = (date: NightDate) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ${Number(date.slice(8, 10))}, ${date.slice(0, 4)}`;
 
 /** Every month from first to last ("YYYY-MM"), newest first (8.5 item 3). */
 export function monthsNewestFirst(first: string, last: string): string[] {

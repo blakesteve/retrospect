@@ -9,8 +9,14 @@ import type { PlanetSheet as PlanetSheetData } from "@/lib/sky/planet";
 import { SheetLink } from "../cards";
 import { AnswerPill, Chevron, SheetFailed, SheetSkeleton, Terms } from "../pieces";
 import { DIGNITY_COLOR, planetGlyph, signGlyph } from "../sky";
+import { aboutTheListener, planetSheetValue } from "@/lib/client/planetSheet";
+import { dateText } from "@/lib/client/dates";
+import { tonightDate } from "../format";
 
-/* A planet (spec 8.7.4), from /api/sky/planet. */
+/* A planet (spec 8.7.4), from /api/sky/planet: tonight, or on a night
+   ("venus-2024-05-10", as the Sky view's dial opens it), which titles it.
+   Any night inside the sky data opens; outside the listener's history the
+   sheet is the sky alone, with no lines about the listener. */
 
 // Type only: the module itself reads the sky data, which stays server-side (13).
 type PlanetData = PlanetSheetData & { zone: string; zoneFellBack: boolean };
@@ -39,9 +45,13 @@ const dignityWord = (d: Dignity, his: string) =>
   ({ home: "At home", exalted: "Exalted", detriment: "In detriment", fall: `In ${his} fall`, neutral: "A neutral sign" })[d];
 const H3 = "mt-8 text-[13px] font-semibold uppercase tracking-[0.12em] text-gold";
 
-export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }: SheetBodyProps) {
+export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, retry }: SheetBodyProps) {
   const L = useListener();
   const [data, setData] = useState<PlanetData | null | "failed">(null);
+  // The host refused anything else before it loaded this.
+  const parsed = planetSheetValue(raw);
+  const value: string = parsed?.body ?? raw;
+  const night = parsed?.night ?? null;
   const name = value.charAt(0).toUpperCase() + value.slice(1);
 
   // The history's span: the sync's oldest play, else the first scrobble the
@@ -51,12 +61,20 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
   const [now] = useState(() => Math.floor(Date.now() / 1000));
   const to = L.sync?.newestUts ?? now;
   const from = L.sync?.oldestUts ?? firstScrobble ?? (L.songs.state === "loading" ? null : to);
+  // The history's first night: the earlier of the two, since the sync's
+  // oldest play can trail the first one.
+  const firstUts = [L.sync?.oldestUts, firstScrobble].filter((t): t is number => typeof t === "number");
+  const firstNight = firstUts.length ? tonightDate(L.zone, Math.min(...firstUts) * 1000) : null;
+  const listener = aboutTheListener(night, firstNight, tonightDate(L.zone));
 
   useEffect(() => {
-    setTitle(value === "moon" || value === "sun" ? `The ${name} tonight` : `${name} tonight`);
+    // Never "tonight" on a dated sheet: that night's date.
+    const when = night ? `on ${dateText(night)}` : "tonight";
+    setTitle(value === "moon" || value === "sun" ? `The ${name} ${when}` : `${name} ${when}`);
     if (from === null) return;
     const ac = new AbortController();
-    getJson<PlanetData>(`/api/sky/planet?body=${value}&from=${from}&to=${to}&tz=${encodeURIComponent(L.zone)}`, { signal: ac.signal })
+    const on = night ? `&night=${night}` : "";
+    getJson<PlanetData>(`/api/sky/planet?body=${value}&from=${from}&to=${to}${on}&tz=${encodeURIComponent(L.zone)}`, { signal: ac.signal })
       .then(setData)
       .catch((err) => {
         if (ac.signal.aborted) return;
@@ -64,8 +82,8 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
         else setData("failed");
       });
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per planet and span
-  }, [value, L.zone, from, to]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per planet, night and span
+  }, [value, night, L.zone, from, to]);
   useEffect(() => setBusy(data === null), [data, setBusy]);
 
   if (data === "failed") return <SheetFailed retry={retry} />;
@@ -114,7 +132,7 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
         ))}
       </ul>
 
-      {data.path && (
+      {data.path && listener && (
         <>
           <h3 className={H3}>Through your history</h3>
           <div aria-hidden className="mt-3 flex h-5 overflow-hidden rounded-md bg-surface-2">
@@ -133,7 +151,7 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
         </>
       )}
 
-      {about.length > 0 && (
+      {about.length > 0 && listener && (
         <>
           <h3 className={H3}>In your 12 questions</h3>
           <ul className="mt-2 divide-y divide-[var(--line)]">
@@ -155,7 +173,7 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
         </>
       )}
 
-      {rxAnswer && rxAnswer.status === "too-few-events" && (
+      {listener && rxAnswer && rxAnswer.status === "too-few-events" && (
         <>
           <h3 className={H3}>{name === "Venus" ? "Her" : "His"} retrograde, an early read</h3>
           {rxAnswer.phrases.tooEarly && <p className="mt-2 leading-relaxed text-ink">{rxAnswer.phrases.tooEarly}</p>}
@@ -170,7 +188,7 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
 
       {(data.next.station || data.next.signChange) && (
         <>
-          <h3 className={H3}>Next</h3>
+          <h3 className={H3}>{night ? "After that night" : "Next"}</h3>
           {/* The key shows only the kinds listed: the Sun and Moon never station (8.7.4). */}
           {data.next.station && <Terms names={["Retrograde", "Station"]} />}
           <ul className="mt-2 space-y-1.5 text-[15px] text-ink">

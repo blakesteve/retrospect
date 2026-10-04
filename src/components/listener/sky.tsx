@@ -243,7 +243,10 @@ export function SkyWheel({
           <g
             key={p.body}
             data-body={p.body}
-            style={{ opacity: dim ? 0.4 : 1 }}
+            // Focus shows as the planet's own two-tone circle (11), never the
+            // page's square ring around the group's box, which an unlayered
+            // :focus-visible rule drew over Tailwind's outline-none.
+            style={{ opacity: dim ? 0.4 : 1, ...(focusable ? { outline: "none", boxShadow: "none" } : {}) }}
             className={`motion-safe:transition-opacity motion-safe:duration-200 ${focusable ? "outline-none [&:focus-visible_.pl-sel]:opacity-100" : ""}`}
             {...(focusable
               ? {

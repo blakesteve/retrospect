@@ -46,9 +46,9 @@ test.describe("the first screen on a phone (spec 8.4 item 3, the fold test)", ()
     }, ROWS);
     expect(covered).toEqual([]);
 
-    // The page measured has the real switcher (3b: Tonight and Every night),
+    // The page measured has the real switcher (3c: Tonight, Every night and Sky),
     // and so no eyebrow over the heading (8.4).
-    await expect(page.locator("nav[aria-label=Views] a")).toHaveCount(2);
+    await expect(page.locator("nav[aria-label=Views] a")).toHaveCount(3);
     expect(
       await page
         .locator("section[aria-labelledby=view-heading]")
@@ -203,14 +203,30 @@ test.describe("targets of at least 44px (spec 10, 11)", () => {
   });
 });
 
+test("a focused planet shows its own two-tone ring, not a square box around it (11)", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openTonight(page);
+  const wheel = page.locator("svg[aria-label='Sky wheel']");
+  await wheel.locator("[data-body][tabindex='0']").focus();
+  await page.keyboard.press("ArrowRight");
+  const r = await page.evaluate(() => {
+    const el = document.activeElement as SVGGElement;
+    const cs = getComputedStyle(el);
+    const other = document.querySelector(`svg[aria-label='Sky wheel'] [data-body]:not([data-body="${el.dataset.body}"]) .pl-sel`)!;
+    return { body: el.dataset.body ?? "", outline: cs.outlineStyle, shadow: cs.boxShadow, rings: [...el.querySelectorAll(".pl-sel")].map((c) => getComputedStyle(c).opacity), other: getComputedStyle(other).opacity };
+  });
+  expect(r.body).not.toBe("");
+  expect(r).toMatchObject({ outline: "none", shadow: "none", rings: ["1", "1"], other: "0" });
+});
+
 test.describe("the selected tab's contrast on the rendered page (11; ClickUp 86e3h9mca)", () => {
   test("Tonight's label reads at 4.5:1 or more on its pill, and the other on the track, on the real switcher", async ({ page }) => {
     await openTonight(page);
     const tab = await selectedTabContrast(page);
-    // It reached the real switcher, its two links and real colors: an opaque pill, a label of another color.
+    // It reached the real switcher, its three links and real colors: an opaque pill, a label of another color.
     expect(tab).not.toBeNull();
     expect(tab!.label).toBe("Tonight");
-    expect(tab!.links).toBe(2);
+    expect(tab!.links).toBe(3);
     expect(tab!.bg[3]).toBe(1);
     expect(tab!.fg[3]).toBe(1);
     expect(tab!.fg.slice(0, 3)).not.toEqual(tab!.bg.slice(0, 3));

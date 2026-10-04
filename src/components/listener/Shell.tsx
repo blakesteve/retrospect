@@ -63,11 +63,12 @@ export function useListener(): Listener {
 /** The view's heading, where focus returns when a deep-linked sheet closes. */
 export const VIEW_HEADING = "view-heading";
 
-/** The views, in the switcher's order. Sky joins when it's built (3c);
-    `route` is the path after `/u/{name}`. */
+/** The views, in the switcher's order (4, 10: thirds from 3c); `route` is
+    the path after `/u/{name}`. */
 export const VIEWS: { id: string; label: string; route: string }[] = [
   { id: "tonight", label: "Tonight", route: "" },
   { id: "nights", label: "Every night", route: "/nights" },
+  { id: "sky", label: "Sky", route: "/sky" },
 ];
 
 /** With one view there's no switcher: a lone gold item reads as a button

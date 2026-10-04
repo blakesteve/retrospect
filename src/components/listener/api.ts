@@ -5,6 +5,7 @@
  */
 import type { AnswersPayload, ComputingPayload, QuestionPayload } from "@/lib/answers/payload";
 import type { SongEntry } from "@/lib/listener/record";
+import type { DialMarks } from "@/lib/client/dial";
 import type { GenreFact } from "@/lib/listener/genres";
 import type { QuestionId } from "@/lib/answers/questions";
 import type { NoneOverhead, SkyFact, TonightMoon } from "@/lib/sky/tonight";
@@ -181,6 +182,23 @@ export interface NightsCounts {
   /** The same, per month ("YYYY-MM"), months with none left out; null while a record is rebuilt. */
   filterMonths: Record<string, Record<string, number>> | null;
   genreMonths: Record<string, Record<string, number>> | null;
+}
+
+/** The Sky view's dial: every night of the history, the first to tonight,
+    in one small answer (8.6 item 3; `GET /api/user/{name}/dial`). */
+export interface DialData {
+  status: "ready" | "updating" | "computing";
+  zone: string;
+  zoneFellBack?: boolean;
+  nasa: "ok" | "unavailable";
+  /** The history's first night; null when every play is noise. */
+  first: string | null;
+  tonight: string;
+  /** Plays on each night from `first` to `tonight`, tonight's so far. */
+  plays: number[];
+  /** A usual night's plays by weekday, Sunday first. */
+  usual: (number | null)[];
+  marks: DialMarks;
 }
 
 /** One sky filter and one genre together, for the whole history (7.6). */

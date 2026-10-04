@@ -15,6 +15,7 @@ import type { SheetBodyProps } from "@/components/listener/SheetHost";
 import { closeSheets, dropSheet, finishClose, openSheet, sheetDepth, sheetFrom, type SheetRef } from "@/components/listener/sheetUrl";
 import type { AnswersPayload, Highlights, SkyNow, Songs, SyncStatus } from "@/components/listener/api";
 import { isNightDate, songIndex, tonightDate } from "@/components/listener/format";
+import { planetSheetValue } from "@/lib/client/planetSheet";
 import { SheetSkeleton } from "@/components/listener/pieces";
 import { dropSample, LANDING_HEADING, SAMPLE_LABEL, SAMPLE_SHEETS, SAMPLE_USER, SAMPLE_ZONE, sampleFile, sampleFrom, type SampleSheet } from "./sampleUrls";
 import { loadSkyNow } from "./skyNow";
@@ -32,9 +33,7 @@ export interface SampleHostProps {
 }
 
 type Open = SheetRef | { kind: "sample"; value: string };
-type BodyKind = Exclude<SheetRef["kind"], "share"> | SampleSheet;
-
-const PLANETS = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
+type BodyKind = Exclude<SheetRef["kind"], "share" | "chart"> | SampleSheet;
 
 const Skeleton = SheetSkeleton;
 
@@ -64,21 +63,23 @@ function openFrom(params: URLSearchParams): Open | null {
 }
 
 const bodyOf = (o: Open): BodyKind | null =>
-  o.kind === "sample" ? (SAMPLE_SHEETS.includes(o.value as SampleSheet) ? (o.value as SampleSheet) : null) : o.kind === "share" ? null : o.kind;
+  o.kind === "sample" ? (SAMPLE_SHEETS.includes(o.value as SampleSheet) ? (o.value as SampleSheet) : null) : o.kind === "share" || o.kind === "chart" ? null : o.kind;
 
 /** What can be refused before anything loads. Sharing a sample has no link
-    to give (the made-up listener has no page), so a share sheet is refused. */
+    to give (the made-up listener has no page), so a share sheet is refused,
+    and the birth chart belongs to the Sky view, which the landing hasn't. */
 function obviouslyInvalid(o: Open): boolean {
   switch (o.kind) {
     case "q":
       return !QUESTIONS.some((q) => q.id === o.value);
     case "planet":
-      return !PLANETS.includes(o.value);
+      return planetSheetValue(o.value) === null;
     case "night":
       return !isNightDate(o.value) || o.value > tonightDate(SAMPLE_ZONE);
     case "song":
       return false;
     case "share":
+    case "chart":
       return true;
     case "sample":
       return bodyOf(o) === null;

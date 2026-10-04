@@ -2,43 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { Button, Input, Select } from "@blakesteve/roster";
-import { computeNatalChart, type NatalChart } from "@/lib/astro/natal";
-import type { ZodiacSign } from "@/lib/ephemeris/retrogrades";
+import { chartFromBirth, type NatalChart } from "@/lib/astro/natal";
+import { NATAL_KEY as STORAGE_KEY, type StoredBirth } from "@/lib/client/natalStore";
+import type { Sign as ZodiacSign } from "@/lib/sky/sky";
 
-const STORAGE_KEY = "retrospect.natal.v1";
-
+/* Each glyph followed by U+FE0E, so none renders as an emoji (8.9). */
+const VS = "\uFE0E";
 const GLYPHS: Record<ZodiacSign, string> = {
   Aries: "♈", Taurus: "♉", Gemini: "♊", Cancer: "♋", Leo: "♌", Virgo: "♍",
   Libra: "♎", Scorpio: "♏", Sagittarius: "♐", Capricorn: "♑", Aquarius: "♒", Pisces: "♓",
 };
 
-interface StoredBirth {
-  date: string; // YYYY-MM-DD
-  time: string; // HH:MM
-  offset: number; // hours east of UTC at birth place
-  lat: string;
-  lon: string;
-}
-
 const OFFSETS: number[] = [];
 for (let o = -12; o <= 14; o += 0.5) OFFSETS.push(o);
 const fmtOffset = (o: number) =>
   `UTC${o >= 0 ? "+" : "−"}${Math.floor(Math.abs(o))}${Math.abs(o) % 1 ? ":30" : ""}`;
-
-function chartFromBirth(b: StoredBirth): NatalChart | null {
-  if (!b.date) return null;
-  const [y, m, d] = b.date.split("-").map(Number);
-  const [hh, mm] = (b.time || "12:00").split(":").map(Number);
-  const utcMs = Date.UTC(y, m - 1, d, hh, mm) - b.offset * 3600 * 1000;
-  if (!Number.isFinite(utcMs)) return null;
-  const lat = parseFloat(b.lat);
-  const lon = parseFloat(b.lon);
-  const coords =
-    Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 66
-      ? { latitude: lat, longitude: lon }
-      : null;
-  return computeNatalChart(new Date(utcMs), coords);
-}
 
 /**
  * Birth data in, natal chart out — computed entirely in this browser tab and
@@ -52,7 +30,7 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
   /* Load saved birth data once, client-side only.
    *
    * `set-state-in-effect` is suppressed rather than worked around, because the
-   * workaround is worse. A lazy `useState` initializer cannot read
+   * workaround is worse. A lazy `useState` initializer can't read
    * `localStorage`: the server renders "add your birth chart" and a client
    * that already has a saved chart would render "your chart" on its first
    * pass, which is a hydration mismatch. Reading persisted state after mount
@@ -97,8 +75,9 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
      hairline border, the gold focus, the ink — comes from the tokens. */
   const fieldProps = {
     variant: "outline",
-    size: "sm",
-    inputClassName: "bg-surface-2 text-xs",
+    // 44px, the house bar for every control (11).
+    size: "lg",
+    inputClassName: "bg-surface-2",
   } as const;
 
   if (chart && !editing) {
@@ -115,22 +94,12 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
                 worth having: it carries the focus ring, the disabled handling,
                 and `type="button"`, which these lacked while sitting inside a
                 form. */}
-            <Button
-              variant="link"
-              size="xs"
-              className="h-auto px-0 text-ink-3 underline hover:text-ink-2"
-              onClick={() => setEditing(true)}
-            >
-              edit
+            <Button variant="link" size="lg" className="min-w-11 px-1 text-ink-2 underline hover:text-ink" onClick={() => setEditing(true)}>
+              Edit
             </Button>
             {" · "}
-            <Button
-              variant="link"
-              size="xs"
-              className="h-auto px-0 text-ink-3 underline hover:text-ink-2"
-              onClick={clear}
-            >
-              forget me
+            <Button variant="link" size="lg" className="min-w-11 px-1 text-ink-2 underline hover:text-ink" onClick={clear}>
+              Forget it
             </Button>
           </span>
         </div>
@@ -148,9 +117,9 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
           <Chip label="Venus" glyph="♀" sign={chart.venus.sign} />
           <Chip label="Mars" glyph="♂" sign={chart.mars.sign} />
         </div>
-        <p className="text-ink-3 text-xs mt-3">
-          Your signs are highlighted in the sign breakdown below. Computed in your browser;
-          your birth data never leaves this device.
+        <p className="text-ink-2 text-sm mt-3">
+          Your Sun, Moon, Mercury, Venus and Mars are drawn on the wheel, just inside the signs.
+          Worked out in your browser; nothing about your birth leaves this device.
         </p>
       </div>
     );
@@ -163,9 +132,9 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
         Date gives your Sun and planets; time sharpens the Moon; coordinates unlock your
         rising sign. Everything is computed in your browser and saved only on this device.
       </p>
-      <div className="flex flex-wrap items-end gap-3 text-xs text-ink-2">
+      <div className="flex flex-wrap items-end gap-3 text-sm text-ink-2">
         <label className="flex flex-col gap-1">
-          birth date
+          Birth date
           <Input
             type="date"
             value={birth.date}
@@ -174,7 +143,7 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
           />
         </label>
         <label className="flex flex-col gap-1">
-          time (local)
+          Time (local)
           <Input
             type="time"
             value={birth.time}
@@ -183,7 +152,7 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
           />
         </label>
         <label className="flex flex-col gap-1">
-          birthplace UTC offset
+          Birthplace&rsquo;s UTC offset
           {/* A real `Select` now. It was left native on the grounds that
               Roster's menu had no max-height and no scroll, and that turned
               out to be false: Headless UI's `size` middleware has always
@@ -209,12 +178,12 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
               label: fmtOffset(o),
             }))}
             variant="outline"
-            size="sm"
-            triggerClassName="bg-surface-2 text-xs"
+            size="lg"
+            triggerClassName="bg-surface-2"
           />
         </label>
         <label className="flex flex-col gap-1">
-          latitude (optional)
+          Latitude (optional)
           <Input
             placeholder="41.88"
             value={birth.lat}
@@ -224,7 +193,7 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
           />
         </label>
         <label className="flex flex-col gap-1">
-          longitude
+          Longitude
           <Input
             placeholder="-87.63"
             value={birth.lon}
@@ -237,11 +206,11 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
           type="button"
           colorScheme="primary"
           variant="solid"
-          size="sm"
+          size="lg"
           onClick={save}
           disabled={!birth.date}
         >
-          Cast my chart
+          Save my chart
         </Button>
       </div>
     </div>
@@ -250,10 +219,11 @@ export function BirthChartPanel({ onChart }: { onChart: (chart: NatalChart | nul
 
 function Chip({ label, glyph, sign }: { label: string; glyph: string; sign: ZodiacSign }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-surface-2 px-3 py-1 text-xs">
-      <span className="text-gold">{glyph}</span>
+    // A fact, so a solid label with no border: a bordered pill is a control (8.9).
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1 text-xs">
+      <span className="text-gold" aria-hidden>{glyph}{VS}</span>
       <span className="text-ink-3">{label}</span>
-      <span className="text-ink">{GLYPHS[sign]} {sign}</span>
+      <span className="text-ink"><span aria-hidden>{GLYPHS[sign]}{VS} </span>{sign}</span>
     </span>
   );
 }

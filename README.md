@@ -36,6 +36,23 @@ statistics is the answer.
   screen, the doors work by keyboard, by date, and the switcher and filters
   stay in view as you scroll (the header compacts to them, 165px on a
   phone), with a "Back to top" button.
+- **Sky**: a chart wheel with the seven planets on their own orbits at their
+  real longitudes, your songs as stars on a spiral around the signs (each
+  where the Sun was at its first play), and a dial under it that moves the
+  sky through every night of your history: drag it, tap the track, use the
+  keys, jump to a wild night, or play your years in 15 seconds. The planets
+  travel as Tonight's do; letting go near a wild night snaps to it with a
+  card that opens the night. Add a birth chart and your natal planets join
+  the wheel, worked out and kept in your browser only. The sky is computed
+  in the browser by the same module the server uses, loaded just after the
+  page first paints. On a visit's first view the wheel opens as the Orrery
+  prototype did: the planets wind into place the moment tonight's positions
+  arrive, the spiral draws in behind a comet, and the stars fly in as they
+  load, all still within 5 seconds and none of it under reduced motion. The
+  stars twinkle while you play your years, and ease to rest when it ends.
+  The spiral stays legible at any length: a long history's turns are drawn
+  finer, its last year brightest. A planet tapped on a past night opens
+  that night's planet, dated, never "tonight".
 - **The 12 questions**: fixed, the same for everyone, each answered Yes,
   Maybe, Not clearly, No or Too early, in plain words, with how likely it is
   to be chance. The math is there for anyone who opens "Show the math".
@@ -125,8 +142,24 @@ the page), a filter's dim (fill, Moon and badges at
 dock covers no door that can't scroll clear of it, the doors by keyboard (by
 day, week, month and the week's ends, into months not yet drawn), and the
 states for a year that didn't load, NASA's data missing and tonight before
-its first play. CI runs them in the "Browser checks" job, after a build that
-also runs the bundle guards.
+its first play. On Sky they check the dial's handle (54 by 46px or more) and
+its keys by night, week, month and the ends with the date each speaks, that a
+tap 21px from a planet or star picks it at 375 and 1280px, that "Play your
+years" stops on a key and on a pointer, the snap to a wild night and its
+card, that under reduced motion a planet is at its final place on the next
+frame (with the moving case as the control), that the wheel's opening winds
+the planets into place in 2 seconds, never waits for the stars, leaves
+nothing moving by 5, ends on any input (stars too, and the press that ended
+it opens nothing), doesn't run off screen, waits for the reveal to close,
+and never runs under reduced motion or on a return, that the stars twinkle only while Play
+runs and ease to rest after, that Play stopped rests on a whole night, that a
+planet's sheet on a past night is that night's, dated, with its "after" in
+its year, that a dated planet link opens on any view for any date in the sky
+data (the sky alone outside the history) and says so for a date outside the
+sky data, the dial's
+failed state, and a
+birth chart that draws its planets and sends nothing. CI runs them in the
+"Browser checks" job, after a build that also runs the bundle guards.
 
 ### A note on form controls
 
@@ -432,6 +465,7 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 | Endpoint | What it returns |
 |---|---|
 | `/api/user/{name}/nights?from=YYYY-MM&to=YYYY-MM` | Every night of up to a year: plays against a usual night of that weekday, after-midnight plays, songs first heard (with pairings), the Moon at 9 p.m., every sign change and station during the night with its time ("The Moon entered Cancer at 10:12 p.m. CDT."; Jupiter and Saturn to the day), the questions whose condition held, with when for one that began or ended that night ("from 10:12 p.m. CDT"), the filters it lights, its wild title with whether the zone saw its eclipse, its genre mix, and NASA's facts with its photos. Plus, on every request: the history's first night and whether NASA's log read. With `&counts=1`, each filter's and genre's nights over the whole history, in all and per month: the calendar asks once a visit, with the first year it loads. With `?filter=storm&genre=shoegaze` and no months instead: the nights one sky filter and one of your genres light together, in all and per month. |
+| `/api/user/{name}/dial` | The Sky view's dial in one small answer (54 KB for 20 years of heavy listening as first measured, 20 KB of it asteroid names it no longer sends): the history's first night, tonight's night, plays per night from the first to tonight (tonight's so far), a usual night for each weekday, and ticks at each night's place in that series, only on nights you listened: storms ("Kp 9"), X flares ("X9.0"), eclipses ("total solar"), asteroids closer than the Moon, and every wild night with its rank, title and whether it heads its event (a storm's run of nights has one). NASA's ticks are left out when its log didn't read. |
 | `/api/user/{name}/songs` | Your 12 most-played songs with 5 plays or more first played after your first 90 days, plus your first scrobble; "See all" lists 50. Each with its genre, first play, highlight chip, pairing sentence and the Moon's phase at that minute. |
 | `/api/user/{name}/highlights` | The reveal: how long, the count-ups (the storms and X flares NASA logged in your history among them), the wildest nights as cards (plays against a usual night, the night's photo, the Moon's phase at 9 p.m.), one card per event (a storm's run of nights is one, as question 7 counts it), the wildest night's date ("Friday, May 10, 2024") and line, and the song with the strangest sky. Plus the "Surprise me" pool: song skies with a chip, wild nights, and dated facts. |
 | `/api/user/{name}/profile` | Your habits, with the sentence for the ones still waiting built on the server, so no page imports the sky's windows. Noise is always left out. |
@@ -439,7 +473,7 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 | `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
 | `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days, each with the body it's about. Plus Tonight's words: the heading by local time, the time (with the weekday from midnight to 4 a.m.), the Moon's line with and without her sign ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), each held question's sky line ("Mercury is retrograde until Oct 13", "A solar storm tonight, Kp 7"), the sky facts that fill the "for you" rows ("Jupiter turns retrograde Saturday"), every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the row for a night with no question's sky overhead, with the next start. |
 | `/api/sky/path?to=` | The wheel's path to a coming-up moment at most 45 days out: every body's longitude from now (down to the hour) to `to` (to the hour), the Moon hourly and the rest daily, both ends included, to 0.01°. Cached until the hour turns. |
-| `/api/sky/planet?body=&from=&to=` | A planet's sheet: tonight's sign and dignity, its dignity in every sign, its path through a history as a strip (the Moon's as a letter per night), its next station and sign change, and the questions about it. Jupiter and Saturn to the day, the others to the minute. |
+| `/api/sky/planet?body=&from=&to=` | A planet's sheet: tonight's sign and dignity (or, with `night=2024-05-10`, any date from 2002 through 2035, that night's at 9 p.m. in the zone, as the Sky view's dial shows it, titled with the date), its dignity in every sign, its path through a history as a strip (the Moon's as a letter per night), its next station and sign change, and the questions about it. Jupiter and Saturn to the day, the others to the minute. |
 
 A night runs 4 a.m. to 4 a.m. local. A question's condition holds on every
 night its window touches, but the full- and new-moon filters light only the

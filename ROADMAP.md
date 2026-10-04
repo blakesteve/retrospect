@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -16,11 +16,68 @@
   confidence (28 Sept) · A young history gets a real report (28 Sept) · The
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The redesign: Sky (3c), compare and the share cards
-  (3d)
+- **Next, product:** The redesign: compare and the share cards (3d)
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Sky (3 October 2026)
+
+- **`/u/{name}/sky`**, the third view: the planets on their own orbits at
+  their real longitudes, your songs as stars on a spiral outside the signs
+  (each where the Sun was at its first play), and a dial under it: plays per
+  night, the Moon's light, ticks for storms, X flares and eclipses, a mark at
+  each wild night. Drag it, tap the track, use the keys, jump to a wild
+  night, go back to tonight, or play your years in 15 seconds; letting go
+  within 6 nights of a wild night snaps to it with a card that opens the
+  night. A planet tapped tints the signs by its standing, with a legend.
+- **The Orrery's look and opening**: glyphs centered in their halos, the
+  Sun's and Moon's glows, ticks every 5° on the sign ring, stars with the
+  prototype's glow and sparkle, and a comet at the dial's moment joined to
+  the Sun. On a visit's first view the planets wind into place the moment
+  tonight's positions arrive (never held for the stars; off screen then,
+  they simply show), the spiral draws in and the stars fly in as they load,
+  still within 5 seconds. Stars twinkle
+  only while "Play your years" runs, and ease to rest when it ends. The spiral is sampled smooth
+  (a point every 2.5° or so) and thins as its turns crowd, so 16 years read
+  as fine lines with the last year brightest, not one gold band. The dial's
+  waveform is smoothed over about a week and topped at the 98th percentile,
+  so one huge night can't flatten a history; the Moon's wave fades out once
+  its months are under 3px apart. Every wild night keeps a fine tick, the
+  wildest a mark; the ring around the center is as wide as the night's plays,
+  averaged over a week either way while the sky moves so it doesn't flicker.
+  The opening runs only with a fifth of the wheel on screen as the planets
+  arrive, and waits for the reveal to close; any input stops it, the stars too, and the press that stopped it
+  opens nothing.
+- **A planet's sheet on a past night**: tapped while the dial stands on a
+  past night, it's that night's planet at 9 p.m., titled "Venus on Sept 28,
+  2023", never "tonight", and what came after it says its year
+  (`?planet=venus-2023-09-28`, and the planet route's `night`). Any date in
+  the sky data, 2002 through 2035, opens on every view; outside the
+  listener's history the sheet is the sky alone, and a date outside the sky
+  data says so. Play stopped rests the wheel on a whole night, so the wheel
+  and the sheet agree.
+- **The sky in the browser, after the first paint**: the shared sky module
+  (one `bodiesAt` for the routes and the wheel) and astronomy-engine,
+  49,497 bytes, load once the view has painted; tonight's first frame comes
+  from the server. Sky's first load is 801,117 bytes, under Tonight's.
+- **The travel is Tonight's**: `trips.ts` now goes into the past, jumps while
+  the dial is dragged, and says where the wheel is in time.
+- **`GET /api/user/{name}/dial`**: the whole history in one small answer
+  for the dial, asteroids as bare offsets.
+- **The birth chart is a sheet (`?chart=you`, Sky only)**: today's panel,
+  loaded with its sheet, its signs and positions now the sky module's, its
+  controls 44px, its natal planets drawn just inside the signs.
+- **The sync's oldest play is the first play**: set from the stored history
+  when a backfill finishes or an older state first refreshes, so the planet
+  sheet and every other reader agree with the nights route.
+- **From review**: a link's `tz` the server refuses no longer crashes the
+  view; keys pressed mid-trip step from where the dial is going; flashes
+  come at most two a second; a focused planet shows its own two-tone ring
+  on Sky and Tonight, no longer a square box; term buttons like "Kp" are
+  44px wide.
+- **The bundle guard**, re-baselined: JS to 1,804,000 (1,733,273 measured),
+  CSS to 201,000 (193,163), what grew written beside them.
 
 ### Every night (3 October 2026)
 

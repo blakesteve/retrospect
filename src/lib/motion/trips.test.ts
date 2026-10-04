@@ -39,13 +39,15 @@ function harness({ reduced = false } = {}) {
   let clock = 0;
   const states: TripState<Body, Moment>[] = [];
   const paths: number[] = [];
+  const spans: [number, number][] = [];
   const pending: { uts: number; at: ReturnType<typeof deferred<Body[]>> }[] = [];
   let hold = false;
   const trips = createTrips<Body, Moment>(
     {
       now: { bodies: NOW, uts: T0 },
-      getPath: async (to) => {
+      getPath: async (from, to) => {
         paths.push(to);
+        spans.push([from, to]);
         return PATH;
       },
       getAt: (uts) => {
@@ -72,7 +74,7 @@ function harness({ reduced = false } = {}) {
     }
   };
   const settle = () => new Promise((r) => setTimeout(r, 0));
-  return { trips, states, paths, pending, frames, settle, holdFetches: () => (hold = true), queued: () => queue.length };
+  return { trips, states, paths, spans, pending, frames, settle, holdFetches: () => (hold = true), queued: () => queue.length };
 }
 
 const A: Moment = { uts: T0 + 7 * DAY, name: "A" };
@@ -168,6 +170,47 @@ describe("the wheel's trips (8.11 item 1)", () => {
     expect(separation("Sun", "Moon")).toBeGreaterThan(20);
     expect(Math.max(...steps)).toBeLessThan(1);
     expect(h.trips.state.glyphs).toEqual(glyphAngles(atSky(A.uts)));
+  });
+
+  it("jumps straight to a moment while the dial is dragged, stopping a trip, and travels on from there (8.6)", async () => {
+    const h = harness();
+    const out = h.trips.goTo(A);
+    await h.settle();
+    h.frames(5);
+    const sky = atSky(B.uts);
+    h.trips.jump(B, sky);
+    expect(await out).toBe(false);
+    expect(h.trips.state).toMatchObject({ moment: B, uts: B.uts, moving: false, arrived: null });
+    expect(h.trips.state.bodies).toBe(sky);
+    expect(h.queued()).toBe(0);
+    // The next trip starts where the jump left the wheel, and asks for that span.
+    const on = h.trips.goTo(A);
+    await h.settle();
+    expect(h.spans.at(-1)).toEqual([B.uts, A.uts]);
+    h.frames(80);
+    expect(await on).toBe(true);
+  });
+
+  it("travels back in time along the path it asked for, the Moon running backward", async () => {
+    const h = harness();
+    const there = h.trips.goTo(A);
+    await h.settle();
+    h.frames(80);
+    await there;
+    const back = h.trips.goTo(B);
+    await h.settle();
+    expect(h.spans.at(-1)).toEqual([A.uts, B.uts]);
+    h.frames(10);
+    // The wheel's time runs back too, between the two moments.
+    expect(h.trips.state.uts).toBeLessThan(A.uts);
+    expect(h.trips.state.uts).toBeGreaterThan(B.uts);
+    const moon = h.trips.state.bodies.find((b) => b.body === "Moon")!.longitude;
+    // Between B's 122.9° and A's 180°, on its way down.
+    expect(moon).toBeLessThan(180);
+    expect(moon).toBeGreaterThan(122.8);
+    h.frames(80);
+    expect(await back).toBe(true);
+    expect(h.trips.state.moment).toEqual(B);
   });
 
   it("stops asking for frames once disposed", async () => {

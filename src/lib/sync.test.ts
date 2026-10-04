@@ -406,3 +406,89 @@ describe("the chunk that finishes a backfill", () => {
     expect(await getStore().getScrobbles("halfway")).toHaveLength(15);
   });
 });
+
+describe("the history's first play (oldestUts)", () => {
+  /* Every reader of the sync state (a planet's sheet, Every night before its
+     first year, the nights' sheet) takes `oldestUts` as the history's first
+     play, the record's first night: the oldest stored play that isn't noise
+     or an impossible date. The backfill's running minimum counts both, and a
+     state saved before the field existed kept a later one. */
+  const FIRST = Date.UTC(2023, 8, 28, 2, 15) / 1000; // Sept 27, 2023, 9:15 p.m. CDT
+  const plays = [
+    { uts: FIRST + 7200, artist: "Khruangbin", track: "May Ninth" },
+    { uts: FIRST, artist: "Boards of Canada", track: "Aquarius" },
+    { uts: FIRST - 3600, artist: "Rain Sounds", track: "Rolling Thunder" }, // noise
+    { uts: 0, artist: "Boards of Canada", track: "Roygbiv" }, // a 1970 timestamp
+  ];
+
+  it("is set to the first play by the chunk that finishes a backfill, not to noise or a 1970 date", async () => {
+    fetchPage.mockResolvedValue(page({ totalPages: 1, totalScrobbles: plays.length, scrobbles: plays }));
+    const state = await runSyncChunk("first-play");
+    expect(state.status).toBe("ready");
+    expect(state).toMatchObject({ oldestUts: FIRST, oldestIsFirstPlay: true });
+    expect(await getStore().getSyncState("first-play")).toMatchObject({ oldestUts: FIRST, oldestIsFirstPlay: true });
+  });
+
+  it("corrects a ready state saved with a later one on its next refresh, and reads the history for it once", async () => {
+    await getStore().appendScrobbles("saved-before", plays);
+    const stale = (oldestUts?: number, extra = {}) =>
+      getStore().setSyncState({
+        username: "saved-before",
+        status: "ready",
+        pagesDone: 1,
+        totalPages: 1,
+        totalScrobbles: plays.length,
+        newestUts: FIRST + 7200,
+        oldestUts,
+        updatedAt: Date.now() - 2 * 3600_000,
+        ...extra,
+      });
+    // A state from before the field: its oldest taken from a later sync, ten days in.
+    await stale(FIRST + 10 * 86_400);
+    fetchPage.mockResolvedValue(page({ totalPages: 1, totalScrobbles: plays.length }));
+    const read = vi.spyOn(getStore(), "getScrobbles");
+    expect(await runSyncChunk("saved-before")).toMatchObject({ oldestUts: FIRST, oldestIsFirstPlay: true });
+    expect(read).toHaveBeenCalledTimes(1);
+    // Corrected, it isn't read again on the refreshes after.
+    await stale(FIRST, { oldestIsFirstPlay: true });
+    expect(await runSyncChunk("saved-before")).toMatchObject({ oldestUts: FIRST });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+    read.mockRestore();
+  });
+
+  it("isn't claimed while an empty history that gained plays syncs again, and is set once it's ready", async () => {
+    // Ready and empty, the first play settled as none; then plays arrive.
+    await getStore().setSyncState({
+      username: "empty-then-plays",
+      status: "ready",
+      pagesDone: 0,
+      totalPages: 0,
+      totalScrobbles: 0,
+      newestUts: 0,
+      emptyReads: 2,
+      oldestIsFirstPlay: true,
+      updatedAt: Date.now() - 61_000,
+    });
+    const blankedOnce = new Set([2]);
+    fetchPage.mockImplementation(async (_user, n) => {
+      if (blankedOnce.delete(n)) return page({ page: n, totalPages: 0 });
+      return page({ page: n, totalPages: 2, totalScrobbles: 2, scrobbles: [n === 1 ? plays[0] : plays[1]] });
+    });
+    const syncing = await runSyncChunk("empty-then-plays");
+    expect(syncing.status).toBe("syncing");
+    // While it syncs, the oldest seen so far, and no claim it's the first play.
+    expect(syncing.oldestIsFirstPlay).toBeUndefined();
+    expect(syncing.oldestUts).toBe(plays[0].uts);
+    const ready = await runSyncChunk("empty-then-plays");
+    expect(ready).toMatchObject({ status: "ready", oldestUts: FIRST, oldestIsFirstPlay: true });
+  });
+
+  it("is left out for an empty history", async () => {
+    fetchPage.mockResolvedValue(page({ totalPages: 1 }));
+    const state = await runSyncChunk("first-play-empty");
+    expect(state.status).toBe("ready");
+    expect(state.oldestUts).toBeUndefined();
+    expect(state.oldestIsFirstPlay).toBe(true);
+  });
+});

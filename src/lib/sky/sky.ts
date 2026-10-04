@@ -308,9 +308,11 @@ export interface SkyAtWithWords extends SkyAt {
   bodies: BodyAtWithWords[];
 }
 
-/** Everything spec 7.2 lists for one instant. A pure function of the time. */
-export function skyAt(date: Date): SkyAtWithWords {
-  const bodies: BodyAtWithWords[] = BODIES.map((body) => {
+/** The seven bodies at an instant, each with its place, standing and words.
+    The server's sky and the Sky view's wheel (8.6, computed in the browser)
+    both come from here, so they can't disagree at a sign boundary. */
+export function bodiesAt(date: Date): BodyAtWithWords[] {
+  return BODIES.map((body) => {
     const lon = longitude(body, date);
     const sign = signOf(lon);
     const at: BodyAt = {
@@ -324,6 +326,15 @@ export function skyAt(date: Date): SkyAtWithWords {
     };
     return { ...at, ...bodyWords(at) };
   });
+}
+
+/** The Moon's phase angle (astronomy-engine's MoonPhase): the Moon's
+    longitude less the Sun's, 0 new, 90 first quarter, 180 full. */
+export const moonPhaseAngle = (date: Date): number => MoonPhase(MakeTime(date));
+
+/** Everything spec 7.2 lists for one instant. A pure function of the time. */
+export function skyAt(date: Date): SkyAtWithWords {
+  const bodies = bodiesAt(date);
   const byBody = Object.fromEntries(bodies.map((b) => [b.body, b])) as Record<SkyBody, BodyAtWithWords>;
 
   const aspects: SkyAt["aspects"] = [];
@@ -351,7 +362,7 @@ export function skyAt(date: Date): SkyAtWithWords {
   return {
     at: date.toISOString(),
     bodies,
-    moon: { phaseAngle: MoonPhase(MakeTime(date)), illumination, sign: byBody.Moon.sign },
+    moon: { phaseAngle: moonPhaseAngle(date), illumination, sign: byBody.Moon.sign },
     aspects,
     conditions,
   };

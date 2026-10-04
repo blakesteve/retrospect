@@ -129,9 +129,32 @@ const PKG = "@blakesteve/roster";
  * layout. At 99.1% of the old ceiling, the next feature would have tripped
  * it for ordinary growth. 192,000 restores 4.7% slack. JS stays: 1,601,883
  * bytes, 3.8% under its ceiling.
+ *
+ * Raised 3 October 2026, JS 1,665,000 to 1,804,000 and CSS 192,000 to
+ * 201,000, measured on a clean build of bb/sky-view (the Sky view, phase 3c)
+ * over fdefc24: JS 1,721,020 bytes (a build of 391e411, the same tree as
+ * fdefc24: 1,553,169), CSS 192,151 (191,497). What grew, all of it new:
+ * chunks no route loads first, 393,129 to 516,506 (+123,377): astronomy-
+ * engine for the Sky view, 49,497, loaded after its first paint, and the
+ * birth chart's sheet, which brings Roster's Select and its Headless UI and
+ * floating-ui, 62,143; the Sky view's own chunk, 42,175; the rest is the
+ * shell's third view and the chart sheet's wiring. Per route, Sky's first
+ * load is 790,483 and Tonight's and Every night's grew 1,671 and 1,487
+ * (spec 13 budgets the routes; this ceiling is the tripwire). CSS: the
+ * Sky view's utilities and one keyframe. Both restore the slack they were
+ * set with: 4.8% and 4.6%. The same branch's pass toward the Orrery's look
+ * (its opening, stars and spiral) then measured JS 1,729,762 (+8,742, all
+ * but 6 bytes in Sky's own chunk; Sky's first load 799,219) and CSS 193,140
+ * (its keyframes, +989): 4.1% and 3.9% left. Over that commit (68063ed),
+ * the architect's 4 Oct rulings and a planet sheet dated on a past night
+ * measured JS 1,733,032 (+3,270; Sky's first load 801,057, Tonight's and
+ * Every night's +553 each for the sheet value's parser) and CSS 193,163
+ * (+23): 3.9% and 3.9% left. Over that (d282c84), dated planet links valid
+ * across the sky data measured JS 1,733,273 (+241; Sky's first load
+ * 801,117) and CSS 193,163.
  */
-const CLIENT_JS_CEILING = 1_665_000;
-const CLIENT_CSS_CEILING = 192_000;
+const CLIENT_JS_CEILING = 1_804_000;
+const CLIENT_CSS_CEILING = 201_000;
 
 const problems = [];
 

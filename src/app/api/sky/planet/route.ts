@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parsePlanetQuery, planetSheet } from "@/lib/sky/planet";
+import { nightMoment, parsePlanetQuery, planetSheet } from "@/lib/sky/planet";
 import { requestZone } from "@/lib/zone";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,9 @@ const PLANET_CACHE_CONTROL = "public, max-age=300";
 
 /**
  * GET /api/sky/planet?body=venus&from={uts}&to={uts}&tz=America/Chicago:
- * the planet sheet (spec 8.7.4). The body tonight, its dignity in each sign,
+ * the planet sheet (spec 8.7.4). With `night=2024-05-10` it's read at 9 p.m.
+ * that night in the zone, as the Sky view's dial shows it, and titled with
+ * the date; without, tonight. The body then, its dignity in each sign,
  * its path through the history `from` to `to` (the client's first and last
  * play, clamped to the sky data's 2002 through 2035), its next station and
  * sign change, and the questions about it. Stateless: no listener record is
@@ -23,9 +25,10 @@ export function GET(req: Request) {
     const query = parsePlanetQuery(params);
     if ("error" in query) return NextResponse.json({ error: query.error, code: "invalid" }, { status: 400 });
     const { zone, fellBack } = requestZone(params);
-    const now = Math.floor(Date.now() / 1000);
+    const today = Math.floor(Date.now() / 1000);
+    const now = query.night ? nightMoment(query.night, zone) : today;
     return NextResponse.json(
-      { zone, zoneFellBack: fellBack, ...planetSheet(query.body, query.from, query.to, zone, now) },
+      { zone, zoneFellBack: fellBack, ...planetSheet(query.body, query.from, query.to, zone, now, query.night, today) },
       { headers: { "Cache-Control": PLANET_CACHE_CONTROL } },
     );
   } catch (err) {
