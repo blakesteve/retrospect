@@ -145,7 +145,11 @@ const PKG = "@blakesteve/roster";
  * set with: 4.8% and 4.6%. The same branch's pass toward the Orrery's look
  * (its opening, stars and spiral) then measured JS 1,729,762 (+8,742, all
  * but 6 bytes in Sky's own chunk; Sky's first load 799,219) and CSS 193,140
- * (its keyframes, +989): 4.1% and 3.9% left.
+ * (its keyframes, +989): 4.1% and 3.9% left. Over that commit (68063ed),
+ * the architect's 4 Oct rulings and a planet sheet dated on a past night
+ * measured JS 1,733,032 (+3,270; Sky's first load 801,057, Tonight's and
+ * Every night's +553 each for the sheet value's parser) and CSS 193,163
+ * (+23): 3.9% and 3.9% left.
  */
 const CLIENT_JS_CEILING = 1_804_000;
 const CLIENT_CSS_CEILING = 201_000;

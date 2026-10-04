@@ -73,6 +73,11 @@ describe("validation", () => {
     ["milliseconds for to", "body=venus&from=1700000000&to=1700000001000"],
     ["2100 or later", "body=venus&from=1700000000&to=4102444800"],
     ["from after to", "body=venus&from=1700000001&to=1700000000"],
+    ["a night that isn't a date", "body=venus&from=1700000000&to=1700000001&night=May10"],
+    ["a 13th month", "body=venus&from=1700000000&to=1700000001&night=2024-13-01"],
+    ["Feb 30", "body=venus&from=1700000000&to=1700000001&night=2024-02-30"],
+    ["a night before the sky data", "body=venus&from=1700000000&to=1700000001&night=1990-01-01"],
+    ["a night after it", "body=venus&from=1700000000&to=1700000001&night=2040-01-01"],
   ])("refuses %s with a 400", async (_what, query) => {
     const res = await call(query);
     expect(res.status).toBe(400);
@@ -129,6 +134,46 @@ describe("tonight", () => {
     });
     expect((await sheet("moon", "2026-10-03T12:00:00Z")).tonight.title).toBe("The Moon tonight");
     expect((await sheet("venus", "2026-10-03T12:00:00Z")).tonight.title).toBe("Venus tonight");
+  });
+});
+
+describe("on a past night, as the Sky view's dial opens it", () => {
+  const night = (body: string, date: string, tz = "America/Chicago", now = "2026-11-20T12:00:00Z") =>
+    call(`body=${body}&from=${at("2025-01-01T00:00:00Z")}&to=${at("2025-02-01T00:00:00Z")}&night=${date}&tz=${tz}`, now).then((r) => {
+      expect(r.status).toBe(200);
+      return r.body as PlanetSheet;
+    });
+
+  it("reads the planet that night, never tonight, and says the night's date", async () => {
+    // Read on Nov 20, after Venus's 2026 retrograde ended; the night is Oct 10, during it.
+    const s = await night("venus", "2026-10-10");
+    expect(s.tonight).toMatchObject({
+      title: "Venus on Oct 10, 2026",
+      sign: "Scorpio",
+      dignity: "detriment",
+      retrograde: true,
+      plain: "Retrograde in Scorpio, in her detriment",
+    });
+    // "Next" runs from that night too, its year said only when it isn't this year.
+    expect(s.next.station!.text).toBe("Venus turns direct Nov 13, 6:20 p.m. CST");
+  });
+
+  it("says the year of what came after a night in another year, so it can't read as coming up", async () => {
+    // Read Nov 20, 2026; Venus left Leo for Virgo on Oct 8, 2023.
+    const s = await night("venus", "2023-09-28");
+    expect(s.tonight.title).toBe("Venus on Sept 28, 2023");
+    expect(s.next.signChange!.text).toMatch(/^Venus enters Virgo Oct 8, 2023, /);
+  });
+
+  it("reads it at 9 p.m. that night in the zone, as the wheel shows it", async () => {
+    expect((await night("mars", "2024-10-01")).now).toBe(at("2024-10-02T02:00:00Z")); // 9 p.m. CDT
+    expect((await night("mars", "2024-10-01", "Asia/Tokyo")).now).toBe(at("2024-10-01T12:00:00Z")); // 9 p.m. JST
+    expect((await night("mars", "2024-10-01")).tonight).toMatchObject({ sign: "Cancer", plain: "In Cancer, in his fall", title: "Mars on Oct 1, 2024" });
+  });
+
+  it("titles the Sun and the Moon with their article", async () => {
+    expect((await night("sun", "2024-05-10")).tonight.title).toBe("The Sun on May 10, 2024");
+    expect((await night("moon", "2024-05-10")).tonight.title).toBe("The Moon on May 10, 2024");
   });
 });
 

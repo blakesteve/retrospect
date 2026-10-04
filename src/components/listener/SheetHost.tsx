@@ -16,8 +16,7 @@ import { dropSheet, sheetDepth, sheetFrom, type SheetKind, type SheetRef } from 
 import { QUESTIONS } from "@/lib/answers/questions";
 import { isNightDate, songIndex, tonightDate } from "./format";
 import { SheetSkeleton } from "./pieces";
-
-const PLANETS = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
+import { planetSheetValue } from "@/lib/client/planetSheet";
 
 /** What can be refused before anything loads (8.7: the sheet doesn't open). */
 function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>, onSky: boolean): boolean {
@@ -25,7 +24,8 @@ function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>, onSk
     case "q":
       return !QUESTIONS.some((q) => q.id === ref.value);
     case "planet":
-      return !PLANETS.includes(ref.value);
+      // Tonight, or a past night the Sky view's dial stood at.
+      return planetSheetValue(ref.value, tonightDate(L.zone)) === null;
     case "chart":
       // The birth chart draws on the Sky view's wheel, and nowhere else.
       return ref.value !== "you" || !onSky;

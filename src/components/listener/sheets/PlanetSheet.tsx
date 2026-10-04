@@ -9,8 +9,12 @@ import type { PlanetSheet as PlanetSheetData } from "@/lib/sky/planet";
 import { SheetLink } from "../cards";
 import { AnswerPill, Chevron, SheetFailed, SheetSkeleton, Terms } from "../pieces";
 import { DIGNITY_COLOR, planetGlyph, signGlyph } from "../sky";
+import { planetSheetValue } from "@/lib/client/planetSheet";
+import { dateText } from "@/lib/client/dates";
+import { tonightDate } from "../format";
 
-/* A planet (spec 8.7.4), from /api/sky/planet. */
+/* A planet (spec 8.7.4), from /api/sky/planet: tonight, or on the past
+   night the Sky view's dial stood at ("venus-2024-05-10"), which titles it. */
 
 // Type only: the module itself reads the sky data, which stays server-side (13).
 type PlanetData = PlanetSheetData & { zone: string; zoneFellBack: boolean };
@@ -39,9 +43,13 @@ const dignityWord = (d: Dignity, his: string) =>
   ({ home: "At home", exalted: "Exalted", detriment: "In detriment", fall: `In ${his} fall`, neutral: "A neutral sign" })[d];
 const H3 = "mt-8 text-[13px] font-semibold uppercase tracking-[0.12em] text-gold";
 
-export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }: SheetBodyProps) {
+export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, retry }: SheetBodyProps) {
   const L = useListener();
   const [data, setData] = useState<PlanetData | null | "failed">(null);
+  // The host refused anything else before it loaded this.
+  const parsed = planetSheetValue(raw, tonightDate(L.zone));
+  const value: string = parsed?.body ?? raw;
+  const night = parsed?.night ?? null;
   const name = value.charAt(0).toUpperCase() + value.slice(1);
 
   // The history's span: the sync's oldest play, else the first scrobble the
@@ -53,10 +61,13 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
   const from = L.sync?.oldestUts ?? firstScrobble ?? (L.songs.state === "loading" ? null : to);
 
   useEffect(() => {
-    setTitle(value === "moon" || value === "sun" ? `The ${name} tonight` : `${name} tonight`);
+    // Never "tonight" on a past night: that night's date.
+    const when = night ? `on ${dateText(night)}` : "tonight";
+    setTitle(value === "moon" || value === "sun" ? `The ${name} ${when}` : `${name} ${when}`);
     if (from === null) return;
     const ac = new AbortController();
-    getJson<PlanetData>(`/api/sky/planet?body=${value}&from=${from}&to=${to}&tz=${encodeURIComponent(L.zone)}`, { signal: ac.signal })
+    const on = night ? `&night=${night}` : "";
+    getJson<PlanetData>(`/api/sky/planet?body=${value}&from=${from}&to=${to}${on}&tz=${encodeURIComponent(L.zone)}`, { signal: ac.signal })
       .then(setData)
       .catch((err) => {
         if (ac.signal.aborted) return;
@@ -64,8 +75,8 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
         else setData("failed");
       });
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per planet and span
-  }, [value, L.zone, from, to]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per planet, night and span
+  }, [value, night, L.zone, from, to]);
   useEffect(() => setBusy(data === null), [data, setBusy]);
 
   if (data === "failed") return <SheetFailed retry={retry} />;
@@ -170,7 +181,7 @@ export default function PlanetSheet({ value, setTitle, setBusy, invalid, retry }
 
       {(data.next.station || data.next.signChange) && (
         <>
-          <h3 className={H3}>Next</h3>
+          <h3 className={H3}>{night ? "After that night" : "Next"}</h3>
           {/* The key shows only the kinds listed: the Sun and Moon never station (8.7.4). */}
           {data.next.station && <Terms names={["Retrograde", "Station"]} />}
           <ul className="mt-2 space-y-1.5 text-[15px] text-ink">

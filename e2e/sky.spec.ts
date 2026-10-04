@@ -25,12 +25,14 @@ async function openSky(page: Page, query = "") {
 /** Saturn's angle every frame the wheel opens, from the page's first script. */
 const recordOpening = (page: Page) =>
   page.addInitScript(() => {
-    const rec = { angles: [] as number[], startedAt: -1, endedAt: -1, ever: false, opens: 0 };
+    const rec = { angles: [] as number[], startedAt: -1, endedAt: -1, ever: false, opens: 0, starsAt: -1, planetsAt: -1 };
     let was = false;
     (window as unknown as { __opening: typeof rec }).__opening = rec;
     const frame = () => {
       const state = document.querySelector("[data-sky-wheel]")?.getAttribute("data-opening");
       if (state) rec.ever = true;
+      if (rec.starsAt < 0 && document.querySelector("[data-sky-wheel] [data-star]")) rec.starsAt = performance.now();
+      if (rec.planetsAt < 0 && document.querySelector("[data-sky-wheel] [data-body='Saturn']")) rec.planetsAt = performance.now();
       // Each time the wheel starts to open, from not opening.
       if (state && !was) rec.opens++;
       was = Boolean(state);
@@ -45,7 +47,7 @@ const recordOpening = (page: Page) =>
     };
     requestAnimationFrame(frame);
   });
-type Opening = { angles: number[]; startedAt: number; endedAt: number; ever: boolean; opens: number };
+type Opening = { angles: number[]; startedAt: number; endedAt: number; ever: boolean; opens: number; starsAt: number; planetsAt: number };
 const opening = (page: Page) => page.evaluate(() => (window as unknown as { __opening: Opening }).__opening);
 /** The wheel's animations still running. */
 const wheelAnimations = (page: Page) =>
@@ -328,9 +330,15 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     await expect(page.locator("[data-snap]")).toHaveCount(0);
   });
 
-  test("the wheel opens once a visit: the planets wind into place in 2s, and all that moved by itself is still within 5s (8.11, 2.2.2)", async ({ page }) => {
+  test("the wheel opens once a visit: the planets wind into place in 2s, the stars fly in, and all is still within 5s (8.11, 2.2.2)", async ({ page }) => {
     await recordOpening(page);
-    await openSky(page);
+    await returnVisit(page);
+    await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+    await page.goto(SKY);
+    await expect(page.locator("[data-sky-wheel]")).toHaveAttribute("data-opening", "run", { timeout: 30_000 });
+    // The stars fly in (the check can see them)...
+    await expect.poll(() => wheelAnimations(page), { timeout: 2500 }).toBeGreaterThan(0);
+    await expect(page.locator("[data-sky-wheel]")).not.toHaveAttribute("data-opening", /./, { timeout: 5000 });
     const o = await opening(page);
     // Saturn, the farthest out, winds back 294° and comes round to its place.
     let travel = 0;
@@ -339,11 +347,7 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     expect(travel).toBeGreaterThan(250);
     // 1.9s, with room for a slow runner's frames.
     expect(o.endedAt - o.startedAt).toBeLessThan(2400);
-    // The stars still twinkle a moment after (the check can see them)...
-    await page.waitForFunction((t) => performance.now() >= t, o.startedAt + 2600);
-    expect(await wheelAnimations(page)).toBeGreaterThan(0);
-    // ...and by 5 seconds nothing moves (2.2.2): checked at 4.9, before the
-    // opening's own cleanup at 5, so it's the twinkle's own end that's seen.
+    // ...and by 4.9 seconds nothing moves (2.2.2): nothing twinkles until Play.
     await page.waitForFunction((t) => performance.now() >= t, o.startedAt + 4900);
     expect(await wheelAnimations(page)).toBe(0);
     expect(o.opens).toBe(1);
@@ -356,19 +360,21 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     expect((await opening(page)).opens).toBe(1);
   });
 
-  test("any input ends the opening at once, every planet in its place (2.2.2)", async ({ page }) => {
+  test("any input ends the opening at once: every planet in its place, the stars still, and none flying in later (2.2.2)", async ({ page }) => {
     await recordOpening(page);
     await returnVisit(page);
     await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+    // The stars come a moment after the planets, so the key comes between.
+    await page.route("**/api/user/sample/songs*", async (r) => {
+      await new Promise((done) => setTimeout(done, 1500));
+      await r.continue();
+    });
     await page.goto(SKY);
     const wheel = page.locator("[data-sky-wheel]");
+    // A key as the planets begin to wind.
     await expect(wheel).toHaveAttribute("data-opening", "run", { timeout: 30_000 });
-    // The stars are on their way in...
-    expect(await wheelAnimations(page)).toBeGreaterThan(0);
     await page.keyboard.press("Shift");
     await expect(wheel).not.toHaveAttribute("data-opening", /./, { timeout: 300 });
-    // ...and stop with the planets.
-    await expect.poll(() => wheelAnimations(page), { timeout: 300 }).toBe(0);
     const saturn = wheel.locator("[data-body='Saturn']");
     const at = await saturn.getAttribute("transform");
     await page.waitForTimeout(600);
@@ -377,6 +383,53 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     const o = await opening(page);
     expect(o.angles.length).toBeGreaterThan(0);
     expect(o.endedAt - o.startedAt).toBeLessThan(1500);
+    // Stars that load after it ended simply appear.
+    await expect(page.locator("[data-star]").first()).toBeAttached({ timeout: 15_000 });
+    await page.waitForTimeout(100);
+    expect((await opening(page)).starsAt).toBeGreaterThan(o.endedAt);
+    expect(await wheelAnimations(page)).toBe(0);
+    // A new visit: a key while the stars fly stops them too.
+    await page.reload();
+    await expect.poll(() => wheelAnimations(page), { timeout: 30_000 }).toBeGreaterThan(0);
+    await page.keyboard.press("Shift");
+    await expect.poll(() => wheelAnimations(page), { timeout: 300 }).toBe(0);
+  });
+
+  test("the planets never wait for the stars: they show, opening, as soon as tonight's positions arrive (8.11)", async ({ page }) => {
+    await recordOpening(page);
+    await returnVisit(page);
+    await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+    // The songs, and so the stars, come 6 seconds late.
+    await page.route("**/api/user/sample/songs*", async (r) => {
+      await new Promise((done) => setTimeout(done, 6000));
+      await r.continue();
+    });
+    await page.goto(SKY);
+    const wheel = page.locator("[data-sky-wheel]");
+    await expect(wheel.locator("[data-body='Saturn']")).toBeAttached({ timeout: 30_000 });
+    // Nothing between a planet and the screen hides it.
+    const shown = await page.evaluate(() => {
+      let el: Element | null = document.querySelector("[data-sky-wheel] [data-body='Saturn']");
+      let opacity = 1;
+      while (el && el.tagName !== "svg") {
+        opacity *= Number(getComputedStyle(el).opacity);
+        el = el.parentElement;
+      }
+      return opacity;
+    });
+    expect(shown).toBe(1);
+    await expect(wheel).toHaveAttribute("data-opening", "run");
+    expect(await page.locator("[data-star]").count()).toBe(0);
+    // It began as the planets came, not after waiting for anything.
+    const began = await opening(page);
+    expect(began.startedAt - began.planetsAt).toBeLessThan(300);
+    // The stars join late, near the opening's end or after it, and their
+    // flight, if any, fits what's left: by 4.9 seconds nothing moves.
+    await expect(page.locator("[data-star]").first()).toBeAttached({ timeout: 15_000 });
+    const o = await opening(page);
+    expect(o.starsAt - o.startedAt).toBeGreaterThan(2500);
+    await page.waitForFunction((t) => performance.now() >= t, o.startedAt + 4900);
+    expect(await wheelAnimations(page)).toBe(0);
   });
 
   test("a press that stops the opening only stops it: it opens nothing where a planet was going (11)", async ({ page }) => {
@@ -385,7 +438,9 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     await page.goto(SKY);
     const wheel = page.locator("[data-sky-wheel]");
     const saturn = wheel.locator("[data-body='Saturn']");
-    await expect(wheel).not.toHaveAttribute("data-opening", /./, { timeout: 30_000 });
+    // Saturn here and in its place: the attribute is absent before the planets come, too.
+    await expect(saturn).toBeAttached({ timeout: 30_000 });
+    await expect(wheel).not.toHaveAttribute("data-opening", /./, { timeout: 10_000 });
     const box = (await saturn.boundingBox())!;
     const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     // A new visit opens again; press where Saturn is going while it winds.
@@ -421,7 +476,7 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     expect(o.angles.length).toBeGreaterThan(10);
   });
 
-  test("the opening waits until the wheel is on screen, then runs (8.11)", async ({ page }) => {
+  test("off screen as tonight's planets arrive, the wheel doesn't open: the planets simply show, in place (8.11)", async ({ page }) => {
     await recordOpening(page);
     await returnVisit(page);
     await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
@@ -429,15 +484,76 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     await page.setViewportSize({ width: 375, height: 120 });
     await page.goto(SKY);
     const wheel = page.locator("[data-sky-wheel]");
-    await expect(wheel.locator("[data-body='Sun']")).toBeAttached({ timeout: 30_000 });
-    await expect(page.locator("[data-star]").first()).toBeAttached({ timeout: 15_000 });
-    await page.waitForTimeout(2000);
-    expect((await opening(page)).startedAt).toBe(-1);
-    await expect(wheel).toHaveAttribute("data-opening", "hold");
-    // On screen, it runs, and ends.
+    const saturn = wheel.locator("[data-body='Saturn']");
+    await expect(saturn).toBeAttached({ timeout: 30_000 });
+    await expect(wheel).not.toHaveAttribute("data-opening", /./);
+    const at = await saturn.getAttribute("transform");
+    // On screen later: still nothing winds, and nothing moved.
     await page.setViewportSize({ width: 375, height: 812 });
-    await expect(wheel).not.toHaveAttribute("data-opening", /./, { timeout: 5000 });
-    expect((await opening(page)).angles.length).toBeGreaterThan(10);
+    await page.waitForTimeout(2500);
+    expect((await opening(page)).startedAt).toBe(-1);
+    expect(await saturn.getAttribute("transform")).toBe(at);
+  });
+
+  test("the stars twinkle only while Play runs, and ease to rest when it ends (8.11)", async ({ page }) => {
+    await openSky(page);
+    const twinkle = () =>
+      page.evaluate(() => {
+        const out = { twinkling: 0, easing: 0 };
+        for (const a of document.getAnimations()) {
+          const t = (a.effect as KeyframeEffect | null)?.target as Element | null;
+          if (!t?.classList.contains("sky-tw") || a.playState !== "running") continue;
+          if (a instanceof CSSAnimation) out.twinkling++;
+          else if (!(a instanceof CSSTransition)) out.easing++;
+        }
+        return out;
+      });
+    expect(await twinkle()).toEqual({ twinkling: 0, easing: 0 });
+    await page.getByRole("button", { name: "Play your years" }).click();
+    await expect.poll(async () => (await twinkle()).twinkling).toBeGreaterThan(5);
+    await page.waitForTimeout(1500);
+    await page.getByRole("button", { name: "Pause" }).click();
+    // Each star eases back from where its twinkle was, not a jump...
+    const ended = await twinkle();
+    expect(ended.twinkling).toBe(0);
+    expect(ended.easing).toBeGreaterThan(0);
+    // Played again before they're at rest: they twinkle from where they are,
+    // the easing gone at once rather than holding them still over the twinkle.
+    await page.getByRole("button", { name: "Play your years" }).click();
+    expect((await twinkle()).easing).toBe(0);
+    await page.getByRole("button", { name: "Pause" }).click();
+    // ...and at rest within a second.
+    await expect.poll(twinkle, { timeout: 1500 }).toEqual({ twinkling: 0, easing: 0 });
+  });
+
+  test("Play stopped rests the wheel on a whole night, the one the dial and a planet's sheet read (8.6, 8.7.4)", async ({ page }) => {
+    await openSky(page);
+    const moon = page.locator("[data-sky-wheel] [data-body='Moon']");
+    await page.getByRole("button", { name: "Play your years" }).click();
+    await page.waitForTimeout(1200);
+    await page.getByRole("button", { name: "Pause" }).click();
+    await settle(page);
+    const paused = await moon.getAttribute("transform");
+    const night = await slider(page).getAttribute("aria-valuetext");
+    // A night on and back again travels to that night's 9 p.m.: where the Moon already is.
+    await slider(page).focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowLeft");
+    await expect(slider(page)).toHaveAttribute("aria-valuetext", night!);
+    // Compared once it has settled: on its way back it passes through the in-between places.
+    let last: string | null = null;
+    await expect
+      .poll(
+        async () => {
+          const now = await moon.getAttribute("transform");
+          const still = now === last;
+          last = now;
+          return still;
+        },
+        { intervals: [300], timeout: 5000 },
+      )
+      .toBe(true);
+    expect(last).toBe(paused);
   });
 
   test("under reduced motion the wheel doesn't open and nothing in it moves by itself (8.11, 11)", async ({ page }) => {
@@ -471,6 +587,36 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     const moving = await marsAfterHome(false);
     expect(moving.next).not.toBe(moving.last);
     expect(moving.last).toBe(still.last);
+  });
+});
+
+test.describe("a planet's sheet from Sky (8.7.4)", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("on a past night it's that night's planet, titled with the date, never tonight", async ({ page }) => {
+    await openSky(page);
+    const venus = page.locator("[data-sky-wheel] [data-body='Venus']");
+    // The control: at tonight, "Venus tonight".
+    await venus.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { name: "Venus tonight" })).toBeVisible();
+    await expect(page).toHaveURL(/[?&]planet=venus(&|$)/);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("heading", { name: "Venus tonight" })).toBeHidden();
+    // The first night, Thursday, Sept 28, 2023: Venus in Leo, which she left Oct 8.
+    await slider(page).focus();
+    await page.keyboard.press("Home");
+    await expect(slider(page)).toHaveAttribute("aria-valuetext", /^Thursday, Sept 28, 2023/);
+    await expect(venus).toHaveAttribute("aria-label", /Leo/);
+    await venus.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/[?&]planet=venus-2023-09-28(&|$)/);
+    await expect(page.getByRole("heading", { name: "Venus on Sept 28, 2023" })).toBeVisible();
+    await expect(page.getByText("In Leo, a neutral sign")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /tonight/i })).toHaveCount(0);
+    // What came after says its year, so it can't read as coming up.
+    await expect(page.getByRole("heading", { name: "After that night" })).toBeVisible();
+    await expect(page.getByText(/^Venus enters Virgo Oct 8, 2023, /)).toBeVisible();
   });
 });
 

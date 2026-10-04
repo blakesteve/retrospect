@@ -1,5 +1,5 @@
-import { dateIn, timeIn } from "@/lib/listener/words";
-import { nightName, zoneClock } from "@/lib/zone";
+import { dateIn, nightDate, timeIn } from "@/lib/listener/words";
+import { nightName, ninePm, zoneClock } from "@/lib/zone";
 import {
   SIGNS,
   degreeInSign,
@@ -180,9 +180,11 @@ export interface PlanetSheet {
     Copied, because zone.ts doesn't export it. */
 const LATEST = Date.UTC(2100, 0, 1) / 1000;
 
-export type PlanetQuery = { body: SkyBody; from: number; to: number } | { error: string };
+export type PlanetQuery = { body: SkyBody; from: number; to: number; night: string | null } | { error: string };
 
-/** `body`, `from` and `to` from a request, or why they're refused. */
+/** `body`, `from` and `to` from a request, and the `night` the sheet is read
+    on ("2024-05-10", within the sky data; tonight when left out), or why
+    they're refused. */
 export function parsePlanetQuery(params: URLSearchParams): PlanetQuery {
   const rawBody = params.get("body") ?? "";
   if (!Object.hasOwn(BODY_IDS, rawBody)) {
@@ -199,7 +201,19 @@ export function parsePlanetQuery(params: URLSearchParams): PlanetQuery {
   }
   const [from, to] = times;
   if (from > to) return { error: "from must not be after to" };
-  return { body: BODY_IDS[rawBody as BodyId], from, to };
+  const night = params.get("night");
+  if (night !== null) {
+    const t = Date.parse(`${night}T00:00:00Z`) / 1000;
+    const real = /^\d{4}-\d{2}-\d{2}$/.test(night) && Number.isFinite(t) && new Date(t * 1000).toISOString().slice(0, 10) === night;
+    if (!real || t < SKY_FROM || t + 86_400 > SKY_LAST) return { error: "night must be a date like 2024-05-10 within the sky data" };
+  }
+  return { body: BODY_IDS[rawBody as BodyId], from, to, night };
+}
+
+/** 9 p.m. on a night's date in a zone: the moment the Sky view's dial shows it (7.4). */
+export function nightMoment(night: string, zone: string): number {
+  const n = Math.round(Date.parse(`${night}T00:00:00Z`) / 86_400_000);
+  return ninePm(zoneClock(zone, (n - 1) * 86_400, (n + 2) * 86_400), n);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -276,7 +290,8 @@ function firstEndingAfter(list: Window[], t: number): number {
 
 const TERM: Record<Dignity, string> = { home: "domicile", exalted: "exaltation", detriment: "detriment", fall: "fall" };
 
-export function tonightOf(body: SkyBody, now: number): PlanetTonight {
+/** The body at `now`, titled for tonight, or for `night` when the sheet is read on a past night ("Venus on May 10, 2024"). */
+export function tonightOf(body: SkyBody, now: number, night: string | null = null): PlanetTonight {
   const date = new Date(now * 1000);
   const lon = longitude(body, date);
   const sign = signOf(lon);
@@ -289,7 +304,7 @@ export function tonightOf(body: SkyBody, now: number): PlanetTonight {
     degreeText: `${degree}°${String(minute).padStart(2, "0")}′`,
     dignity: haloDignity(body, sign),
     retrograde,
-    title: `${DISPLAY[body]} tonight`,
+    title: night ? `${DISPLAY[body]} on ${nightDate(night)}` : `${DISPLAY[body]} tonight`,
     plain: `${retrograde ? "Retrograde in" : "In"} ${sign}, ${dignityPhrase(body, sign)}`,
     term: `${standing} in ${sign}`,
   };
@@ -398,7 +413,7 @@ function windowWords(zone: string, from: number, to: number): string {
   return aRest.join(" ") === bRest.join(" ") ? `Between ${aClock} and ${b}` : `Between ${a} and ${b}`;
 }
 
-/** The "when" of an event, and its detail line. */
+/** The "when" of an event, and its detail line; `now` is the reader's clock, which decides whether the year is said. */
 function whenWords(body: SkyBody, zone: string, t: number, now: number): { when: string; detail: string | null } {
   if (PRECISION[body] === "minute") return { when: `${shortDate(zone, t, now)}, ${timeIn(zone, t)}`, detail: null };
   // Centered on the data's instant, to the nearest 5 minutes, plus or minus
@@ -409,10 +424,11 @@ function whenWords(body: SkyBody, zone: string, t: number, now: number): { when:
   return { when: dayWords(zone, from, to, now), detail: windowWords(zone, from, to) };
 }
 
-export function nextStation(body: SkyBody, zone: string, now: number): NextStation | null {
+/** The first station after `now`, its year said unless it's the year at `today` (the reader's clock). */
+export function nextStation(body: SkyBody, zone: string, now: number, today = now): NextStation | null {
   const s = stationsOf(body).find((x) => x.time > now);
   if (!s) return null;
-  const { when, detail } = whenWords(body, zone, s.time, now);
+  const { when, detail } = whenWords(body, zone, s.time, today);
   return {
     time: s.time,
     precision: PRECISION[body],
@@ -423,10 +439,10 @@ export function nextStation(body: SkyBody, zone: string, now: number): NextStati
   };
 }
 
-export function nextSignChange(body: SkyBody, zone: string, now: number): NextSignChange | null {
+export function nextSignChange(body: SkyBody, zone: string, now: number, today = now): NextSignChange | null {
   const w = windowsOf(body).find((x) => x.start > now);
   if (!w) return null;
-  const { when, detail } = whenWords(body, zone, w.start, now);
+  const { when, detail } = whenWords(body, zone, w.start, today);
   return {
     time: w.start,
     precision: PRECISION[body],
@@ -438,15 +454,25 @@ export function nextSignChange(body: SkyBody, zone: string, now: number): NextSi
   };
 }
 
-/** Everything the planet sheet shows, for a history spanning `from` to `to`. */
-export function planetSheet(body: SkyBody, from: number, to: number, zone: string, now: number): PlanetSheet {
+/** Everything the planet sheet shows, for a history spanning `from` to `to`,
+    read at `now`: tonight's moment, or 9 p.m. on `night`, whose date then
+    titles it. `today` is the reader's clock, so a past night's "next" says its year. */
+export function planetSheet(
+  body: SkyBody,
+  from: number,
+  to: number,
+  zone: string,
+  now: number,
+  night: string | null = null,
+  today = now,
+): PlanetSheet {
   return {
     body,
     now,
-    tonight: tonightOf(body, now),
+    tonight: tonightOf(body, now, night),
     dignityMap: dignityMapOf(body),
     path: pathOf(body, from, to, zone),
-    next: { station: nextStation(body, zone, now), signChange: nextSignChange(body, zone, now) },
+    next: { station: nextStation(body, zone, now, today), signChange: nextSignChange(body, zone, now, today) },
     questions: [...PLANET_QUESTIONS[body]],
   };
 }

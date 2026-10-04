@@ -34,9 +34,11 @@
 - **The Orrery's look and opening**: glyphs centered in their halos, the
   Sun's and Moon's glows, ticks every 5° on the sign ring, stars with the
   prototype's glow and sparkle, and a comet at the dial's moment joined to
-  the Sun. On a visit's first view the planets wind into place, the spiral
-  draws in and the stars fly in and twinkle, still within 5 seconds; while
-  "Play your years" runs the stars twinkle on. The spiral is sampled smooth
+  the Sun. On a visit's first view the planets wind into place the moment
+  tonight's positions arrive (never held for the stars; off screen then,
+  they simply show), the spiral draws in and the stars fly in as they load,
+  still within 5 seconds. Stars twinkle
+  only while "Play your years" runs, and ease to rest when it ends. The spiral is sampled smooth
   (a point every 2.5° or so) and thins as its turns crowd, so 16 years read
   as fine lines with the last year brightest, not one gold band. The dial's
   waveform is smoothed over about a week and topped at the 98th percentile,
@@ -44,13 +46,18 @@
   its months are under 3px apart. Every wild night keeps a fine tick, the
   wildest a mark; the ring around the center is as wide as the night's plays,
   averaged over a week either way while the sky moves so it doesn't flicker.
-  The opening waits for the wheel to be on screen and for the reveal to
-  close; any input stops it, the stars too, and the press that stopped it
+  The opening runs only with a fifth of the wheel on screen as the planets
+  arrive, and waits for the reveal to close; any input stops it, the stars too, and the press that stopped it
   opens nothing.
+- **A planet's sheet on a past night**: tapped while the dial stands on a
+  past night, it's that night's planet at 9 p.m., titled "Venus on Sept 28,
+  2023", never "tonight", and what came after it says its year
+  (`?planet=venus-2023-09-28`, and the planet route's `night`). Play stopped
+  rests the wheel on a whole night, so the wheel and the sheet agree.
 - **The sky in the browser, after the first paint**: the shared sky module
   (one `bodiesAt` for the routes and the wheel) and astronomy-engine,
   49,497 bytes, load once the view has painted; tonight's first frame comes
-  from the server. Sky's first load is 799,219 bytes, under Tonight's.
+  from the server. Sky's first load is 801,057 bytes, under Tonight's.
 - **The travel is Tonight's**: `trips.ts` now goes into the past, jumps while
   the dial is dragged, and says where the wheel is in time.
 - **`GET /api/user/{name}/dial`**: the whole history in one small answer
@@ -66,8 +73,8 @@
   come at most two a second; a focused planet shows its own two-tone ring
   on Sky and Tonight, no longer a square box; term buttons like "Kp" are
   44px wide.
-- **The bundle guard**, re-baselined: JS to 1,804,000 (1,729,762 measured),
-  CSS to 201,000 (193,140), what grew written beside them.
+- **The bundle guard**, re-baselined: JS to 1,804,000 (1,733,032 measured),
+  CSS to 201,000 (193,163), what grew written beside them.
 
 ### Every night (3 October 2026)
 

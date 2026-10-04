@@ -358,9 +358,11 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
 }
 
 /* The Sky view's opening, once a visit: each star flies in from nearer the
-   center, oldest first, then twinkles once, everything done within 5s. While
-   "Play your years" runs (the listener started it, and any input stops it)
-   the stars twinkle on. */
+   center, oldest first, inside the 4.8s opening (SkyOrbits fits its delays
+   to what's left). Stars twinkle only while "Play your years" runs (the
+   listener started it, and any input stops it), each from its own start so
+   none jumps; when it ends, SkyView eases each back to rest from where it
+   was (8.11). */
 @keyframes sky-star-in {
   from {
     opacity: 0;
@@ -380,13 +382,9 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   transform-box: fill-box;
   transform-origin: center;
 }
-.sky-tw-open {
-  animation: sky-tw var(--tw, 1s) ease-in-out var(--dl, 2s) 2 alternate;
-}
 [data-playing] .sky-tw {
   animation: sky-tw var(--tw, 1s) ease-in-out var(--dp, 0s) infinite alternate;
 }
-
 /* A star the dial passes flares and fades; the ring of the night's plays
    beats as the dial passes music. Both end at their own style, unseen. */
 @keyframes sky-lit {
@@ -438,7 +436,6 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   .jar-fill,
   .sky-flash,
   .sky-star-in,
-  .sky-tw-open,
   [data-playing] .sky-tw,
   .sky-lit,
   .sky-beat {

@@ -30,6 +30,7 @@ import {
   type DialNight,
 } from "@/lib/client/dial";
 import { buildSpiral, spiralAt, spiralPieces, spiralStrokes, TAIL_SECONDS } from "@/lib/client/spiral";
+import { planetSheetRef } from "@/lib/client/planetSheet";
 import { NATAL_EVENT, readStoredBirth } from "@/lib/client/natalStore";
 import { useListener, VIEW_HEADING } from "./Shell";
 import { getJson, type DialData, type Dignity, type Planet } from "./api";
@@ -39,7 +40,7 @@ import { DIGNITY_COLOR, SIGNS, WheelKey } from "./sky";
 import { SheetLink } from "./cards";
 import { ForYou } from "./forYou";
 import { CompareCard, QuestionsGrid } from "./shared";
-import { prefersReducedMotion, usePauseWhenHidden, useSeen } from "./media";
+import { prefersReducedMotion, usePauseWhenHidden } from "./media";
 import { RowFailed } from "./pieces";
 import { sheetFrom } from "./sheetUrl";
 
@@ -121,6 +122,8 @@ type Flash = { kind: (typeof FLASH_ORDER)[number]; n: number };
     trip or Play crosses a night most frames, and a flash every frame never
     fades (8.11: motion means something). */
 const FLASH_GAP_MS = 500;
+/** How long the stars' twinkle takes to ease to rest when Play ends. */
+const TWINKLE_EASE_MS = 800;
 const clockMs = () => performance.now();
 
 /** Below the dial (8.6 item 6): read from the shell's data, so a dial frame never redraws it. */
@@ -134,48 +137,59 @@ const BelowTheDial = memo(function BelowTheDial() {
   );
 });
 
-/** The wheel opens once a visit (8.11), as the Orrery did: the planets
-    wind back into place, the spiral draws in from your first night, and the
-    stars fly in and twinkle. Not again on a return from a sheet or a view,
-    not when a sheet opened the page, and never under reduced motion. */
+/** The wheel opens once a visit (8.11, "Motion on Sky"), as the Orrery did:
+    the planets wind into place and the spiral draws in from your first
+    night; the stars fly in as they load. Not again on a return from a sheet
+    or a view, not when a sheet opened the page, and never under reduced
+    motion. The planets never wait for the stars: they show the moment
+    tonight's positions arrive, and the opening starts then. */
 let skyOpened = false;
-/** The longest the opening holds the planets for the stars before going without them. */
-const OPENING_WAIT_MS = 1500;
-/** The stars' flight and twinkle end on their own by then (globals.css: 4.8s at most). */
-const OPENING_STARS_MS = 5000;
+/** Everything the opening moves is still by then, the stars' flight included (8.11). */
+const OPENING_STILL_S = 4.8;
+/** Stars that load with less of the opening left than this simply appear. */
+const STARS_FLY_MIN_S = 0.8;
 /** A frame's longest step: a slow device's frames still count in full, a hidden tab's gap doesn't. */
 const OPENING_FRAME_MS = 250;
 const ORDER = ["Moon", "Mercury", "Venus", "Sun", "Mars", "Jupiter", "Saturn"];
 type Opening = {
-  hold: boolean;
+  /** "wait" until the wheel is on screen and the reveal has closed, "run" while it opens, then null. */
+  state: "wait" | "run" | null;
   p: number;
-  stars: boolean;
+  /** The seconds the stars' flight has, to end inside the opening; null: they don't fly. */
+  stars: number | null;
   /** The pointer press that ended it, by its time stamp: that press only stops the motion. */
   endedBy: RefObject<number | null>;
 };
+type OpeningState = { at: "wait" | "run" | "done"; p: number; startedAt: number | null; stars: number | null; starsDecided: boolean };
 
-/** Where the opening is: holding (the planets here, the stars on their way,
-    or the wheel not yet on screen), running (p from 0 to 1), or done. Any
-    input ends it at once, the stars' flight and twinkle too, except while
-    the reveal is over the page: its keys and taps are its own. */
-function useOpening(planets: boolean, all: boolean, starsHere: boolean, seen: boolean, revealOpen: boolean): Opening {
+/** Where the opening is: waiting (tonight's planets here, not yet known to
+    be on screen, or under the reveal), running (p from 0 to 1), or done. It
+    runs only if a fifth of the wheel is on screen when tonight's planets
+    arrive (8.11); otherwise they simply show, in place, with nothing held
+    back. Any input ends it at once, the stars' flight too, and stars that
+    load after it ended don't fly; except while the reveal is over the page,
+    whose keys and taps are its own. */
+function useOpening(planets: boolean, starsHere: boolean, seen: boolean | null, revealOpen: boolean): Opening {
   const [eligible] = useState(
     () => !skyOpened && typeof window !== "undefined" && sheetFrom(new URLSearchParams(window.location.search)) === null && !prefersReducedMotion(),
   );
-  const [o, setO] = useState<{ at: "wait" | "run" | "done"; p: number; stars: boolean }>({ at: eligible ? "wait" : "done", p: 1, stars: false });
+  const [o, setO] = useState<OpeningState>({ at: eligible ? "wait" : "done", p: 1, startedAt: null, stars: null, starsDecided: !eligible });
   const endedBy = useRef<number | null>(null);
+  // Stars arriving while it runs (or just after) fly in what's left of it.
+  if (starsHere && !o.starsDecided && o.at !== "wait") {
+    const left = o.startedAt === null ? 0 : OPENING_STILL_S - (clockMs() - o.startedAt) / 1000;
+    setO({ ...o, starsDecided: true, stars: left >= STARS_FLY_MIN_S ? left : null });
+  }
   useEffect(() => {
-    // Only once it's on screen (8.11).
-    if (o.at !== "wait" || !planets || !seen || revealOpen) return;
-    const t = window.setTimeout(
-      () => {
-        skyOpened = true;
-        setO({ at: "run", p: 0, stars: starsHere });
-      },
-      all ? 0 : OPENING_WAIT_MS,
-    );
+    // At once, never held for the stars; and only on screen (8.11).
+    if (o.at !== "wait" || !planets || seen === null || revealOpen) return;
+    const t = window.setTimeout(() => {
+      skyOpened = true;
+      if (!seen) setO({ at: "done", p: 1, startedAt: null, stars: null, starsDecided: true });
+      else setO({ at: "run", p: 0, startedAt: clockMs(), stars: starsHere ? OPENING_STILL_S : null, starsDecided: starsHere });
+    }, 0);
     return () => clearTimeout(t);
-  }, [o.at, planets, all, starsHere, seen, revealOpen]);
+  }, [o.at, planets, starsHere, seen, revealOpen]);
   useEffect(() => {
     if (o.at !== "run") return;
     let elapsed = 0;
@@ -193,18 +207,19 @@ function useOpening(planets: boolean, all: boolean, starsHere: boolean, seen: bo
     return () => cancelAnimationFrame(raf);
   }, [o.at]);
   useEffect(() => {
-    if (!o.stars) return;
-    const t = window.setTimeout(() => setO((x) => ({ ...x, stars: false })), OPENING_STARS_MS);
+    // The flight's classes go once it's over, so a star mounted again never replays it.
+    if (o.stars === null) return;
+    const t = window.setTimeout(() => setO((x) => ({ ...x, stars: null })), (o.stars + 0.2) * 1000);
     return () => clearTimeout(t);
   }, [o.stars]);
   useEffect(() => {
-    if ((o.at === "done" && !o.stars) || revealOpen) return;
+    if ((o.at === "done" && o.stars === null && o.starsDecided) || revealOpen) return;
     // Only a press while the planets move is swallowed; once they rest, a tap is a tap.
     const moving = o.at !== "done";
     const end = (e: Event) => {
       skyOpened = true;
       if (moving && e.type === "pointerdown") endedBy.current = e.timeStamp;
-      setO({ at: "done", p: 1, stars: false });
+      setO((x) => ({ ...x, at: "done", p: 1, stars: null, starsDecided: true }));
     };
     window.addEventListener("keydown", end, true);
     window.addEventListener("pointerdown", end, true);
@@ -214,9 +229,23 @@ function useOpening(planets: boolean, all: boolean, starsHere: boolean, seen: bo
       window.removeEventListener("pointerdown", end, true);
       window.removeEventListener("wheel", end, true);
     };
-  }, [o.at, o.stars, revealOpen]);
-  if (!planets || o.at === "done") return { hold: false, p: 1, stars: o.stars, endedBy };
-  return o.at === "wait" ? { hold: true, p: 0, stars: false, endedBy } : { hold: false, p: o.p, stars: o.stars, endedBy };
+  }, [o.at, o.stars, o.starsDecided, revealOpen]);
+  if (!planets || o.at === "done") return { state: null, p: 1, stars: o.stars, endedBy };
+  return { state: o.at, p: o.at === "wait" ? 0 : o.p, stars: o.at === "wait" ? null : o.stars, endedBy };
+}
+
+/** Whether `threshold` of the element is on screen the first time it's
+    looked at once `ready`; null until then. */
+function useFirstSight(ref: RefObject<Element | null>, ready: boolean, threshold: number): boolean | null {
+  const [sight, setSight] = useState<boolean | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!ready || sight !== null || !el) return;
+    const io = new IntersectionObserver(([e]) => setSight(e.isIntersecting && e.intersectionRatio >= threshold), { threshold });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, ready, sight, threshold]);
+  return sight;
 }
 
 export function SkyView() {
@@ -322,14 +351,8 @@ export function SkyView() {
     });
   }, [state, nowSky, compute]);
   // A fifth on screen will do: a landscape phone may never show half of it.
-  const wheelSeen = useSeen(wheelRef, bodies.length > 0, 0.2);
-  const opening = useOpening(
-    bodies.length > 0,
-    Boolean(compute || computeFailed) && dial.state !== "loading" && L.songs.state !== "loading",
-    stars.length > 0,
-    wheelSeen,
-    L.revealOpen,
-  );
+  const wheelSeen = useFirstSight(wheelRef, bodies.length > 0, 0.2);
+  const opening = useOpening(bodies.length > 0, stars.length > 0, wheelSeen, L.revealOpen);
   // While it opens, each planet winds back into its place (8.11).
   const shown = useMemo(
     () => (opening.p >= 1 ? bodies : bodies.map((b) => ({ ...b, longitude: openingLongitude(b.longitude, Math.max(0, ORDER.indexOf(b.body)), opening.p) }))),
@@ -406,16 +429,42 @@ export function SkyView() {
   /* ---- Play your years (8.6, 11): 15 seconds, any input stops it ---- */
   const [playing, setPlaying] = useState(false);
   const play = useRef<{ raf: number; timer: number } | null>(null);
-  const stop = () => {
+  // When Play ends, however it ends, each star's twinkle eases to rest from
+  // where it was (8.11): read before the twinkle goes, played back after.
+  const twinkleAt = useRef<{ el: Element; opacity: string; transform: string }[] | null>(null);
+  const easing = useRef<Animation[]>([]);
+  const stop = (settle = true) => {
     if (!play.current) return;
     cancelAnimationFrame(play.current.raf);
     clearInterval(play.current.timer);
     play.current = null;
+    // Rest on a whole night, so the wheel, the readout and a planet's sheet
+    // agree (the sheet reads 9 p.m. on the dial's night). The trip's state is
+    // live, so a listener set up when Play began still reads where it is now.
+    const now = trips?.state;
+    if (settle && now && d) jump(Math.round(posOf(now.uts)));
+    twinkleAt.current = [...document.querySelectorAll("[data-sky-wheel] .sky-tw")].map((el) => {
+      const cs = getComputedStyle(el);
+      return { el, opacity: cs.opacity, transform: cs.transform };
+    });
     setPlaying(false);
   };
+  useEffect(() => {
+    if (playing || !twinkleAt.current) return;
+    const was = twinkleAt.current;
+    twinkleAt.current = null;
+    for (const { el, opacity, transform } of was) {
+      const rest = getComputedStyle(el);
+      if (!el.isConnected || (opacity === rest.opacity && transform === rest.transform)) continue;
+      easing.current.push(el.animate([{ opacity, transform }, { opacity: rest.opacity, transform: rest.transform }], { duration: TWINKLE_EASE_MS, easing: "ease-out" }));
+    }
+  }, [playing]);
   const start = () => {
     if (!ready || !first) return;
     setCard(null);
+    // A Play started again while the stars still ease: they twinkle from where they are.
+    for (const a of easing.current) a.cancel();
+    easing.current = [];
     const from = playStart(at, n);
     jump(from);
     setPlaying(true);
@@ -444,6 +493,11 @@ export function SkyView() {
     };
     play.current = { raf: requestAnimationFrame(step), timer: 0 };
   };
+  // Play's listeners and the unmount call this render's stop, not the one Play began with.
+  const latestStop = useRef(stop);
+  useEffect(() => {
+    latestStop.current = stop;
+  });
   useEffect(() => {
     if (!playing) return;
     // Any input stops it, anywhere on the page, except a press of the button
@@ -452,7 +506,7 @@ export function SkyView() {
       const onPlay = Boolean((e.target as Element | null)?.closest?.("[data-play]"));
       const presses = e.type === "pointerdown" || (e instanceof KeyboardEvent && (e.key === "Enter" || e.key === " "));
       if (onPlay && presses) return;
-      stop();
+      latestStop.current();
     };
     window.addEventListener("keydown", any, true);
     window.addEventListener("pointerdown", any, true);
@@ -463,7 +517,7 @@ export function SkyView() {
       window.removeEventListener("wheel", any, true);
     };
   }, [playing]);
-  useEffect(() => () => stop(), []);
+  useEffect(() => () => latestStop.current(false), []);
 
   const nextWild = () => {
     if (headlines.length === 0) return;
@@ -563,7 +617,8 @@ export function SkyView() {
           tints={tints}
           onPlanet={(body) => {
             setSelected(body);
-            L.open({ kind: "planet", value: body.toLowerCase() });
+            // On a past night, that night's planet, titled with its date (8.7.4).
+            L.open({ kind: "planet", value: planetSheetRef(body, isTonight || !first ? null : nightAt(first, at), first ? nightAt(first, n - 1) : "") });
           }}
           onStar={(id) => L.open({ kind: "song", value: id })}
           lit={fx.lit}

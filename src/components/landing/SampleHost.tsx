@@ -15,6 +15,7 @@ import type { SheetBodyProps } from "@/components/listener/SheetHost";
 import { closeSheets, dropSheet, finishClose, openSheet, sheetDepth, sheetFrom, type SheetRef } from "@/components/listener/sheetUrl";
 import type { AnswersPayload, Highlights, SkyNow, Songs, SyncStatus } from "@/components/listener/api";
 import { isNightDate, songIndex, tonightDate } from "@/components/listener/format";
+import { planetSheetValue } from "@/lib/client/planetSheet";
 import { SheetSkeleton } from "@/components/listener/pieces";
 import { dropSample, LANDING_HEADING, SAMPLE_LABEL, SAMPLE_SHEETS, SAMPLE_USER, SAMPLE_ZONE, sampleFile, sampleFrom, type SampleSheet } from "./sampleUrls";
 import { loadSkyNow } from "./skyNow";
@@ -33,8 +34,6 @@ export interface SampleHostProps {
 
 type Open = SheetRef | { kind: "sample"; value: string };
 type BodyKind = Exclude<SheetRef["kind"], "share" | "chart"> | SampleSheet;
-
-const PLANETS = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 
 const Skeleton = SheetSkeleton;
 
@@ -74,7 +73,7 @@ function obviouslyInvalid(o: Open): boolean {
     case "q":
       return !QUESTIONS.some((q) => q.id === o.value);
     case "planet":
-      return !PLANETS.includes(o.value);
+      return planetSheetValue(o.value, tonightDate(SAMPLE_ZONE)) === null;
     case "night":
       return !isNightDate(o.value) || o.value > tonightDate(SAMPLE_ZONE);
     case "song":

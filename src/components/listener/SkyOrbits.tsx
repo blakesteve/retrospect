@@ -115,9 +115,9 @@ export interface SkyOrbitsProps {
   flash: { kind: "storm" | "flare" | "eclipse" | "asteroid"; n: number } | null;
   /** The ring around the center, as wide as the night's plays, and its beat, numbered to restart. */
   pulse: { width: number; n: number };
-  /** The opening (8.11): held unseen until the sky is all here, then p (0 to 1)
-      of the way, the stars flying in if they were here when it began. */
-  opening: { hold: boolean; p: number; stars: boolean; endedBy: RefObject<number | null> };
+  /** The opening (8.11): waiting or running, p (0 to 1) of the way, and the
+      seconds the stars' flight has to end inside it (null: they don't fly). */
+  opening: { state: "wait" | "run" | null; p: number; stars: number | null; endedBy: RefObject<number | null> };
   /** "Play your years" is running: the stars twinkle while it does. */
   playing: boolean;
 }
@@ -213,8 +213,9 @@ export function SkyOrbits({
       <circle className="pl-sel" r={f(r + 2.5)} fill="none" stroke="var(--gold)" strokeWidth={2.2} opacity={0} />
     </>
   );
-  // Held unseen, in the DOM and the accessibility tree, until the opening starts.
-  const held: CSSProperties | undefined = opening.hold ? { opacity: 0 } : undefined;
+  // The stars' flight fits what's left of the opening: their delays spread
+  // over up to 1.05s, each 0.7s long, all ended before it's still (8.11).
+  const flight = opening.stars === null ? null : Math.max(0, Math.min(1.05, opening.stars - 0.85));
   const sun = bodies.find((b) => b.body === "Sun");
   const sunAt = sun ? pt(sun.longitude, RR.Sun) : null;
 
@@ -243,7 +244,7 @@ export function SkyOrbits({
         activate(it);
       }}
       data-sky-wheel
-      data-opening={opening.hold ? "hold" : opening.p < 1 ? "run" : undefined}
+      data-opening={opening.state ?? undefined}
       data-playing={playing || undefined}
     >
       <defs>
@@ -294,7 +295,7 @@ export function SkyOrbits({
           part the dial has passed, its last year brightening to the moment,
           and the moment itself, joined to the Sun whose place it is. */}
       {spiral && (
-        <g aria-hidden style={held}>
+        <g aria-hidden>
           <path
             d={spiral.d}
             fill="none"
@@ -343,20 +344,20 @@ export function SkyOrbits({
           </g>
         </g>
       )}
-      <g style={held}>
+      <g>
         {stars.map((s, i) => {
           const [x, y] = pt(s.angle, s.r);
           const key = `star:${s.id}`;
-          // The opening: stars fly in from nearer the center, oldest first,
-          // then twinkle; all done within 5s (8.11). Varied so none move together.
+          // The opening: stars fly in from nearer the center, oldest first.
+          // While Play runs they twinkle, each at its own pace and start, so
+          // none move together and none jumps as it begins.
           const fly = (s.r - RR.si) / (RR.so - RR.si);
           const vars = {
-            "--sd": `${(0.15 + fly * 1.05).toFixed(2)}s`,
+            "--sd": `${(0.05 + fly * (flight ?? 0)).toFixed(2)}s`,
             "--tx": `${f(-x * 0.25)}px`,
             "--ty": `${f(-y * 0.25)}px`,
             "--tw": `${(0.8 + ((i * 0.61) % 0.4)).toFixed(2)}s`,
-            "--dl": `${(1.9 + ((i * 0.37) % 0.5)).toFixed(2)}s`,
-            "--dp": `${(-((i * 0.83) % 2)).toFixed(2)}s`,
+            "--dp": `${((i * 0.83) % 2).toFixed(2)}s`,
           } as CSSProperties;
           return (
             <g
@@ -377,8 +378,8 @@ export function SkyOrbits({
               className="[&:focus-visible_.pl-sel]:opacity-100"
               style={NO_BOX}
             >
-              <g className={opening.stars ? "sky-star-in" : undefined} style={vars}>
-                <circle r={f(s.size * 3.1)} fill={`url(#${uid}s)`} opacity={0.62} className={opening.stars ? "sky-tw sky-tw-open" : "sky-tw"} />
+              <g className={flight !== null ? "sky-star-in" : undefined} style={vars}>
+                <circle r={f(s.size * 3.1)} fill={`url(#${uid}s)`} opacity={0.62} className="sky-tw" />
                 {lit?.id === s.id && <circle key={lit.n} r={f(s.size * 3.1)} fill={`url(#${uid}s)`} className="sky-lit" />}
                 {s.origin ? (
                   <>
@@ -448,7 +449,7 @@ export function SkyOrbits({
       </g>
 
       {/* The planets on their orbits, a dignity halo and a small ℞ when retrograde. */}
-      <g style={held}>
+      <g>
         {ORBITS.map((o) => {
           const b = bodies.find((p) => p.body === o);
           if (!b) return null;
