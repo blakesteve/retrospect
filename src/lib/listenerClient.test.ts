@@ -145,6 +145,9 @@ describe("the listener components", () => {
     "src/components/SyncScreen.tsx",
   ].filter((f) => /\.tsx?$/.test(f) && !/\.test\.ts$/.test(f));
   const sources = files.map((f) => ({ f, s: readFileSync(path.join(root, f), "utf8") }));
+  // What else a visitor reads: compare, and the share cards' words and drawings (server code, so only the copy scan).
+  const shown = ["src/components/compare/Compare.tsx", "src/app/vs/[a]/[b]/page.tsx", "src/lib/share/card.ts", "src/app/api/og/cards.tsx"];
+  const copySources = [...sources, ...shown.map((f) => ({ f: path.join(f), s: readFileSync(path.join(root, f), "utf8") }))];
 
   it("reach every file they're about", () => {
     expect(files).toContain(path.join("src/components/listener/Tonight.tsx"));
@@ -282,14 +285,18 @@ describe("the listener components", () => {
       /\b(innocent|guilty|convicted|conviction|suspect|allegedly|debunk|peregrine|wandering|significant|statistically|proves|cannot|made you|caused|electromagnetic|energy|vibrations?|vibes|frequencies|downloads|activation)\b|no horoscope required|p</i;
     const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}](?!︎)/u;
     let reached = 0;
-    for (const { f, s } of sources) {
+    const reachedIn = new Set<string>();
+    for (const { f, s } of copySources) {
       for (const t of strings(s)) {
         reached++;
+        reachedIn.add(f);
         expect(t, `${f}: "${t}"`).not.toMatch(NEVER);
         expect(t, `${f}: "${t}"`).not.toMatch(EMOJI);
       }
     }
     expect(reached).toBeGreaterThan(150);
+    // Every file read, compare's and the cards' included.
+    for (const f of shown) expect(reachedIn, f).toContain(path.join(f));
     // Controls: the patterns catch what they're for.
     expect("The full moon's energy is strong.").toMatch(NEVER);
     expect("Your sky is innocent.").toMatch(NEVER);

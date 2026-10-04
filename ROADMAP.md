@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -16,10 +16,52 @@
   confidence (28 Sept) · A young history gets a real report (28 Sept) · The
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** The redesign: compare and the share cards (3d)
+- **Next, product:** nothing queued after the redesign. Filed: glyphs overlapping
+  at conjunctions (ClickUp 86e3jrztm)
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Compare and the share cards (4 October 2026)
+
+- **Compare, `/vs/{a}/{b}`**: "Same sky, different people." Both histories
+  sync and are checked as today, each side's words corrected across its own
+  tested questions. The 12 questions are rows, both words side by side with
+  the swing under each ("A 23% bigger after-midnight share", new in the
+  answers payload). A row whose words differ opens a two-column sheet
+  (`?q=`). No winner and no score. Too early, not checked, private, missing,
+  empty or failed shows in that side's column only; the same listener twice
+  says so, with the two fields. A side being checked again swaps its new
+  words in, as on the listener's page.
+- **Share cards, `/api/og`**: song, night and question cards at 1200 by 630
+  for unfurls and 1080 by 1920 for "Save image", read from the stored record
+  and stored answers in the sharer's zone, never computed. With nothing
+  stored, the generic card: the name and tonight's Moon. A question card
+  never shows its word without its question, asked in the first person. The
+  glyphs come from the cards' own font, a 5,000-byte subset of Noto Sans
+  Symbols and Symbols 2 at Private Use code points (the renderer ignores
+  U+FE0E), beside a Geist Latin subset, so a card fetches nothing. The
+  busiest card is 184,618 bytes, and a 308,616-play history's cards take 33
+  to 78 ms, against 10,637 ms for the old route.
+- **The share sheet**: the 9:16 card itself as its preview, what it says, and
+  "Save image", "Copy link" ("Link copied." in a polite live region) and,
+  where the browser has it, "Share…". Links carry the sharer's zone, and
+  `/u/{name}` unfurls as the card its link names.
+- **Deleted**: the report route and its builder, `likelihood.ts`,
+  `Versus.tsx`, the orphaned phenomena module, the exports only they used,
+  and the report's `.rise` animation. The README's "How the math works" now
+  describes the 12 questions.
+- **Browser checks**: a second synthetic listener, "newcomer" (the sample's
+  first ten weeks), for Compare's one-sided Too early. The offline guard lets
+  `data:` URLs through: `next/og` loads its WebAssembly that way, and
+  refusing it failed the run's teardown.
+- **The sky guard's control**: the postbuild check that the sky data stays
+  server-only proved its scan could see client code with the old client
+  ephemeris, which this phase deleted, so every build failed it. It now
+  proves it with the last night the planet links accept.
+- **The bundle**, fc86afd's build against this one: guard JS 1,734,027 to
+  1,581,812, CSS 193,163 to 193,054. `/vs/` first load +6,510 bytes (Roster's
+  Sheet and inputs), `/u/` +274.
 
 ### Sky (3 October 2026)
 
@@ -745,9 +787,8 @@ One raw control remains, with the reason at the usage:
       `--roster-popover-*`. Verified open: 53 options, capped at 480px on a
       1000px viewport, scrolling, on `--surface-2` with the gold hairline and
       this app's ink.
-- [ ] **The threshold `<input type="range">` in `Report`.** Roster has no
-      Slider. The native control reads `accent-color`, so it already takes the
-      gold. Would be a reasonable Roster candidate.
+- [x] ~~**The threshold `<input type="range">` in `Report`.**~~ Gone with
+      `Report` in the redesign (spec 4).
 
 Not visually verified: the `/u/{username}` report page. The two era month
 fields, the slider, `replay the reveal`, `GenresPanel`, `SkyScan` and
@@ -759,7 +800,8 @@ the `threshold` refactor.
 
 ### Product
 
-- [ ] **The redesign.** Next, now that the live defects are fixed. The
+- [x] **The redesign.** Done: its last phase, Compare and the share cards,
+      landed 4 October 2026 (under Done). The
       young-history and confidence work left these for it rather than
       redesigning in passing:
       - Whether the 25-trial sweep and the genre headline get a

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { skyAt } from "@/lib/sky/sky";
 import { tonightSky } from "@/lib/sky/tonight";
 import { ANSWERS_VERSION, type AnswerRecord, type QuestionRecord } from "./engine";
-import { answersPayload, computingPayload, formatP, type QuestionPayload } from "./payload";
+import { answersPayload, chanceLine, computingPayload, formatP, type QuestionPayload } from "./payload";
 import { QUESTIONS, questionById, type QuestionId } from "./questions";
 
 /* The sentences are spec 9.2's, written out as literals. Most of the spec's
@@ -73,6 +73,43 @@ const withRange = (lo: number, hi: number) => {
   const c = (Math.log(1 + hi) - Math.log(1 + lo)) / 2;
   return { index: Math.exp(L), rangeC: c };
 };
+
+describe("the swing alone, under each word on compare (8.8)", () => {
+  it("names the change in a few words, whichever way it went", () => {
+    expect(phrasesOf(record("fullmoon", { status: "tested", index: 1.23, p: 0.004, iterations: 2000 }, rest9), "fullmoon").phrases.swing).toBe(
+      "A 23% bigger after-midnight share",
+    );
+    expect(phrasesOf(record("moonstrong", { status: "tested", index: 0.95, p: 0.07, iterations: 2000 }, rest9), "moonstrong").phrases.swing).toBe(
+      "A 5% smaller share of old favorites",
+    );
+    expect(phrasesOf(record("venusmars", { status: "tested", index: 1.11, p: 0.2, iterations: 2000 }, rest9), "venusmars").phrases.swing).toBe("11% more listening");
+    expect(phrasesOf(record("venusmars", { status: "tested", index: 1.002, p: 0.8, iterations: 2000 }, rest9), "venusmars").phrases.swing).toBe(
+      "Listening that barely moved",
+    );
+  });
+  it("is left out for a question that wasn't tested", () => {
+    expect(phrasesOf(record("fullmoon", { status: "too-few-events" }, rest9), "fullmoon").phrases.swing).toBeNull();
+  });
+});
+
+describe("how likely chance is, as a share card says it (8.7.5)", () => {
+  it("carries the correction when it decides the word", () => {
+    const chance = (p: number) => phrasesOf(record("fullmoon", { status: "tested", index: 1.23, p, iterations: 2000 }, rest9), "fullmoon");
+    expect(chance(0.004).word).toBe("Yes");
+    expect(chance(0.004).phrases.chance).toBe("Very unlikely to be chance, even allowing for 10 questions.");
+    expect(chance(0.03).word).toBe("Maybe");
+    expect(chance(0.03).phrases.chance).toBe("Unlikely to be chance on its own, but not after allowing for 10 questions.");
+    expect(chance(0.07).phrases.chance).toBe("Could be chance.");
+    expect(chance(0.6).phrases.chance).toBe("Could easily be chance.");
+  });
+  it("says a lone Yes plainly, and a very small p on its own", () => {
+    expect(chanceLine("Yes", 0.002, 1)).toBe("Very unlikely to be chance.");
+    expect(chanceLine("Maybe", 0.005, 4)).toBe("Very unlikely to be chance on its own, but not after allowing for 4 questions.");
+  });
+  it("is left out for a question that wasn't tested", () => {
+    expect(phrasesOf(record("fullmoon", { status: "too-few-events" }, rest9), "fullmoon").phrases.chance).toBeNull();
+  });
+});
 
 describe("the word line and Tonight's line (9.2)", () => {
   it("Yes, around full moons", () => {
@@ -479,7 +516,9 @@ describe("a question stored under another measure (architect, 1 Oct 2026)", () =
         phrases: {
           wordLine: CHECKING,
           tonightLine: CHECKING,
+          swing: null,
           likelihood: null,
+          chance: null,
           frequency: null,
           range: null,
           tooEarly: null,

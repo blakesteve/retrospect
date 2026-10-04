@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Versus } from "@/components/Versus";
+import { Compare } from "@/components/compare/Compare";
 import { Wordmark } from "@/components/Wordmark";
 
 interface Props {
@@ -11,19 +12,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ua = decodeURIComponent(a);
   const ub = decodeURIComponent(b);
   return {
-    title: `${ua} vs ${ub} · Retrospect`,
-    description: `Whose listening does the sky actually control? ${ua} and ${ub} put five celestial phenomena on trial.`,
+    title: `${ua} and ${ub} · Retrospect`,
+    description: `Same sky, different people: ${ua} and ${ub} on the same 12 questions about the sky and their listening.`,
+    // Compare unfurls as the generic card, with no one's name or answers (8.7.5).
+    openGraph: { images: ["/api/og"] },
   };
 }
 
-export default async function VersusPage({ params }: Props) {
+/** Compare (spec 8.8), at the duel's old URL so its links still open. */
+export default async function ComparePage({ params }: Props) {
   const { a, b } = await params;
   return (
-    <main className="flex-1 w-full max-w-3xl mx-auto px-6 py-12">
-      <nav className="mb-10">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
+      <nav className="mb-8">
         <Wordmark />
       </nav>
-      <Versus a={decodeURIComponent(a)} b={decodeURIComponent(b)} />
+      {/* The compare sheet is a URL (`?q=`), read with useSearchParams. */}
+      <Suspense fallback={null}>
+        <Compare a={decodeURIComponent(a)} b={decodeURIComponent(b)} />
+      </Suspense>
     </main>
   );
 }

@@ -1,107 +1,52 @@
 import { ImageResponse } from "next/og";
-import { buildReport } from "@/lib/report";
-import { getPhenomenon } from "@/lib/ephemeris/phenomena";
-import { METRICS } from "@/lib/analysis/metrics";
-import { readTrial } from "@/lib/likelihood";
+import { cardRef, CARD_SIZES, type CardSize } from "@/lib/share/card";
+import { cardData } from "@/lib/share/cardData";
+import { requestZone } from "@/lib/zone";
+import { cardFonts } from "./cardFonts";
+import { Card } from "./cards";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/og?u=username&body=mercury
+ * GET /api/og?u={name}&card=song:{id}|night:{YYYY-MM-DD}|q:{id}&tz={zone}&size=tall
  *
- * The share card: paste a report link anywhere and this is what unfurls.
- * Computes the user's real verdict server-side (cache-warm after any visit).
+ * The share cards (spec 8.7.5): 1200 by 630 for unfurls, 1080 by 1920 with
+ * `size=tall` for "Save image". Read from the listener's stored record and
+ * stored answers in the zone (the sharer's, which a shared link carries),
+ * never computed: with nothing stored, a card the history doesn't hold, or
+ * no card asked for, it's the generic card, the username and tonight's Moon.
+ * `/vs/` asks for it with no name.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const username = (url.searchParams.get("u") ?? "").trim().slice(0, 50);
-  const bodyParam = url.searchParams.get("body") ?? "mercury";
-  const phen = getPhenomenon(bodyParam) ?? getPhenomenon("mercury")!;
-  const metric = METRICS[phen.metric];
+  const username = (url.searchParams.get("u") ?? "").slice(0, 64);
+  const ref = cardRef(url.searchParams.get("card"));
+  const size: CardSize = url.searchParams.get("size") === "tall" ? "tall" : "wide";
+  const { zone } = requestZone(url.searchParams);
 
-  let index: string = "?.??";
-  let headline = "Consult the ephemeris.";
-  let sub = "Does the sky run your listening? Find out.";
-  if (username) {
-    try {
-      const outcome = await buildReport(username, {
-        thresholdDays: metric.slider?.default ?? 365,
-        level: "track",
-        body: phen.key,
-        excludeNoise: true,
-      });
-      /* Only a tested trial gets its number on the card. An untested one
-         (warming up, or too few plays or events) keeps the generic card: its
-         index is a figure the data can't stand behind, and a zero count
-         would unfurl as "0.00×". */
-      const report = outcome.kind === "report" ? outcome.report : null;
-      if (report && report.verdict.status === "tested") {
-        // The dashboard's own reading, so a lead can't unfurl as "innocent".
-        const reading = readTrial(report);
-        index = report.index.toFixed(2);
-        headline = reading.big;
-        sub = `${reading.likelihood!.label} ${reading.likelihood!.sentence}`;
-      }
-    } catch {
-      // fall through to the generic card
-    }
+  let data;
+  try {
+    data = await cardData(username, ref, zone);
+  } catch (err) {
+    // A store that won't read is no reason for a broken image: the generic card.
+    console.error("[retrospect] share card data failed:", err);
+    data = await cardData("", null, zone);
   }
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#0b1026",
-          color: "#f2efe6",
-          padding: 60,
-        }}
-      >
-        <div style={{ display: "flex", fontSize: 26, color: "#83816f", letterSpacing: 8, textTransform: "uppercase" }}>
-          {`The ${phen.title} ${metric.name} of`}
-        </div>
-        <div style={{ display: "flex", fontSize: 54, marginTop: 12 }}>{username || "Retrospect"}</div>
-        <div style={{ display: "flex", fontSize: 160, color: "#d4af37", marginTop: 8 }}>
-          {`${index}×`}
-        </div>
-        <div style={{ display: "flex", fontSize: 40, marginTop: 8, textAlign: "center" }}>{headline}</div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 24,
-            marginTop: 10,
-            color: "#b9b6ab",
-            textAlign: "center",
-            maxWidth: 900,
-          }}
-        >
-          {sub}
-        </div>
-        <div style={{ display: "flex", fontSize: 22, marginTop: 34, color: "#83816f" }}>
-          {`${phen.glyph}  retrospect · entertainment with error bars`}
-        </div>
-      </div>
-    ),
-    {
-      width: 1200,
-      height: 630,
-      headers: {
-        /* No caching: every use asks again, so a card never outlives the
-           history behind it. A removed listener's next unfurl renders the
-           generic card, and an expired one's does too. This is the value
-           `next/og` already sends in production, written here so the promise
-           doesn't rest on a framework default. It isn't the year-long header
-           `@vercel/og` sets: `next/og` wraps that response and replaces its
-           headers. Vercel's CDN doesn't cache it either (no `s-maxage`).
-           Chat apps keep their own copies of an unfurled image, which no
-           header here controls. `og.test.ts` pins the value. */
-        "cache-control": "public, max-age=0, must-revalidate",
-      },
-    }
-  );
+  return new ImageResponse(<Card data={data} size={size} />, {
+    ...CARD_SIZES[size],
+    fonts: cardFonts(),
+    headers: {
+      /* No caching: every use asks again, so a card never outlives the
+         history behind it. A removed listener's next unfurl renders the
+         generic card, and an expired one's does too. This is the value
+         `next/og` already sends in production, written here so the promise
+         doesn't rest on a framework default. It isn't the year-long header
+         `@vercel/og` sets: `next/og` wraps that response and replaces its
+         headers. Vercel's CDN doesn't cache it either (no `s-maxage`).
+         Chat apps keep their own copies of an unfurled image, which no
+         header here controls. `og.test.ts` pins the value. */
+      "cache-control": "public, max-age=0, must-revalidate",
+    },
+  });
 }

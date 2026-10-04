@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 /*
- * Whether this visitor wants p-values shown. Off by default: the report reads
+ * Whether this visitor wants p-values shown. Off by default: the app reads
  * in plain English, and the p-value is for someone who knows what it means
  * and asks for it. There are no accounts, so it lives in this browser.
  *

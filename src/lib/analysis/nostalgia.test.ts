@@ -6,7 +6,6 @@ import {
   firstListens,
   permutationTest,
   tagScrobbles,
-  verdict,
   type Scrobble,
 } from "./nostalgia";
 import { mulberry32 } from "./rng";
@@ -145,15 +144,5 @@ describe("computeIndex + permutationTest", () => {
     const b = permutationTest(tagged, bounds, spanStart, spanEnd, index, 200, mulberry32(7));
     expect(a.p).toBe(b.p);
     expect(a.samples).toEqual(b.samples);
-  });
-});
-
-describe("verdict", () => {
-  it("maps the three outcome states", () => {
-    const plenty = { retroN: 5000, events: 20 };
-    expect(verdict(1.23, 0.01, plenty).headline).toMatch(/grip/);
-    expect(verdict(0.8, 0.01, plenty).headline).toMatch(/Reverse/);
-    expect(verdict(1.02, 0.6, plenty).headline).toMatch(/innocent/);
-    expect(verdict(1.4, 0.01, { retroN: 100, events: 20 }).significant).toBe(false);
   });
 });

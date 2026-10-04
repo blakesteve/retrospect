@@ -20,6 +20,8 @@ const refuse = (where) => {
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+  // A data: URL is bytes already in hand, not a request: `next/og` loads its WebAssembly that way.
+  if (url.protocol === "data:") return realFetch(input, init);
   if (!LOCAL.has(url.hostname)) throw refuse(`${url.host}${url.pathname}`);
   return realFetch(input, init);
 };

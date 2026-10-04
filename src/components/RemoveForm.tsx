@@ -11,7 +11,7 @@ const fmtWhen = (ms: number) =>
 
 /**
  * Type a username, press Remove. Typing the name is the confirmation: the
- * field never starts filled in, even when the report page sent the name along
+ * field never starts filled in, even when the listener's page sent the name along
  * (`?u=`), which only shows up as a hint. The request is a POST that repeats
  * the name (see the route).
  */

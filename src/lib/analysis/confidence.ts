@@ -1,10 +1,9 @@
-import type { WindowBounds } from "@/lib/ephemeris/retrogrades";
 
 /*
  * How much evidence a trial needs before Retrospect will call it either way,
  * and how the scramble test turns into a p-value. Everything that decides
- * whether a verdict is issued lives here, so every consumer (the report, the
- * reveal, the sweep, the duel, the share card) reads the same answer.
+ * whether a verdict is issued lives here, so the answers engine and its
+ * payload read the same rules.
  */
 
 /** Below this many plays inside the windows, no verdict. */
@@ -39,10 +38,10 @@ export const MIN_EVENTS = 6;
  * - "too-few-events": fewer than MIN_EVENTS separate events.
  * - "no-comparison": enough plays, but no ratio to test, e.g. nothing of
  *   this kind was played outside the windows.
- * - "warming-up": every play sits inside the measure's warm-up (see Report).
+ * - "warming-up": every play sits inside the measure's warm-up.
  *
- * Only "tested" can be a conviction, a lead, or "nothing there". Everything
- * else is untested, and must never read as unremarkable.
+ * Only "tested" gets a word from Yes to No. Everything else is untested, and
+ * must never read as unremarkable.
  */
 export type VerdictStatus =
   | "tested"
@@ -87,40 +86,3 @@ export function permutationP(matches: number, valid: number): number {
   return valid > 0 ? (matches + 1) / (valid + 1) : NaN;
 }
 
-/**
- * Separate events a trial rests on: the windows that overlap the tested span
- * and hold at least one of its plays.
- *
- * A window with no plays in it says nothing about a share metric (what share
- * of your plays were old favorites, when there were no plays?), so it doesn't
- * count. The rate metric is different: a window you didn't listen in at all
- * is a real observation of how much you listened, so for it every window
- * overlapping the span counts. Pass `countEmpty` for that case.
- */
-export function countEvents(
-  bounds: WindowBounds[],
-  spanStart: number,
-  spanEnd: number,
-  uts: number[],
-  countEmpty = false,
-): number {
-  const sorted = [...uts].sort((a, b) => a - b);
-  let n = 0;
-  for (const [a, b] of bounds) {
-    if (b < spanStart || a > spanEnd) continue;
-    if (countEmpty) {
-      n++;
-      continue;
-    }
-    // First play at or after the window's start; is it inside the window?
-    let lo = 0;
-    let hi = sorted.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (sorted[mid] < a) lo = mid + 1;
-      else hi = mid;
-    }
-    if (lo < sorted.length && sorted[lo] <= b) n++;
-  }
-  return n;
-}

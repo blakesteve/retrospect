@@ -73,17 +73,17 @@ const isSkyData = (f: string) => f === "src/lib/sky/windows.ts" || f.startsWith(
 describe("client modules and the generated sky", () => {
   it("found the client modules to start from", () => {
     // Positive control: the walk has something to walk.
-    expect(clientRoots.map(rel)).toContain("src/components/Versus.tsx");
+    expect(clientRoots.map(rel)).toContain("src/components/compare/Compare.tsx");
   });
 
-  it("follows JSON imports: today's duel reaches today's small ephemeris files", () => {
+  it("follows JSON imports: the retrograde tables reach their files", () => {
     // Positive control: a graph walk that skipped JSON would pass the real
-    // check below on nothing. The duel imports PHENOMENA, which imports the
-    // window files, until compare is rewritten (phase 3d); the landing's
-    // calendar, the control before it, went with the landing's redesign.
-    const fromDuel = reachable([path.join(root, "src/components/Versus.tsx")]);
-    expect(isClient(path.join(root, "src/components/Versus.tsx"))).toBe(true);
-    expect([...fromDuel].map(rel)).toContain("src/lib/ephemeris/mercury-retrogrades.json");
+    // check below on nothing. No client module reaches a JSON file any more
+    // (the duel, the control before this, went with compare's rewrite in 3d;
+    // the landing's calendar before that), so the walk starts from a server
+    // module that does: the same walker either way.
+    const fromTables = reachable([path.join(root, "src/lib/ephemeris/retrogrades.ts")]);
+    expect([...fromTables].map(rel)).toContain("src/lib/ephemeris/mercury-retrogrades.json");
   });
 
   it("sees the loader's own imports of the data, and would call them leaks", () => {
