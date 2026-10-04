@@ -28,6 +28,12 @@ export function planetSheetValue(value: string): { body: PlanetId; night: string
   return { body: m[1] as PlanetId, night };
 }
 
+/** A planet on a real date the sky data doesn't reach (before 2002, after 2035): refused, and said so in its own words (8.7.4). */
+export function outsideTheSky(value: string): boolean {
+  const m = /^([a-z]+)-(.+)$/.exec(value);
+  return m !== null && (PLANET_IDS as readonly string[]).includes(m[1]) && isDate(m[2]) && (m[2] < SKY_FIRST_NIGHT || m[2] > SKY_LAST_NIGHT);
+}
+
 /** The value for a planet, on a night, or tonight when the night is tonight or unknown. */
 export const planetSheetRef = (body: string, night: string | null, today: string): string =>
   night === null || night >= today ? body.toLowerCase() : `${body.toLowerCase()}-${night}`;

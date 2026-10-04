@@ -1,6 +1,6 @@
 import { makeInWindow, type WindowBounds } from "@/lib/ephemeris/retrogrades";
 import { mulberry32, type Rng } from "./rng";
-import { evidenceStatus, permutationP, type Evidence, type VerdictStatus } from "./confidence";
+import { permutationP } from "./confidence";
 
 export interface Scrobble {
   uts: number; // unix seconds
@@ -173,67 +173,4 @@ export function permutationTest(
     if (Math.abs(Math.log(sim)) >= observed) matches++;
   }
   return { p: permutationP(matches, valid), matches, iterations: valid, samples };
-}
-
-export interface Verdict {
-  headline: string;
-  /** Plain English, and never a p-value: pages add the likelihood, and the
-      p-value only for a visitor who has asked for it. */
-  detail: string;
-  /** Passed the scramble test. Only ever true when status is "tested". */
-  significant: boolean;
-  /** Whether there was enough to test at all. Untested and unremarkable both
-      have `significant: false`; this is what tells them apart. */
-  status: VerdictStatus;
-}
-
-export interface VerdictSubject {
-  /** "Mercury" — the accused. */
-  name: string;
-  /** "when Mercury is retrograde" — phrasing for the detail line. */
-  when: string;
-}
-
-const MERCURY: VerdictSubject = { name: "Mercury", when: "when Mercury is retrograde" };
-
-/** The Mercury × Nostalgia verdict. The report uses `metricVerdict`, which
-    is this for any measure; the two share their floors and their status. */
-export function verdict(
-  index: number,
-  p: number,
-  evidence: Evidence,
-  subject: VerdictSubject = MERCURY
-): Verdict {
-  const pct = (x: number) => `${Math.round(Math.abs(x) * 100)}%`;
-  const status = evidenceStatus(index, p, evidence);
-  if (status !== "tested") {
-    return {
-      headline: "The stars withhold judgment.",
-      detail: "Not enough listening history for a verdict yet. Keep scrobbling.",
-      significant: false,
-      status,
-    };
-  }
-  if (p < 0.05 && index > 1) {
-    return {
-      headline: "The heavens have a measurable grip on you.",
-      detail: `You revisit old music ${pct(index - 1)} more ${subject.when}.`,
-      significant: true,
-      status,
-    };
-  }
-  if (p < 0.05 && index < 1) {
-    return {
-      headline: "Reverse-cursed.",
-      detail: `You revisit old music ${pct(1 - index)} LESS ${subject.when}.`,
-      significant: true,
-      status,
-    };
-  }
-  return {
-    headline: `${subject.name} is innocent.`,
-    detail: "Nothing here is bigger than what chance produces on its own.",
-    significant: false,
-    status,
-  };
 }

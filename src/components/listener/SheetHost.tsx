@@ -16,7 +16,8 @@ import { dropSheet, sheetDepth, sheetFrom, type SheetKind, type SheetRef } from 
 import { QUESTIONS } from "@/lib/answers/questions";
 import { isNightDate, songIndex, tonightDate } from "./format";
 import { SheetSkeleton } from "./pieces";
-import { planetSheetValue } from "@/lib/client/planetSheet";
+import { outsideTheSky, planetSheetValue } from "@/lib/client/planetSheet";
+import { OUTSIDE_THE_SKY } from "@/components/invalidLink";
 
 /** What can be refused before anything loads (8.7: the sheet doesn't open). */
 function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>, onSky: boolean): boolean {
@@ -86,7 +87,7 @@ const PROVISIONAL: Record<SheetKind, string> = {
   chart: "Your birth chart",
 };
 
-export function SheetHost({ onInvalid, lead }: { onInvalid: () => void; lead: { date: string; text: string } | null }) {
+export function SheetHost({ onInvalid, lead }: { onInvalid: (message?: string) => void; lead: { date: string; text: string } | null }) {
   const params = useSearchParams();
   const ref = sheetFrom(params);
   const L = useListener();
@@ -104,7 +105,7 @@ export function SheetHost({ onInvalid, lead }: { onInvalid: () => void; lead: { 
   const key = ref && !rejected ? `${ref.kind}:${ref.value}` : null;
   useEffect(() => {
     if (rejected) {
-      onInvalid();
+      onInvalid(ref?.kind === "planet" && outsideTheSky(ref.value) ? OUTSIDE_THE_SKY : undefined);
       dropSheet();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per bad parameter

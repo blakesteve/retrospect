@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countEvents, evidenceStatus, permutationP } from "./confidence";
+import { evidenceStatus, permutationP } from "./confidence";
 import { permutationTest, type TaggedScrobble } from "./nostalgia";
 import { volumePermutationTest } from "./metrics";
 import { mulberry32 } from "./rng";
@@ -102,28 +102,5 @@ describe("evidence floors", () => {
   it("calls no plays inside the windows yet a wait for history, not a failure", () => {
     // Venus hasn't turned retrograde since a three-month history began.
     expect(evidenceStatus(NaN, NaN, { retroN: 0, events: 0 })).toBe("too-few-plays");
-  });
-});
-
-describe("countEvents", () => {
-  const bounds: [number, number][] = [
-    [10, 20],
-    [30, 40],
-    [50, 60],
-    [70, 80],
-  ];
-
-  it("counts windows in the span that hold some of the trial's plays", () => {
-    // Plays in the first and third windows only; the fourth is past the span.
-    expect(countEvents(bounds, 0, 75, [15, 55, 65])).toBe(2);
-  });
-
-  it("counts a play on a window's edge as inside it", () => {
-    expect(countEvents(bounds, 0, 100, [20, 30])).toBe(2);
-  });
-
-  it("counts every window in the span for the rate measure, played in or not", () => {
-    expect(countEvents(bounds, 0, 75, [15], true)).toBe(4);
-    expect(countEvents(bounds, 25, 65, [], true)).toBe(2);
   });
 });

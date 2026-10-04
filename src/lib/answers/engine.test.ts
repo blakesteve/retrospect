@@ -166,7 +166,7 @@ describe("the measures", () => {
     expect(tagMeasures(plays, "America/Chicago").aftermidnight.tags).toEqual([false, true, true, false]);
   });
 
-  it("leaves sleep noise out, as the report does", () => {
+  it("leaves sleep noise out", () => {
     const noisy = [
       ...young,
       ...young.slice(0, 500).map((s) => ({ ...s, uts: s.uts + 1, artist: "Rain Sounds" })),

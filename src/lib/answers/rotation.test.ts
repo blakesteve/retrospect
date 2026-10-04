@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeIndex, permutationTest, type TaggedScrobble } from "@/lib/analysis/nostalgia";
 import { volumeIndex, volumePermutationTest } from "@/lib/analysis/metrics";
 import type { WindowBounds } from "@/lib/ephemeris/retrogrades";
-import { isNoiseArtist } from "@/lib/report";
+import { isNoiseArtist } from "@/lib/noise";
 import { conditionFor } from "./conditions";
 import { runQuestion, tagMeasures } from "./engine";
 import { QUESTIONS } from "./questions";

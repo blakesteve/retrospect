@@ -5,8 +5,8 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * Retrospect's browser checks (`npm run test:browser`): what jsdom can't see,
  * measured in Chromium on the built app, served from a fresh folder holding
- * only the landing's made-up sample listener (`e2e/global-setup.ts`). Run
- * `npm run build` first.
+ * only made-up listeners: the landing's sample, and compare's newcomer
+ * (`e2e/global-setup.ts`). Run `npm run build` first.
  *
  * Never real data. `next start` reads any `.env*` file beside it, and the
  * store turns to R2 when R2's variables are set, so the checks refuse to run

@@ -9,11 +9,12 @@
  * ("...:49Z") and the old client files write milliseconds ("...:49.156Z"),
  * so a new-data marker can't be matched by an old file's string.
  *
- * Positive control: a timestamp from today's small client ephemeris
- * (src/lib/ephemeris/mercury-retrogrades.json), which the old UI imports on
- * purpose until phase 3 deletes it, MUST be found in the client chunks. A
- * scan that finds nothing there is looking in the wrong place, and its
- * clean result means nothing.
+ * Positive control: the last night the client's planet links accept
+ * (`SKY_LAST_NIGHT` in src/lib/client/planetSheet.ts), which ships to the
+ * browser on purpose, MUST be found in the client chunks. A scan that finds
+ * nothing there is looking in the wrong place, and its clean result means
+ * nothing. (It was a timestamp from the old client ephemeris until the
+ * redesign deleted that import.)
  *
  * Runs as `postbuild`, after the bundle-shape guard.
  */
@@ -48,7 +49,11 @@ const markers = [
   read("src/lib/sky/data/eclipses.json").events.at(-1).start,
   read("src/lib/sky/data/harmony.json").windows.at(-1).start,
 ];
-const control = read("src/lib/ephemeris/mercury-retrogrades.json").windows.at(-1).start;
+const control = /export const SKY_LAST_NIGHT = "(\d{4}-\d{2}-\d{2})";/.exec(readFileSync(join(root, "src/lib/client/planetSheet.ts"), "utf8"))?.[1];
+if (!control) {
+  console.error("[check-sky-server-only] no control: SKY_LAST_NIGHT isn't a date in src/lib/client/planetSheet.ts.");
+  process.exit(1);
+}
 
 const walk = (dir) =>
   readdirSync(dir).flatMap((e) => {
@@ -60,9 +65,9 @@ const texts = chunks.map((f) => [f, readFileSync(f, "utf8")]);
 
 if (!texts.some(([, t]) => t.includes(control))) {
   console.error(
-    `[check-sky-server-only] positive control failed: today's client ephemeris marker ${control} ` +
+    `[check-sky-server-only] positive control failed: the client's last sky night ${control} ` +
       `is in none of ${chunks.length} client chunks under ${relative(root, dist)}/static.\n` +
-      `  Either the scan is looking in the wrong place, or phase 3 removed the old imports, in ` +
+      `  Either the scan is looking in the wrong place, or the planet links stopped shipping it, in ` +
       `which case pick a new control.`,
   );
   process.exit(1);

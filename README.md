@@ -73,7 +73,18 @@ statistics is the answer.
   planet's three pulses, a Too early jar filling. Everything that starts on
   its own stops within 5 seconds, holds still in a hidden tab, and under
   reduced motion the page is complete at rest.
-- **Head-to-head**: two usernames side by side (rewritten in a later step).
+- **Compare** (`/vs/{a}/{b}`): "Same sky, different people." Two listeners on
+  the same 12 questions, both words side by side with the swing under each,
+  each side's words from its own stored answers. No winner and no score.
+  Whatever stops one side (Too early, still reading, private, missing,
+  failed) is said in that side's column, and a row whose words differ opens
+  both answers side by side.
+- **Share cards**: a song's sky, a night or a question's answer as an image,
+  1200 by 630 for a link's unfurl and 1080 by 1920 to save. The share sheet
+  previews it, saves it, copies the link (in the sharer's time zone) and
+  shares it where the browser can. Cards read what's stored and never compute
+  answers; with nothing stored, a card is the listener's name and tonight's
+  Moon.
 - **The landing** says what Retrospect does and asks for a username first,
   then shows NASA's photo of Earth during the Apr 8, 2024 eclipse as an
   example, then four working samples. The samples are a made-up listener run
@@ -98,7 +109,7 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 `.data/` after that.
 
 ```bash
-npm test             # analysis, answers, report, profile, zone, sky, sync, store and error-copy tests
+npm test             # analysis, answers, profile, zone, sky, sync, store, share-card and error-copy tests
 npm run lint
 npm run typecheck
 npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
@@ -335,8 +346,7 @@ aliases fold onto one name, often the old one (Europe/Kyiv comes back
 A night runs from 4 a.m. to 4 a.m. local time and is named by the date it
 starts on, so a 1 a.m. song belongs to the night before. The profile
 (`/api/user/{name}/profile?tz=America/Chicago`) counts its busiest night,
-streak, weekday and loudest month in nights. The report route still takes
-today's single offset (`tzm`) until the redesign's answers replace it.
+streak, weekday and loudest month in nights.
 
 ## The 12 questions
 
@@ -470,6 +480,7 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 | `/api/user/{name}/highlights` | The reveal: how long, the count-ups (the storms and X flares NASA logged in your history among them), the wildest nights as cards (plays against a usual night, the night's photo, the Moon's phase at 9 p.m.), one card per event (a storm's run of nights is one, as question 7 counts it), the wildest night's date ("Friday, May 10, 2024") and line, and the song with the strangest sky. Plus the "Surprise me" pool: song skies with a chip, wild nights, and dated facts. |
 | `/api/user/{name}/profile` | Your habits, with the sentence for the ones still waiting built on the server, so no page imports the sky's windows. Noise is always left out. |
 | `/api/user/{name}/genres` | Up to 12 genres with 50 plays or more: share, top artists, "rising" and biggest night. "building" while the tags are fetched. |
+| `/api/og?u=&card=&tz=&size=tall` | A share card (spec 8.7.5): `card` is `song:{id}`, `night:{YYYY-MM-DD}` or `q:{id}`, read from the listener's stored record and stored answers in that zone, never computed; 1200 by 630, or 1080 by 1920 with `size=tall`. Anything missing, removed or not stored is the generic card, the name and tonight's Moon. Its glyphs come from a 5,000-byte font at Private Use code points (`src/app/api/og/cardFonts.ts` says why). |
 | `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
 | `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days, each with the body it's about. Plus Tonight's words: the heading by local time, the time (with the weekday from midnight to 4 a.m.), the Moon's line with and without her sign ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), each held question's sky line ("Mercury is retrograde until Oct 13", "A solar storm tonight, Kp 7"), the sky facts that fill the "for you" rows ("Jupiter turns retrograde Saturday"), every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the row for a night with no question's sky overhead, with the next start. |
 | `/api/sky/path?to=` | The wheel's path to a coming-up moment at most 45 days out: every body's longitude from now (down to the hour) to `to` (to the hour), the Moon hourly and the rest daily, both ends included, to 0.01°. Cached until the hour turns. |
@@ -509,44 +520,37 @@ routes moves the tag fetch on after its response, and `/genres` says
 
 ## How the math works
 
-Scrobble timestamps are joined against precomputed event windows (see
-`scripts/`), and each measure tags plays (old favorite? first listen?
-after midnight?) or counts volume. The index is the tagged rate inside
-windows over the rate outside. Significance comes from rotating the event
-calendar to thousands of random offsets, which preserves both the calendar's
-structure and your listening's autocorrelation, and asking how often chance
-beats you. Rare-event measures get a "lead" tier for effects that are large
-but unconfirmed. Sleep-noise artists (rain sounds, ASMR) are always left out, so
-eight hours of Rolling Thunder doesn't drown your actual taste.
+Each of the 12 questions joins your scrobbles' timestamps to the sky's
+windows (a retrograde, a full moon's nights, a storm night) and measures what
+its folklore says: the share of your plays that were old favorites, first
+listens or after midnight, or how much you listened. The swing is the measure
+inside the windows over the measure outside. Whether it's chance comes from
+rotating the windows to 2,000 random offsets across your history, which keeps
+both the sky's rhythm and your own (a holiday, a bad week), and asking how
+often chance swings as far. Sleep-noise artists (rain sounds, ASMR) are
+always left out, so eight hours of Rolling Thunder doesn't drown your actual
+taste.
 
-The p-value is (matches + 1) / (shuffles + 1): the real calendar counts as one
+The p-value is (matches + 1) / (rotations + 1): the real sky counts as one
 possible outcome of chance, so p is never 0 and never claims more than the
-shuffles can support (with 2,000 of them, the floor is about 0.0005). A shuffle
-that puts none of your tagged plays inside the windows is the most extreme
-thing chance can do, and it counts.
+rotations can support (with 2,000 of them, the floor is about 0.0005). A
+rotation that puts none of your measured plays inside the windows is the most
+extreme thing chance can do, and it counts.
 
-A trial only gets a verdict with enough to go on: 500 plays inside the
-windows, and 6 separate events. Plays inside one retrograde move together (a
-holiday, a bad week), so the events are the real sample size. Six is the
-fewest at which the events alone could clear the 5% bar: if the sky did
-nothing, all of five events agreeing happens 6.25% of the time by chance, and
-all of six 3.1%. Below either floor a trial is untested: the verdict, the
-reveal, the sweep and the duel say so, and the share card shows no verdict,
-rather than any of them reading it as "nothing there". The API gives each verdict a
-`status` saying which: `tested`, `too-few-plays`, `too-few-events`,
-`no-comparison` or `warming-up`.
+A question is only answered with enough to go on: 500 plays inside the
+windows, and 6 separate events. Plays inside one retrograde move together, so
+the events are the real sample size. Six is the fewest at which the events
+alone could clear the 5% bar: if the sky did nothing, all of five events
+agreeing happens 6.25% of the time by chance, and all of six 3.1%. Below
+either floor the question reads Too early, with what it's waiting for, never
+"nothing there". The answers carry each question's `status`: `tested`,
+`too-few-plays`, `too-few-events`, `no-comparison` or `warming-up` (the four
+questions measured by old favorites or first listens wait out a history's
+first year). How the answer word allows for asking 12 questions at once is
+under [The 12 questions](#the-12-questions).
 
-Three measures ignore the start of a history, because nothing in it can count
-yet: a song can't be an old favorite a week after you first heard it.
-Nostalgia and Old Flames skip their own threshold (365 and 548 days by
-default), and Discovery skips the first year. A history younger than that has
-nothing to test, so instead of a verdict it gets "Too soon to tell", the month
-its plays start counting, and every part of the report that doesn't need the
-warm-up: the timeline, the anthem, the listener fingerprints (from 500
-scrobbles), and the two measures with no warm-up at all, Night Owl and
-Intensity. The API marks such a
-report `trialStatus: "warming-up"`, which is a different answer from a user
-with no scrobbles at all.
+Compare (`/vs/{a}/{b}`) and the share cards read each listener's stored
+answers, the same ones their page shows, and never compute their own.
 
 ## Credits
 

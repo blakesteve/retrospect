@@ -54,8 +54,8 @@ async function deleteKeys(name: string): Promise<void> {
  * the last visit. A name with only some of its keys (a tag store without a
  * history, say) goes by the ones it has, so leftovers expire too.
  *
- * Two kinds of visit don't count: a share-card unfurl, which reads a report
- * without calling `/status` (a chat app previewing a link isn't a visit), and
+ * Two kinds of visit don't count: a share-card unfurl, which reads what's
+ * stored without calling `/status` (a chat app previewing a link isn't a visit), and
  * a visit while Last.fm is down, when the re-read fails and writes nothing.
  */
 export async function expireStaleHistories(now = Date.now()): Promise<ExpirySummary> {

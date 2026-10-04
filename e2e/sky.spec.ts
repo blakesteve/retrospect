@@ -649,12 +649,28 @@ test.describe("a dated planet link on any view (8.7.4, 8.7)", () => {
     await expect(page.getByRole("heading", { name: "In your 12 questions" })).toBeVisible();
   });
 
-  test("outside the sky data it doesn't open, and says so", async ({ page }) => {
+  test("outside the sky data it doesn't open, and says it's the sky that ends there", async ({ page }) => {
     await open(page, "/u/sample/sky?planet=venus-1999-06-15");
-    const said = page.getByRole("status").filter({ hasText: "That link points to something that isn't in this history." });
+    const said = page.getByRole("status").filter({ hasText: "Retrospect's sky runs from 2002 through 2035, so it can't show that date." });
     await expect(said).toBeVisible({ timeout: 30_000 });
     await expect(page).not.toHaveURL(/planet=/);
     await expect(page.getByRole("heading", { name: /^Venus/ })).toHaveCount(0);
+    // The history's line stays for what's outside the history (8.7).
+    await expect(page.getByText("That link points to something that isn't in this history.")).toHaveCount(0);
+  });
+
+  test("on the landing's sample too, a date outside the sky data says it's the sky that ends there", async ({ page }) => {
+    await open(page, "/?planet=venus-1999-06-15");
+    await expect(page.getByRole("status").filter({ hasText: "Retrospect's sky runs from 2002 through 2035, so it can't show that date." })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page).not.toHaveURL(/planet=/);
+  });
+
+  test("a planet that isn't one still gets the history's line", async ({ page }) => {
+    await open(page, "/u/sample/sky?planet=pluto-1999-06-15");
+    await expect(page.getByRole("status").filter({ hasText: "That link points to something that isn't in this history." })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Retrospect's sky runs from 2002 through 2035")).toHaveCount(0);
   });
 });
 

@@ -4,27 +4,14 @@ import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEven
 import { BODY_ORDER, C, R0, R1, RA, RP, VB, glyphAngles, glyphSize } from "@/lib/motion/wheelLayout";
 import type { Dignity, Planet } from "./api";
 import { moonLit, phaseName } from "@/lib/client/moon";
+import { SIGNS, planetGlyph, signGlyph } from "@/lib/sky/glyphs";
 
 /* The sky wheel and the Moon (spec 8.9). Drawn from the numbers the sky
    routes send; nothing here knows any sky data. Glyphs carry U+FE0E so they
    never render as emoji, and are aria-hidden beside text (11). */
 
-const VS = "︎";
-export const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
-const SIGN_GLYPHS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"];
-const PLANET_GLYPHS: Record<string, string> = {
-  Sun: "☉",
-  Moon: "☽",
-  Mercury: "☿",
-  Venus: "♀",
-  Mars: "♂",
-  Jupiter: "♃",
-  Saturn: "♄",
-};
 export { BODY_ORDER };
-
-export const signGlyph = (sign: string) => `${SIGN_GLYPHS[SIGNS.indexOf(sign)] ?? ""}${VS}`;
-export const planetGlyph = (body: string) => `${PLANET_GLYPHS[body] ?? ""}${VS}`;
+export { SIGNS, planetGlyph, signGlyph };
 
 export const DIGNITY_COLOR: Record<Dignity, string | null> = {
   home: "var(--home)",

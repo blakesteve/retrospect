@@ -15,7 +15,8 @@ import type { SheetBodyProps } from "@/components/listener/SheetHost";
 import { closeSheets, dropSheet, finishClose, openSheet, sheetDepth, sheetFrom, type SheetRef } from "@/components/listener/sheetUrl";
 import type { AnswersPayload, Highlights, SkyNow, Songs, SyncStatus } from "@/components/listener/api";
 import { isNightDate, songIndex, tonightDate } from "@/components/listener/format";
-import { planetSheetValue } from "@/lib/client/planetSheet";
+import { outsideTheSky, planetSheetValue } from "@/lib/client/planetSheet";
+import { OUTSIDE_THE_SKY } from "@/components/invalidLink";
 import { SheetSkeleton } from "@/components/listener/pieces";
 import { dropSample, LANDING_HEADING, SAMPLE_LABEL, SAMPLE_SHEETS, SAMPLE_USER, SAMPLE_ZONE, sampleFile, sampleFrom, type SampleSheet } from "./sampleUrls";
 import { loadSkyNow } from "./skyNow";
@@ -28,7 +29,7 @@ import { loadSkyNow } from "./skyNow";
 
 export interface SampleHostProps {
   /** A sheet parameter that points at nothing in the sample (8.7). */
-  onInvalid: () => void;
+  onInvalid: (message?: string) => void;
   onValid: () => void;
 }
 
@@ -166,7 +167,7 @@ export default function SampleHost({ onInvalid, onValid }: SampleHostProps) {
 
   useEffect(() => {
     if (!invalid) return;
-    onInvalid();
+    onInvalid(open?.kind === "planet" && outsideTheSky(open.value) ? OUTSIDE_THE_SKY : undefined);
     dropSheet();
     dropSample();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per bad parameter

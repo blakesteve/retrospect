@@ -141,29 +141,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Staggered section reveals on the report */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.rise {
-  opacity: 0;
-  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
-  animation-delay: var(--rise-delay, 0s);
-}
-@media (prefers-reduced-motion: reduce) {
-  .rise {
-    animation: none;
-    opacity: 1;
-  }
-}
-
 @keyframes orbit {
   from {
     transform: rotate(0deg);

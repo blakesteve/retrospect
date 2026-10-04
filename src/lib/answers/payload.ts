@@ -21,7 +21,7 @@ import { answerWords, likelihoodFor, type AnswerWord } from "./words";
 /**
  * The answers endpoint's payload (spec 7.4): the stored numbers, the words
  * (6.3) worked out from them, and every sentence the client shows (9.1, 9.2,
- * 8.4, 8.7.3), so no client code needs `src/lib/likelihood.ts`. Built on every
+ * 8.4, 8.7.3), so no client code works out a sentence of its own. Built on every
  * request from the stored record, so the sentences that depend on the moment
  * ("The next one begins Saturday", the heads-up) are always current.
  */
@@ -29,7 +29,14 @@ import { answerWords, likelihoodFor, type AnswerWord } from "./words";
 export interface QuestionPhrases {
   wordLine: string;
   tonightLine: string;
+  /** The swing alone, as compare shows it under each word (8.8): "A 23%
+      bigger after-midnight share", "5% less listening". Null untested. */
+  swing: string | null;
   likelihood: string | null;
+  /** How likely chance is, with the correction's say when it decides the
+      word (`chanceLine`): what a share card puts under its word. Null
+      untested. */
+  chance: string | null;
   frequency: string | null;
   range: string | null;
   tooEarly: string | null;
@@ -290,6 +297,21 @@ function tonightLine(q: Question, word: AnswerWord, swing: number, p: number, m:
     default:
       return `${lead}, which could easily be chance.`;
   }
+}
+
+/**
+ * How likely chance is, as one sentence that stands alone (8.7.5): the
+ * likelihood, plus the correction when it's why the word is Yes or why it
+ * isn't. A share card travels without the sheet that would explain a Maybe
+ * over "Unlikely to be chance."
+ */
+export function chanceLine(word: AnswerWord, p: number, m: number): string {
+  const chance = likelihoodFor(p);
+  if (word === "Yes" && m > 1) return `${chance.replace(/\.$/, "")}, even allowing for ${questionsAtOnce(m)}.`;
+  if (word === "Maybe" && p < 0.05) {
+    return `${p < 0.01 ? "Very unlikely" : "Unlikely"} to be chance on its own, but not after allowing for ${questionsAtOnce(m)}.`;
+  }
+  return chance;
 }
 
 /**
@@ -781,6 +803,8 @@ function checking(q: Question, rec: QuestionRecord, record: AnswerRecord, nowUts
     phrases: {
       wordLine: CHECKING,
       tonightLine: CHECKING,
+      swing: null,
+      chance: null,
       likelihood: null,
       frequency: null,
       range: null,
@@ -841,6 +865,8 @@ export function answersPayload(
           ? wordLine(q, word, swing, rec.p!, m)
           : tooEarly(q, rec, zone, nowUts, next),
       tonightLine: tonight,
+      swing: tested ? capital(swingShort(q.measure, swing)) : null,
+      chance: tested ? chanceLine(word, rec.p!, m) : null,
       likelihood: tested ? likelihoodFor(rec.p!) : null,
       frequency: tested ? frequency(rec.p!, rec.matches, rec.iterations) : null,
       range: range?.line ?? null,
