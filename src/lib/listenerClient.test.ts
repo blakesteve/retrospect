@@ -102,6 +102,13 @@ describe("nights and their times (7.1)", () => {
     expect(tonightDate("America/Chicago", Date.UTC(2026, 9, 2, 9, 0))).toBe("2026-10-02");
   });
 
+  it("reads the clock as it stands at the instant, on the mornings clocks change", () => {
+    // Nov 3, 2024: 3:30 a.m. CST (clocks fell back at 2) is still Nov 2's night.
+    expect(tonightDate("America/Chicago", Date.UTC(2024, 10, 3, 9, 30))).toBe("2024-11-02");
+    // Mar 10, 2024: 4:30 a.m. CDT (clocks sprang forward at 2) is Mar 10's.
+    expect(tonightDate("America/Chicago", Date.UTC(2024, 2, 10, 9, 30))).toBe("2024-03-10");
+  });
+
   it("refuses a date that isn't on the calendar", () => {
     expect(isNightDate("2024-05-10")).toBe(true);
     expect(isNightDate("2024-02-29")).toBe(true);

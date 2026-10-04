@@ -154,7 +154,10 @@ it opens nothing), doesn't run off screen, waits for the reveal to close,
 and never runs under reduced motion or on a return, that the stars twinkle only while Play
 runs and ease to rest after, that Play stopped rests on a whole night, that a
 planet's sheet on a past night is that night's, dated, with its "after" in
-its year, the dial's failed state, and a
+its year, that a dated planet link opens on any view for any date in the sky
+data (the sky alone outside the history) and says so for a date outside the
+sky data, the dial's
+failed state, and a
 birth chart that draws its planets and sends nothing. CI runs them in the
 "Browser checks" job, after a build that also runs the bundle guards.
 
@@ -470,7 +473,7 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 | `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
 | `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days, each with the body it's about. Plus Tonight's words: the heading by local time, the time (with the weekday from midnight to 4 a.m.), the Moon's line with and without her sign ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), each held question's sky line ("Mercury is retrograde until Oct 13", "A solar storm tonight, Kp 7"), the sky facts that fill the "for you" rows ("Jupiter turns retrograde Saturday"), every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the row for a night with no question's sky overhead, with the next start. |
 | `/api/sky/path?to=` | The wheel's path to a coming-up moment at most 45 days out: every body's longitude from now (down to the hour) to `to` (to the hour), the Moon hourly and the rest daily, both ends included, to 0.01°. Cached until the hour turns. |
-| `/api/sky/planet?body=&from=&to=` | A planet's sheet: tonight's sign and dignity (or, with `night=2024-05-10`, that night's at 9 p.m. in the zone, as the Sky view's dial shows it, titled with the date), its dignity in every sign, its path through a history as a strip (the Moon's as a letter per night), its next station and sign change, and the questions about it. Jupiter and Saturn to the day, the others to the minute. |
+| `/api/sky/planet?body=&from=&to=` | A planet's sheet: tonight's sign and dignity (or, with `night=2024-05-10`, any date from 2002 through 2035, that night's at 9 p.m. in the zone, as the Sky view's dial shows it, titled with the date), its dignity in every sign, its path through a history as a strip (the Moon's as a letter per night), its next station and sign change, and the questions about it. Jupiter and Saturn to the day, the others to the minute. |
 
 A night runs 4 a.m. to 4 a.m. local. A question's condition holds on every
 night its window touches, but the full- and new-moon filters light only the

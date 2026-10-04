@@ -24,8 +24,8 @@ function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>, onSk
     case "q":
       return !QUESTIONS.some((q) => q.id === ref.value);
     case "planet":
-      // Tonight, or a past night the Sky view's dial stood at.
-      return planetSheetValue(ref.value, tonightDate(L.zone)) === null;
+      // Tonight, or any night inside the sky data (8.7.4).
+      return planetSheetValue(ref.value) === null;
     case "chart":
       // The birth chart draws on the Sky view's wheel, and nowhere else.
       return ref.value !== "you" || !onSky;

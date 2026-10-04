@@ -73,7 +73,7 @@ function obviouslyInvalid(o: Open): boolean {
     case "q":
       return !QUESTIONS.some((q) => q.id === o.value);
     case "planet":
-      return planetSheetValue(o.value, tonightDate(SAMPLE_ZONE)) === null;
+      return planetSheetValue(o.value) === null;
     case "night":
       return !isNightDate(o.value) || o.value > tonightDate(SAMPLE_ZONE);
     case "song":

@@ -620,6 +620,44 @@ test.describe("a planet's sheet from Sky (8.7.4)", () => {
   });
 });
 
+test.describe("a dated planet link on any view (8.7.4, 8.7)", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+  const open = async (page: Page, path: string) => {
+    await returnVisit(page);
+    await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+    await page.goto(path);
+  };
+  const history = (page: Page) => page.getByRole("heading", { name: "Through your history" });
+
+  test("inside the sky data but outside the history it opens, the sky alone, on Tonight and Every night", async ({ page }) => {
+    // The sample begins Sept 28, 2023; Jun 15, 2010 is in the sky data.
+    await open(page, "/u/sample?planet=venus-2010-06-15");
+    await expect(page.getByRole("heading", { name: "Venus on Jun 15, 2010" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Where she's strong and weak" })).toBeVisible();
+    await expect(history(page)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "In your 12 questions" })).toHaveCount(0);
+    await page.goto("/u/sample/nights?planet=mars-2030-06-15");
+    await expect(page.getByRole("heading", { name: "Mars on Jun 15, 2030" })).toBeVisible({ timeout: 30_000 });
+    // Its data in (the title shows before it), and still the sky alone.
+    await expect(page.getByRole("heading", { name: "Where he's strong and weak" })).toBeVisible();
+    await expect(history(page)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "In your 12 questions" })).toHaveCount(0);
+    // The control: a night inside the history keeps the lines about the listener.
+    await page.goto("/u/sample?planet=venus-2024-05-10");
+    await expect(page.getByRole("heading", { name: "Venus on May 10, 2024" })).toBeVisible({ timeout: 30_000 });
+    await expect(history(page)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "In your 12 questions" })).toBeVisible();
+  });
+
+  test("outside the sky data it doesn't open, and says so", async ({ page }) => {
+    await open(page, "/u/sample/sky?planet=venus-1999-06-15");
+    const said = page.getByRole("status").filter({ hasText: "That link points to something that isn't in this history." });
+    await expect(said).toBeVisible({ timeout: 30_000 });
+    await expect(page).not.toHaveURL(/planet=/);
+    await expect(page.getByRole("heading", { name: /^Venus/ })).toHaveCount(0);
+  });
+});
+
 test.describe("the states (8.6)", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 

@@ -205,7 +205,9 @@ export function parsePlanetQuery(params: URLSearchParams): PlanetQuery {
   if (night !== null) {
     const t = Date.parse(`${night}T00:00:00Z`) / 1000;
     const real = /^\d{4}-\d{2}-\d{2}$/.test(night) && Number.isFinite(t) && new Date(t * 1000).toISOString().slice(0, 10) === night;
-    if (!real || t < SKY_FROM || t + 86_400 > SKY_LAST) return { error: "night must be a date like 2024-05-10 within the sky data" };
+    // Any date from the data's first through its last (2002 through 2035): the
+    // planet is computed, not looked up, so 9 p.m. just past the end still reads.
+    if (!real || t < SKY_FROM || t > SKY_LAST) return { error: "night must be a date like 2024-05-10 within the sky data" };
   }
   return { body: BODY_IDS[rawBody as BodyId], from, to, night };
 }

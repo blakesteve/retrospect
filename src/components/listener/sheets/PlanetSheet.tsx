@@ -9,12 +9,14 @@ import type { PlanetSheet as PlanetSheetData } from "@/lib/sky/planet";
 import { SheetLink } from "../cards";
 import { AnswerPill, Chevron, SheetFailed, SheetSkeleton, Terms } from "../pieces";
 import { DIGNITY_COLOR, planetGlyph, signGlyph } from "../sky";
-import { planetSheetValue } from "@/lib/client/planetSheet";
+import { aboutTheListener, planetSheetValue } from "@/lib/client/planetSheet";
 import { dateText } from "@/lib/client/dates";
 import { tonightDate } from "../format";
 
-/* A planet (spec 8.7.4), from /api/sky/planet: tonight, or on the past
-   night the Sky view's dial stood at ("venus-2024-05-10"), which titles it. */
+/* A planet (spec 8.7.4), from /api/sky/planet: tonight, or on a night
+   ("venus-2024-05-10", as the Sky view's dial opens it), which titles it.
+   Any night inside the sky data opens; outside the listener's history the
+   sheet is the sky alone, with no lines about the listener. */
 
 // Type only: the module itself reads the sky data, which stays server-side (13).
 type PlanetData = PlanetSheetData & { zone: string; zoneFellBack: boolean };
@@ -47,7 +49,7 @@ export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, re
   const L = useListener();
   const [data, setData] = useState<PlanetData | null | "failed">(null);
   // The host refused anything else before it loaded this.
-  const parsed = planetSheetValue(raw, tonightDate(L.zone));
+  const parsed = planetSheetValue(raw);
   const value: string = parsed?.body ?? raw;
   const night = parsed?.night ?? null;
   const name = value.charAt(0).toUpperCase() + value.slice(1);
@@ -59,9 +61,14 @@ export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, re
   const [now] = useState(() => Math.floor(Date.now() / 1000));
   const to = L.sync?.newestUts ?? now;
   const from = L.sync?.oldestUts ?? firstScrobble ?? (L.songs.state === "loading" ? null : to);
+  // The history's first night: the earlier of the two, since the sync's
+  // oldest play can trail the first one.
+  const firstUts = [L.sync?.oldestUts, firstScrobble].filter((t): t is number => typeof t === "number");
+  const firstNight = firstUts.length ? tonightDate(L.zone, Math.min(...firstUts) * 1000) : null;
+  const listener = aboutTheListener(night, firstNight, tonightDate(L.zone));
 
   useEffect(() => {
-    // Never "tonight" on a past night: that night's date.
+    // Never "tonight" on a dated sheet: that night's date.
     const when = night ? `on ${dateText(night)}` : "tonight";
     setTitle(value === "moon" || value === "sun" ? `The ${name} ${when}` : `${name} ${when}`);
     if (from === null) return;
@@ -125,7 +132,7 @@ export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, re
         ))}
       </ul>
 
-      {data.path && (
+      {data.path && listener && (
         <>
           <h3 className={H3}>Through your history</h3>
           <div aria-hidden className="mt-3 flex h-5 overflow-hidden rounded-md bg-surface-2">
@@ -144,7 +151,7 @@ export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, re
         </>
       )}
 
-      {about.length > 0 && (
+      {about.length > 0 && listener && (
         <>
           <h3 className={H3}>In your 12 questions</h3>
           <ul className="mt-2 divide-y divide-[var(--line)]">
@@ -166,7 +173,7 @@ export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, re
         </>
       )}
 
-      {rxAnswer && rxAnswer.status === "too-few-events" && (
+      {listener && rxAnswer && rxAnswer.status === "too-few-events" && (
         <>
           <h3 className={H3}>{name === "Venus" ? "Her" : "His"} retrograde, an early read</h3>
           {rxAnswer.phrases.tooEarly && <p className="mt-2 leading-relaxed text-ink">{rxAnswer.phrases.tooEarly}</p>}

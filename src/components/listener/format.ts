@@ -59,10 +59,13 @@ export function utsAtLocal(date: string, hour: number, zone: string): number {
   return uts;
 }
 
-/** The night "now" belongs to: nights run 4 a.m. to 4 a.m. (7.1). */
+/** The night "now" belongs to: nights run 4 a.m. to 4 a.m. (7.1). The
+    zone's offset is read at the instant itself, as the server's clock reads
+    it, so a play at 3:30 a.m. on the morning clocks change is on the same
+    night here as there. */
 export function tonightDate(zone: string, nowMs = Date.now()): string {
-  const uts = Math.floor(nowMs / 1000) - 4 * 3600;
-  const local = new Date((uts + offsetSeconds(zone, uts)) * 1000);
+  const uts = Math.floor(nowMs / 1000);
+  const local = new Date((uts + offsetSeconds(zone, uts) - 4 * 3600) * 1000);
   return local.toISOString().slice(0, 10);
 }
 

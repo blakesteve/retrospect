@@ -85,6 +85,14 @@ describe("validation", () => {
     expect(typeof res.body.error).toBe("string");
   });
 
+  it("takes a night on the sky data's first and last days, 2002 through 2035", async () => {
+    expect((await call("body=venus&from=1700000000&to=1700000001&night=2002-01-01")).status).toBe(200);
+    expect((await call("body=venus&from=1700000000&to=1700000001&night=2035-12-31")).status).toBe(200);
+    expect((await call("body=venus&from=1700000000&to=1700000001&night=2035-12-31&tz=Pacific/Honolulu")).status).toBe(200);
+    expect((await call("body=venus&from=1700000000&to=1700000001&night=2001-12-31")).status).toBe(400);
+    expect((await call("body=venus&from=1700000000&to=1700000001&night=2036-01-01")).status).toBe(400);
+  });
+
   it("takes the last second before 2100, and from equal to to", async () => {
     expect((await call("body=venus&from=1700000000&to=4102444799")).status).toBe(200);
     expect((await call("body=venus&from=1700000000&to=1700000000")).status).toBe(200);

@@ -149,7 +149,9 @@ const PKG = "@blakesteve/roster";
  * the architect's 4 Oct rulings and a planet sheet dated on a past night
  * measured JS 1,733,032 (+3,270; Sky's first load 801,057, Tonight's and
  * Every night's +553 each for the sheet value's parser) and CSS 193,163
- * (+23): 3.9% and 3.9% left.
+ * (+23): 3.9% and 3.9% left. Over that (d282c84), dated planet links valid
+ * across the sky data measured JS 1,733,273 (+241; Sky's first load
+ * 801,117) and CSS 193,163.
  */
 const CLIENT_JS_CEILING = 1_804_000;
 const CLIENT_CSS_CEILING = 201_000;

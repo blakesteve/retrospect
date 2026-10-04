@@ -52,12 +52,15 @@
 - **A planet's sheet on a past night**: tapped while the dial stands on a
   past night, it's that night's planet at 9 p.m., titled "Venus on Sept 28,
   2023", never "tonight", and what came after it says its year
-  (`?planet=venus-2023-09-28`, and the planet route's `night`). Play stopped
-  rests the wheel on a whole night, so the wheel and the sheet agree.
+  (`?planet=venus-2023-09-28`, and the planet route's `night`). Any date in
+  the sky data, 2002 through 2035, opens on every view; outside the
+  listener's history the sheet is the sky alone, and a date outside the sky
+  data says so. Play stopped rests the wheel on a whole night, so the wheel
+  and the sheet agree.
 - **The sky in the browser, after the first paint**: the shared sky module
   (one `bodiesAt` for the routes and the wheel) and astronomy-engine,
   49,497 bytes, load once the view has painted; tonight's first frame comes
-  from the server. Sky's first load is 801,057 bytes, under Tonight's.
+  from the server. Sky's first load is 801,117 bytes, under Tonight's.
 - **The travel is Tonight's**: `trips.ts` now goes into the past, jumps while
   the dial is dragged, and says where the wheel is in time.
 - **`GET /api/user/{name}/dial`**: the whole history in one small answer
@@ -73,7 +76,7 @@
   come at most two a second; a focused planet shows its own two-tone ring
   on Sky and Tonight, no longer a square box; term buttons like "Kp" are
   44px wide.
-- **The bundle guard**, re-baselined: JS to 1,804,000 (1,733,032 measured),
+- **The bundle guard**, re-baselined: JS to 1,804,000 (1,733,273 measured),
   CSS to 201,000 (193,163), what grew written beside them.
 
 ### Every night (3 October 2026)
