@@ -37,7 +37,26 @@ export const returnVisit = (page: Page) =>
 
 /** Every link, button and field on the page smaller than 44 by 44px (spec 10, 11), and how many were measured. */
 export const smallTargets = (page: Page) =>
-  page.evaluate(() => {
+  page.evaluate(async () => {
+    // Measured once nothing has moved for three frames running: a sheet
+    // sliding in puts its 44px close button at 43.99999px for a frame or two
+    // (the translate's floating point), and a sheet just opened waits two
+    // frames before it starts to move. Infinite animations (a skeleton's
+    // pulse) never end and move no target, so they're left out. At most 5
+    // seconds; whatever still moves then is measured as it stands.
+    const frame = () => new Promise((done) => requestAnimationFrame(() => done(null)));
+    const moving = () => document.getAnimations().filter((a) => a.playState === "running" && a.effect?.getComputedTiming().iterations !== Infinity);
+    const deadline = performance.now() + 5000;
+    let still = 0;
+    while (still < 3 && performance.now() < deadline) {
+      const now = moving();
+      if (now.length > 0) {
+        still = 0;
+        const left = Math.max(0, deadline - performance.now());
+        await Promise.race([Promise.all(now.map((a) => a.finished.catch(() => undefined))), new Promise((done) => setTimeout(done, left))]);
+      } else still++;
+      await frame();
+    }
     const small: string[] = [];
     let reached = 0;
     for (const el of document.querySelectorAll("body a, body button, body input, body [role=button], body [role=slider]")) {
