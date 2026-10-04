@@ -348,7 +348,7 @@ for (const width of [375, 1280]) {
       const tab = await selectedTabContrast(page);
       expect(tab).not.toBeNull();
       expect(tab!.label).toBe("Every night");
-      expect(tab!.links).toBe(2);
+      expect(tab!.links).toBe(3);
       expect(tab!.bg[3]).toBe(1);
       expect(tab!.fg[3]).toBe(1);
       expect(tab!.fg.slice(0, 3)).not.toEqual(tab!.bg.slice(0, 3));
@@ -616,6 +616,13 @@ test.describe("the states (8.5)", () => {
     // As it reads: the term's explanation, hidden until asked for, sits inside the line.
     const line = page.getByRole("dialog").locator("p", { hasText: "so far · a usual Wednesday is" });
     await expect.poll(() => line.innerText()).toMatch(/^\d+ plays tonight so far · a usual Wednesday is \d+$/);
+    // Every target in the sheet at least 44px (11), its terms among them:
+    // "Kp", under the storm, was 16px wide. The page behind it is inert.
+    const kp = page.getByRole("dialog").getByRole("button", { name: "Kp", exact: true });
+    await expect(kp).toBeVisible();
+    const { small, reached } = await smallTargets(page);
+    expect(small).toEqual([]);
+    expect(reached).toBeGreaterThan(3);
   });
 
   test("tonight's door opens before its first play (8.5)", async ({ page }) => {

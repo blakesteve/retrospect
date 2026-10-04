@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
    nights cache the night and song sheets share would be copied the same way. */
 import "@/components/listener/rail";
 import "@/components/listener/nightsCache";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Sheet } from "@blakesteve/roster";
 import { useListener, VIEW_HEADING } from "./Shell";
 import { dropSheet, sheetDepth, sheetFrom, type SheetKind, type SheetRef } from "./sheetUrl";
@@ -20,12 +20,15 @@ import { SheetSkeleton } from "./pieces";
 const PLANETS = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 
 /** What can be refused before anything loads (8.7: the sheet doesn't open). */
-function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>): boolean {
+function obviouslyInvalid(ref: SheetRef, L: ReturnType<typeof useListener>, onSky: boolean): boolean {
   switch (ref.kind) {
     case "q":
       return !QUESTIONS.some((q) => q.id === ref.value);
     case "planet":
       return !PLANETS.includes(ref.value);
+    case "chart":
+      // The birth chart draws on the Sky view's wheel, and nowhere else.
+      return ref.value !== "you" || !onSky;
     case "night":
       // Not a date, or in the future. A night before the history's first is
       // the sheet's to refuse, from the route's own nights: the sync's
@@ -69,6 +72,9 @@ const BODIES: Record<SheetKind, React.ComponentType<SheetBodyProps>> = {
   q: dynamic(() => import("./sheets/QuestionSheet"), { loading: Skeleton }),
   planet: dynamic(() => import("./sheets/PlanetSheet"), { loading: Skeleton }),
   share: dynamic(() => import("./sheets/ShareSheet"), { loading: Skeleton }),
+  // The birth chart and its math (natal.ts, with SiderealTime and
+  // SunPosition) load only when this opens (8.6 item 5, 13).
+  chart: dynamic(() => import("./sheets/ChartSheet"), { loading: Skeleton }),
 };
 
 const PROVISIONAL: Record<SheetKind, string> = {
@@ -77,6 +83,7 @@ const PROVISIONAL: Record<SheetKind, string> = {
   q: "A question",
   planet: "A planet",
   share: "Share",
+  chart: "Your birth chart",
 };
 
 export function SheetHost({ onInvalid, lead }: { onInvalid: () => void; lead: { date: string; text: string } | null }) {
@@ -92,7 +99,8 @@ export function SheetHost({ onInvalid, lead }: { onInvalid: () => void; lead: { 
   const [deepLinked, setDeepLinked] = useState(false);
   const [tries, setTries] = useState(0);
 
-  const rejected = ref !== null && obviouslyInvalid(ref, L);
+  const onSky = usePathname()?.endsWith("/sky") ?? false;
+  const rejected = ref !== null && obviouslyInvalid(ref, L, onSky);
   const key = ref && !rejected ? `${ref.kind}:${ref.value}` : null;
   useEffect(() => {
     if (rejected) {

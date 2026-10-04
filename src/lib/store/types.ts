@@ -12,8 +12,14 @@ export interface SyncState {
   totalScrobbles: number;
   /** Newest scrobble uts seen — cursor for incremental refresh. */
   newestUts: number;
-  /** Oldest scrobble uts seen so far — lets the UI show how far back we've reached. */
+  /** While syncing, the oldest play seen so far, so the wait screen can say
+      how far back it has reached. Once `oldestIsFirstPlay`, the history's
+      first play as every reader counts it (the record's first night). */
   oldestUts?: number;
+  /** Set once `oldestUts` is the history's first play: by the chunk that
+      finishes a backfill, or by the first refresh of a state saved before it.
+      Absent on older states. */
+  oldestIsFirstPlay?: boolean;
   /** Written for whoever is debugging; never shown to a visitor. */
   error?: string;
   /** What a visitor is told about `error`. Absent on states saved before it existed. */

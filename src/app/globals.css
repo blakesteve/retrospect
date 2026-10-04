@@ -344,15 +344,104 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   animation-play-state: running;
 }
 
+/* The Sky view's flashes as the dial crosses a night, the plays' pulse and
+   a passed star's title (8.6): opacity, once, ending at the element's own
+   style, unseen. */
+@keyframes sky-flash {
+  from {
+    opacity: 1;
+  }
+}
+.sky-flash {
+  opacity: 0;
+  animation: sky-flash 0.9s ease-out;
+}
+
+/* The Sky view's opening, once a visit: each star flies in from nearer the
+   center, oldest first, then twinkles once, everything done within 5s. While
+   "Play your years" runs (the listener started it, and any input stops it)
+   the stars twinkle on. */
+@keyframes sky-star-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.2);
+  }
+}
+.sky-star-in {
+  animation: sky-star-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) var(--sd, 0s) both;
+}
+@keyframes sky-tw {
+  to {
+    opacity: 0.22;
+    transform: scale(0.78);
+  }
+}
+.sky-tw {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.sky-tw-open {
+  animation: sky-tw var(--tw, 1s) ease-in-out var(--dl, 2s) 2 alternate;
+}
+[data-playing] .sky-tw {
+  animation: sky-tw var(--tw, 1s) ease-in-out var(--dp, 0s) infinite alternate;
+}
+
+/* A star the dial passes flares and fades; the ring of the night's plays
+   beats as the dial passes music. Both end at their own style, unseen. */
+@keyframes sky-lit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(2.7);
+  }
+}
+.sky-lit {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-lit 1.3s ease-out;
+}
+@keyframes sky-beat {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+}
+.sky-beat {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-beat 0.6s ease-out;
+}
+
 [data-hidden] .pl-arrive,
 [data-hidden] .pl-pulse,
-[data-hidden] .jar-fill {
+[data-hidden] .jar-fill,
+[data-hidden] .sky-flash,
+[data-hidden] .sky-star-in,
+[data-hidden] .sky-tw,
+[data-hidden] .sky-lit,
+[data-hidden] .sky-beat {
   animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
   .pl-arrive,
   .pl-pulse,
-  .jar-fill {
+  .jar-fill,
+  .sky-flash,
+  .sky-star-in,
+  .sky-tw-open,
+  [data-playing] .sky-tw,
+  .sky-lit,
+  .sky-beat {
     animation: none;
   }
 }

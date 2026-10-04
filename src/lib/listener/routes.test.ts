@@ -22,6 +22,7 @@ const { GET: songsRoute } = await import("@/app/api/user/[name]/songs/route");
 const { GET: nightsRoute } = await import("@/app/api/user/[name]/nights/route");
 const { GET: highlightsRoute } = await import("@/app/api/user/[name]/highlights/route");
 const { GET: genresRoute } = await import("@/app/api/user/[name]/genres/route");
+const { GET: dialRoute } = await import("@/app/api/user/[name]/dial/route");
 const { GET: skyAtRoute } = await import("@/app/api/sky/at/route");
 const { GET: skyNowRoute } = await import("@/app/api/sky/now/route");
 
@@ -491,5 +492,221 @@ describe("the sky routes (spec 7.2, 7.4)", () => {
     expect(body.comingUp.length).toBeLessThanOrEqual(6);
     for (const i of body.comingUp) expect(i.at).toMatch(/^\d{1,2}:\d{2} (a|p)\.m\. UTC$/);
     expect(body.questionsHeld).toContain("storms");
+  });
+});
+
+/* The dial's own history, small enough to count by hand. In Chicago (CDT,
+   UTC-5) the first night is Monday, Apr 1, 2024, and tonight is Oct 7, 2024
+   (`DIAL_NOW`), so the dial has 190 nights: 30 in April, 31 in May, 30 in
+   June, 31 in July, 31 in August, 30 in September and 7 in October. */
+const DIAL_NIGHTS: [string, number][] = [
+  ["2024-04-01T23:00:00Z", 2], // 6 p.m. Apr 1: offset 0
+  ["2024-04-08T23:00:00Z", 3], // Apr 8, offset 7: the total solar eclipse peaked at 1:17 p.m. CDT
+  ["2024-05-10T23:00:00Z", 4], // May 10, offset 39
+  ["2024-05-12T02:00:00Z", 2], // 9 p.m. May 11, offset 40
+  ["2024-05-12T07:30:00Z", 1], // 2:30 a.m. May 12: still May 11's night (7.1)
+  ["2024-06-29T23:00:00Z", 1], // Jun 29, offset 89: 2024 MK came closest at 8:49 a.m. CDT
+  ["2024-10-03T23:00:00Z", 1], // Oct 3, offset 185: the X9.0 flare peaked at 7:18 a.m. CDT
+  ["2024-10-08T01:00:00Z", 1], // 8 p.m. Oct 7, offset 189: tonight, so far
+];
+const dialHistory = DIAL_NIGHTS.flatMap(([iso, n]) =>
+  Array.from({ length: n }, (_, i) => ({ uts: at(iso) + i * 240, artist: `Artist ${i}`, track: `Dial ${iso} ${i}` })),
+);
+/** 10 p.m. CDT on Oct 7, 2024: tonight is Oct 7's night. */
+const DIAL_NOW = "2024-10-08T03:00:00Z";
+/** Each wild night, in night order (7.5): the eclipse, the storm's two
+    nights (one card, May 10's, with the higher reading), 2024 MK and the
+    X9.0 flare, under their curated titles but May 11's. */
+const DIAL_WILD = [
+  [7, 0, "A total solar eclipse across North America", true],
+  [39, 3, "The strongest geomagnetic storm in about 20 years", true],
+  [40, 4, "A G4 storm, Kp 8+", false],
+  [89, 6, "A 150-meter asteroid, closer than the Moon", true],
+  [185, 5, "The largest flare of this solar cycle in NASA's log, as of September 2026", true],
+];
+
+/** The dial's history with its own NASA log, at `DIAL_NOW`: the May 2024
+    storm running past 4 a.m. into May 11's night, a storm on May 20 and X
+    flares on May 14 and Oct 3, 2024 MK, and two made-up asteroids: one on
+    Jun 15, closer than the Moon, and one on Apr 8, twice as far. Nobody
+    listened on May 14, May 20 or Jun 15. */
+async function seedDial(name: string, xflares: [string, string][] = []) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(DIAL_NOW));
+  await writeCompact(
+    synthCompact("2024-10-08T02:00:00Z", {
+      kp: [
+        ["2024-05-10T21:00:00Z", 8.33], // 1 to 4 p.m. CDT, May 10
+        ["2024-05-11T00:00:00Z", 9],
+        ["2024-05-11T03:00:00Z", 9],
+        ["2024-05-11T06:00:00Z", 9],
+        ["2024-05-11T09:00:00Z", 8.67], // 1 to 4 a.m. CDT: still May 10's night
+        ["2024-05-11T12:00:00Z", 8.33], // 4 to 7 a.m. CDT: May 11's night, "Kp 8+"
+        ["2024-05-20T23:00:00Z", 6], // 3 to 6 p.m. CDT, May 20
+      ],
+      xflares: [["2024-05-14T16:51:00Z", "X8.7"], ["2024-10-03T12:18:00Z", "X9.0"], ...xflares],
+    }),
+  );
+  const approaches = (month: string, records: { name: string; time: string; au: number; h: number }[]) =>
+    writeMonth({ source: "jpl-cad", month, firstDate: "1900-01-01", refreshedAt: "2024-10-01T00:00:00.000Z", records });
+  await approaches("2024-04", [{ name: "2024 GA", time: "2024-04-08T20:00:00Z", au: 0.005, h: 26 }]);
+  await approaches("2024-06", [
+    { name: "2024 LZ", time: "2024-06-15T18:00:00Z", au: 0.0015, h: 27 },
+    { name: "2024 MK", time: "2024-06-29T13:49:00Z", au: 0.00197, h: 22 },
+  ]);
+  await seed(name, dialHistory);
+}
+
+describe("the dial route (spec 8.6, 11)", () => {
+  it("gives every night from the first to tonight with its plays, and the usual for each weekday", async () => {
+    await seedDial("dial");
+    const { status, body } = await call(dialRoute, "dial");
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ status: "ready", zone: "America/Chicago", zoneFellBack: false, nasa: "ok", first: "2024-04-01", tonight: "2024-10-07" });
+    // May 11's 2:30 a.m. play counts for May 11 (7.1); tonight's play so far is the last entry.
+    const expected = Array(190).fill(0);
+    for (const [i, n] of [[0, 2], [7, 3], [39, 4], [40, 3], [89, 1], [185, 1], [189, 1]]) expected[i] = n;
+    expect(body.plays).toEqual(expected);
+    // A usual Monday is the median of Apr 1, Apr 8 and Oct 7 (2, 3, 1); Saturdays May 11 and Jun 29 (3, 1) make 2.
+    expect(body.usual).toEqual([null, 2, null, null, 1, 4, 2]);
+    // The same first night as the nights route names.
+    expect((await call(nightsRoute, "dial", "tz=America/Chicago&from=2024-10&to=2024-10")).body.first).toBe("2024-04-01");
+  });
+
+  it("ticks storms, X flares, eclipses and asteroids only on nights you listened (7.5, 8.5)", async () => {
+    await seedDial("ticks");
+    const { body } = await call(dialRoute, "ticks");
+    expect(body.marks.storm).toEqual([[39, "Kp 9"], [40, "Kp 8+"]]);
+    expect(body.marks.xflare).toEqual([[185, "X9.0"]]);
+    expect(body.marks.eclipse).toEqual([[7, "total solar"]]);
+    // Jun 29, 2024 MK's night, as an offset alone: nothing reads its name.
+    expect(body.marks.asteroid).toEqual([89]);
+    // Every tick on a night with plays: the asteroids are bare offsets, the rest [offset, ...].
+    for (const [kind, marks] of Object.entries(body.marks as Record<string, (number | [number])[]>)) {
+      for (const m of marks) {
+        const i = typeof m === "number" ? m : m[0];
+        expect(body.plays[i], `${kind} at ${i}`).toBeGreaterThan(0);
+      }
+    }
+    /* The nights the sky did something and nobody listened, so each tick
+       left out above was there to leave out: May 20's storm (offset 49),
+       May 14's X8.7 (43), Jun 15's asteroid (75), Sept 17's partial lunar
+       eclipse (169) and Oct 2's annular (184). */
+    const quiet = { "2024-05-14": 43, "2024-05-20": 49, "2024-06-15": 75, "2024-09-17": 169, "2024-10-02": 184 };
+    for (const i of Object.values(quiet)) expect(body.plays[i]).toBe(0);
+    const months = (await call(nightsRoute, "ticks", "tz=America/Chicago&from=2024-04&to=2024-10")).body;
+    const night = (date: string) => months.nights.find((n: { date: string }) => n.date === date);
+    expect(night("2024-05-20")).toMatchObject({ plays: 0, space: { kpText: "Kp 6" } });
+    expect(night("2024-05-14")).toMatchObject({ plays: 0, space: { biggestFlare: "X8.7", xFlare: true } });
+    expect(night("2024-06-15")).toMatchObject({ plays: 0, space: { asteroid: { name: "2024 LZ" } } });
+    expect(night("2024-09-17")).toMatchObject({ plays: 0, eclipse: { kind: "partial lunar" } });
+    expect(night("2024-10-02")).toMatchObject({ plays: 0, eclipse: { kind: "annular solar" } });
+    // A night you listened with an asteroid twice as far as the Moon: no asteroid tick.
+    expect(night("2024-04-08")).toMatchObject({ plays: 3, space: { asteroid: { name: "2024 GA", ld: expect.closeTo(1.95, 2) } } });
+  });
+
+  it("marks every wild night, and one headline for a storm that runs past 4 a.m. (7.5)", async () => {
+    await seedDial("wild");
+    const { body } = await call(dialRoute, "wild");
+    expect(body.marks.wild).toEqual(DIAL_WILD);
+    expect(body.marks.wild.filter((w: unknown[]) => w[0] === 39 || w[0] === 40).map((w: unknown[]) => w[3])).toEqual([true, false]);
+  });
+
+  it("heads a storm run's other night by its next reason, as the Tonight row does (7.5)", async () => {
+    // An X5.8 flare at 10 a.m. CDT on May 11: May 11's card is the flare, and May 10 keeps the storm's.
+    await seedDial("then", [["2024-05-11T15:00:00Z", "X5.8"]]);
+    const { body } = await call(dialRoute, "then");
+    expect(body.marks.xflare).toEqual([[40, "X5.8"], [185, "X9.0"]]);
+    expect(body.marks.wild).toEqual([DIAL_WILD[0], DIAL_WILD[1], [40, 5, "An X5.8 flare", true], DIAL_WILD[3], DIAL_WILD[4]]);
+  });
+
+  it("leaves NASA's ticks out when its log is unavailable, and keeps the eclipses and wild nights (8.5)", async () => {
+    await seedDial("nonasa");
+    const ok = (await call(dialRoute, "nonasa")).body;
+    expect(ok.nasa).toBe("ok");
+    expect(ok.marks.storm).toEqual([[39, "Kp 9"], [40, "Kp 8+"]]);
+    expect(ok.marks.xflare).toEqual([[185, "X9.0"]]);
+    expect(ok.marks.asteroid).toEqual([89]);
+    await getBlobStore().del(COMPACT_KEY);
+    // The record built with the log is served while it's rebuilt without it.
+    const { status, body } = await call(dialRoute, "nonasa");
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ status: "updating", nasa: "unavailable", first: "2024-04-01", tonight: "2024-10-07" });
+    expect(body.marks).toEqual({ storm: [], xflare: [], eclipse: [[7, "total solar"]], asteroid: [], wild: DIAL_WILD });
+    expect(body.plays).toHaveLength(190);
+  });
+
+  it("gives a history that began tonight one night, with tonight's ticks (8.6)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2024-04-09T03:00:00Z")); // 10 p.m. CDT, Apr 8
+    await seed("new", [{ uts: at("2024-04-08T23:00:00Z"), artist: "Artist 1", track: "Eclipse" }]);
+    const { body } = await call(dialRoute, "new");
+    expect(body).toMatchObject({ first: "2024-04-08", tonight: "2024-04-08", plays: [1] });
+    expect(body.marks.eclipse).toEqual([[0, "total solar"]]);
+    expect(body.marks.wild).toEqual([[0, 0, "A total solar eclipse across North America", true]]);
+  });
+
+  it("gives no first night and no plays when every play is noise", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(DIAL_NOW));
+    const noise = [
+      { uts: at("2024-05-10T23:00:00Z"), artist: "Rain Sounds", track: "Storm" },
+      { uts: at("2024-05-11T03:00:00Z"), artist: "White Noise Baby Sleep", track: "Fan" },
+    ];
+    await seed("noise", noise);
+    expect((await call(dialRoute, "noise")).body).toEqual({
+      status: "ready",
+      zone: "America/Chicago",
+      zoneFellBack: false,
+      nasa: "ok",
+      first: null,
+      tonight: "2024-10-07",
+      plays: [],
+      usual: [null, null, null, null, null, null, null],
+      marks: { storm: [], xflare: [], eclipse: [], asteroid: [], wild: [] },
+    });
+    // One song among the noise: May 10 to Oct 7 is 151 nights (22 + 30 + 31 + 31 + 30 + 7), and the noise isn't counted.
+    await seed("music", [...noise, { uts: at("2024-05-10T23:10:00Z"), artist: "Artist 1", track: "Song" }].sort((a, b) => a.uts - b.uts));
+    const music = (await call(dialRoute, "music")).body;
+    expect(music.first).toBe("2024-05-10");
+    expect(music.plays).toHaveLength(151);
+    expect(music.plays.slice(0, 2)).toEqual([1, 0]);
+  });
+
+  it("says computing while a history is first read, refuses a bad name, and reads a refused zone as UTC", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(DIAL_NOW));
+    await getStore().appendScrobbles("reading", dialHistory);
+    await getStore().setSyncState({
+      username: "reading",
+      status: "syncing",
+      pagesDone: 1,
+      totalPages: 3,
+      totalScrobbles: dialHistory.length,
+      newestUts: dialHistory.at(-1)!.uts,
+      updatedAt: Date.now(),
+    });
+    expect(await call(dialRoute, "reading")).toEqual({ status: 200, body: { status: "computing", zone: "America/Chicago", zoneFellBack: false } });
+    expect(await call(dialRoute, "bad name!")).toEqual({ status: 400, body: { error: "Invalid username", code: "invalid-username" } });
+    // Read in UTC, May 12's 2:30 a.m. CDT play is 7:30 a.m. UTC: May 12's night, offset 41.
+    await seedDial("utc");
+    const { status, body } = await call(dialRoute, "utc", "tz=Mars/Olympus_Mons");
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ zone: "UTC", zoneFellBack: true, first: "2024-04-01", tonight: "2024-10-07" });
+    expect(body.plays.slice(39, 42)).toEqual([4, 2, 1]);
+  });
+
+  it("accounts for every play of the made-up history, a night at a time", async () => {
+    await seed("whole");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-20T02:00:00Z")); // 9 p.m. CDT, Oct 19
+    await writeCompact(synthCompact("2026-10-20T01:00:00Z"));
+    const { body } = await call(dialRoute, "whole");
+    // The first play is in January 2016, on Central Standard Time (UTC-6), and a night starts at 4 a.m.
+    const firstNight = new Date(plays[0].uts * 1000 - 10 * 3_600_000).toISOString().slice(0, 10);
+    expect(body.first).toBe(firstNight);
+    expect(body.tonight).toBe("2026-10-19");
+    expect(body.plays).toHaveLength((Date.parse("2026-10-19") - Date.parse(firstNight)) / 86_400_000 + 1);
+    expect(body.plays.reduce((a: number, b: number) => a + b, 0)).toBe(plays.length);
   });
 });

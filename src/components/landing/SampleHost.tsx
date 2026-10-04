@@ -32,7 +32,7 @@ export interface SampleHostProps {
 }
 
 type Open = SheetRef | { kind: "sample"; value: string };
-type BodyKind = Exclude<SheetRef["kind"], "share"> | SampleSheet;
+type BodyKind = Exclude<SheetRef["kind"], "share" | "chart"> | SampleSheet;
 
 const PLANETS = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn"];
 
@@ -64,10 +64,11 @@ function openFrom(params: URLSearchParams): Open | null {
 }
 
 const bodyOf = (o: Open): BodyKind | null =>
-  o.kind === "sample" ? (SAMPLE_SHEETS.includes(o.value as SampleSheet) ? (o.value as SampleSheet) : null) : o.kind === "share" ? null : o.kind;
+  o.kind === "sample" ? (SAMPLE_SHEETS.includes(o.value as SampleSheet) ? (o.value as SampleSheet) : null) : o.kind === "share" || o.kind === "chart" ? null : o.kind;
 
 /** What can be refused before anything loads. Sharing a sample has no link
-    to give (the made-up listener has no page), so a share sheet is refused. */
+    to give (the made-up listener has no page), so a share sheet is refused,
+    and the birth chart belongs to the Sky view, which the landing hasn't. */
 function obviouslyInvalid(o: Open): boolean {
   switch (o.kind) {
     case "q":
@@ -79,6 +80,7 @@ function obviouslyInvalid(o: Open): boolean {
     case "song":
       return false;
     case "share":
+    case "chart":
       return true;
     case "sample":
       return bodyOf(o) === null;

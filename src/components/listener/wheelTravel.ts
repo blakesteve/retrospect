@@ -37,8 +37,9 @@ export function useWheelTravel(now: { bodies: Planet[]; uts: number } | null): W
     const t = createTrips<Planet, WheelMoment>(
       {
         now,
-        getPath: (to) => {
-          const key = Math.round(to / 3600) * 3600;
+        // The server's path runs from now: to the later end of the trip.
+        getPath: (from, to) => {
+          const key = Math.round(Math.max(from, to) / 3600) * 3600;
           let p = paths.get(key);
           if (!p) {
             p = getJson<SkyPath>(`/api/sky/path?to=${key}`);

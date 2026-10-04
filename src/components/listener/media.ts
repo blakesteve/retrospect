@@ -37,17 +37,17 @@ export function useOnScreen(ref: RefObject<Element | null>, ready = true): boole
   return on;
 }
 
-/** True once the element has been on screen (8.11: anything that starts on
-    its own runs only once it's on screen). */
-export function useSeen(ref: RefObject<Element | null>, ready = true): boolean {
+/** True once the element has been on screen, `threshold` of it, half by
+    default (8.11: anything that starts on its own runs only once it's on screen). */
+export function useSeen(ref: RefObject<Element | null>, ready = true, threshold = 0.5): boolean {
   const [seen, setSeen] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!ready || seen || !el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setSeen(true), { threshold: 0.5 });
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setSeen(true), { threshold });
     io.observe(el);
     return () => io.disconnect();
-  }, [ref, ready, seen]);
+  }, [ref, ready, seen, threshold]);
   return seen;
 }
 

@@ -147,21 +147,105 @@ describe("the listener components", () => {
     expect(files.length).toBeGreaterThan(15);
   });
 
-  /** Runtime imports only: `import type` is erased and costs no client bytes. */
-  const runtimeImports = (s: string) =>
-    [...s.matchAll(/^import\s+(?!type\b)[^;]*?from\s+"([^"]+)"/gm)].map((m) => m[1]);
+  /**
+   * A file's static imports, resolved: repo paths for `@/`, `./` and `../`,
+   * a package by its name. `import ... from`, `export ... from` and a bare
+   * `import "x"` all count; `import type`, `export type` and braces holding
+   * only `type` names are erased and cost no client bytes; `import()` is a
+   * lazy chunk and isn't followed.
+   */
+  const staticImports = (file: string, src: string): string[] => {
+    const out: string[] = [];
+    const re = /^\s*(?:import|export)\s+([^;]*?)\s+from\s+["']([^"']+)["']|^\s*import\s+["']([^"']+)["']/gm;
+    for (const m of src.matchAll(re)) {
+      if (m[3]) {
+        out.push(m[3]);
+        continue;
+      }
+      const clause = m[1].trim();
+      if (/^type\b/.test(clause)) continue;
+      const braces = clause.match(/^\{([^}]*)\}$/);
+      if (braces && braces[1].split(",").map((x) => x.trim()).filter(Boolean).every((x) => /^type\s/.test(x))) continue;
+      out.push(m[2]);
+    }
+    return out.map((spec) => {
+      const base = spec.startsWith("@/") ? path.join("src", spec.slice(2)) : spec.startsWith(".") ? path.join(path.dirname(file), spec) : null;
+      if (base === null) return spec;
+      for (const c of [base, `${base}.ts`, `${base}.tsx`, path.join(base, "index.ts"), path.join(base, "index.tsx")]) {
+        try {
+          if (readdirSync(path.dirname(path.join(root, c))).includes(path.basename(c)) && /\.tsx?$/.test(c)) return c;
+        } catch {
+          /* not a directory */
+        }
+      }
+      return base;
+    });
+  };
+  /** Every file and package a static import reaches from `starts`. */
+  const reach = (starts: string[]) => {
+    const seen = new Set<string>();
+    const stack = [...starts];
+    while (stack.length) {
+      const f = stack.pop()!;
+      if (seen.has(f)) continue;
+      seen.add(f);
+      if (/\.tsx?$/.test(f)) stack.push(...staticImports(f, readFileSync(path.join(root, f), "utf8")));
+    }
+    return seen;
+  };
 
   // `@/lib/sky/sky` is banned here for Tonight and its sheets, which read
-  // the sky from the routes. Spec 7.2 lets the Sky view (3c) import it:
-  // relax this for that view's files when it's built.
+  // the sky from the routes. Spec 7.2 lets the Sky view import it (8.6),
+  // through one module, `skyCompute.ts`, which the view loads after its
+  // first paint (next test).
+  const SKY_MODULE_DOOR = path.join("src/lib/client/skyCompute.ts");
+  const banned = /^src\/lib\/(answers\/(payload|engine|conditions|nullTrials)|sky\/(windows|sky|tonight|planet|comingUp)|listener\/(?!words\.ts$)|space\/|likelihood|readiness|report|ephemeris|analysis)/;
   it("import nothing that reaches the sky data or the old analysis (13.5)", () => {
-    const banned = /^@\/lib\/(answers\/(payload|engine|conditions|nullTrials)|sky\/(windows|sky|tonight|planet|comingUp)|listener\/(?!words$)|space\/|likelihood|readiness|report|ephemeris|analysis)/;
+    const through = new Set<string>();
     for (const { f, s } of sources) {
-      for (const m of runtimeImports(s)) expect(m, `${f} imports ${m}`).not.toMatch(banned);
+      for (const m of staticImports(f, s)) {
+        if (f === SKY_MODULE_DOOR && m === path.join("src/lib/sky/sky.ts")) {
+          through.add(f);
+          continue;
+        }
+        expect(m, `${f} imports ${m}`).not.toMatch(banned);
+      }
     }
-    // The control: the pattern catches a runtime import of the payload module.
-    expect(runtimeImports('import { answersPayload } from "@/lib/answers/payload";')[0]).toMatch(banned);
-    expect(runtimeImports('import type { AnswersPayload } from "@/lib/answers/payload";')).toEqual([]);
+    // The one way in, and it's used.
+    expect([...through]).toEqual([SKY_MODULE_DOOR]);
+    // The controls: each form of import is caught, resolved; a type import isn't one.
+    const from = path.join("src/lib/client/dial.ts");
+    expect(staticImports(from, 'import { answersPayload } from "@/lib/answers/payload";')[0]).toMatch(banned);
+    expect(staticImports(from, 'export { skyAt } from "@/lib/sky/sky";')).toEqual([path.join("src/lib/sky/sky.ts")]);
+    expect(staticImports(from, 'export * from "../sky/sky";')).toEqual([path.join("src/lib/sky/sky.ts")]);
+    expect(staticImports(from, 'import "@/lib/sky/sky";')).toEqual([path.join("src/lib/sky/sky.ts")]);
+    expect(staticImports(from, 'import type { AnswersPayload } from "@/lib/answers/payload";')).toEqual([]);
+    expect(staticImports(from, 'import { type SkyAt, type Sign } from "@/lib/sky/sky";')).toEqual([]);
+    expect(staticImports(from, 'import { skyAt, type Sign } from "@/lib/sky/sky";')).toEqual([path.join("src/lib/sky/sky.ts")]);
+  });
+
+  it("load the sky module and the birth chart's math only after the Sky view's first paint (8.6, 13)", () => {
+    // astronomy-engine is about 47 KB: no listener view's first load carries
+    // it. A static walk from each view and the shell, following every static
+    // import and no `import()`.
+    const views = ["Shell.tsx", "Tonight.tsx", "EveryNight.tsx", "SkyView.tsx"].map((f) => path.join("src/components/listener", f));
+    const reached = reach(views);
+    expect(reached.has("astronomy-engine")).toBe(false);
+    for (const lazy of ["src/lib/client/skyCompute.ts", "src/lib/astro/natal.ts", "src/lib/sky/sky.ts", "src/components/BirthChartPanel.tsx"]) {
+      expect(reached.has(path.join(lazy)), lazy).toBe(false);
+    }
+    // Reach: the walk went deep (the dial's logic, the travel, the shell's sheets).
+    for (const f of ["src/lib/client/dial.ts", "src/lib/motion/trips.ts", "src/components/listener/SheetHost.tsx", "src/lib/zone.ts"]) {
+      expect(reached.has(path.join(f)), f).toBe(true);
+    }
+    // The view does load both, as calls (a type query isn't a load).
+    const view = readFileSync(path.join(root, "src/components/listener/SkyView.tsx"), "utf8");
+    expect(view).toMatch(/import\("@\/lib\/client\/skyCompute"\)\.then\(/);
+    expect(view).toMatch(/import\("@\/lib\/astro\/natal"\)\.then\(/);
+    // The controls: a relative static import is followed; a lazy one isn't.
+    const from = path.join("src/lib/client/dial.ts");
+    expect(staticImports(from, 'import { skyPath } from "./skyCompute";')).toEqual([path.join("src/lib/client/skyCompute.ts")]);
+    expect(staticImports(from, 'const m = await import("./skyCompute");')).toEqual([]);
   });
 
   it("never name a question by its number alone (9.2, 2 Oct 2026)", () => {

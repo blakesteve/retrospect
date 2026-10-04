@@ -241,6 +241,11 @@ export function zoneClock(zone: string, fromUts: number, toUts: number = fromUts
   };
 }
 
+/** 9 p.m. local on a night's date: 17 hours after its 4 a.m. start, the
+    moment a night's Moon and planets are drawn at (7.4, 8.6). Daylight
+    saving changes at 2 a.m., so none falls in between. */
+export const ninePm = (clock: ZoneClock, night: number) => clock.nightStart(night) + 17 * 3600;
+
 /** A night's name, the date it starts on: "2026-03-07". */
 export function nightName(night: number): string {
   return new Date(night * DAY * 1000).toISOString().slice(0, 10);

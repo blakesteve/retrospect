@@ -4,7 +4,7 @@ import { QUESTIONS, type QuestionId } from "@/lib/answers/questions";
 import { PRECISION } from "@/lib/sky/planet";
 import { longitude, signOf, type Sign, type SkyBody } from "@/lib/sky/sky";
 import { eclipseEvents, moonEvents, retrogradeWindows, signWindows } from "@/lib/sky/windows";
-import type { ZoneClock } from "@/lib/zone";
+import { ninePm, type ZoneClock } from "@/lib/zone";
 import { timeIn } from "./words";
 
 /**
@@ -79,9 +79,8 @@ export function skyNights(clock: ZoneClock, first: number, last: number): SkyNig
   return { conditions, fullMoon, newMoon, eclipse, marsHome };
 }
 
-/** 9 p.m. local on a night's date: 17 hours after its 4 a.m. start. Daylight
-    saving changes at 2 a.m., so none falls in between. */
-export const ninePm = (clock: ZoneClock, night: number) => clock.nightStart(night) + 17 * 3600;
+/** 9 p.m. local on a night's date (`zone.ts`, which the Sky view shares). */
+export { ninePm };
 
 /** The Moon's phase angle at an instant (MoonPhase: 0 new, 90 first quarter,
     180 full), to 0.01°, the precision `moonAt` explains. */

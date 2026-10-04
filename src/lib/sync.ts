@@ -4,6 +4,7 @@ import { getStore } from "./store/jsonStore";
 import type { SyncState } from "./store/types";
 import { userKey } from "./store/userKeys";
 import { takeBackIfRemoved } from "./removal";
+import { isNoiseArtist } from "./noise";
 import type { Scrobble } from "./analysis/nostalgia";
 
 /**
@@ -82,9 +83,10 @@ export async function runSyncChunk(username: string): Promise<SyncState> {
     if (existing.status === "syncing" || existing.status === "error" || empty) {
       // Resume from the checkpoint — including after an error. Pages already
       // pulled are on disk; re-fetched pages dedupe on read.
+      // A resumed backfill keeps a running oldest until it's ready again.
       return await backfill(
         username,
-        { ...existing, status: "syncing", error: undefined, errorCode: undefined },
+        { ...existing, status: "syncing", error: undefined, errorCode: undefined, oldestIsFirstPlay: undefined },
         true,
         startedAt,
       );
@@ -125,6 +127,19 @@ async function removedMidChunk(username: string, resumed: boolean): Promise<bool
 
 const takeBack = (username: string, startedAt: number) =>
   takeBackIfRemoved(username, startedAt, [userKey("sync", username), userKey("scrobbles", username)]);
+
+/**
+ * The history's first play as every reader counts it: the oldest stored play
+ * that isn't noise or an impossible date, the record's first night. The
+ * backfill's running minimum isn't that: it counts both, and a state saved
+ * before the field existed took it from later syncs, which is how early
+ * nights' sheets closed as they opened in 3b. So the state's `oldestUts`
+ * is set from the stored history, once, and every reader gets the first play.
+ */
+async function setFirstPlay(state: SyncState): Promise<void> {
+  state.oldestUts = (await getStore().getScrobbles(state.username)).find((s) => !isNoiseArtist(s.artist))?.uts;
+  state.oldestIsFirstPlay = true;
+}
 
 async function backfill(
   username: string,
@@ -218,6 +233,7 @@ async function backfill(
   if (collected.length > 0 || state.status === "ready") {
     await store.appendScrobbles(username, collected, { compact: state.status === "ready" });
   }
+  if (state.status === "ready") await setFirstPlay(state);
   state.error = fatal?.message;
   state.errorCode = fatal?.code;
   state.updatedAt = Date.now();
@@ -247,6 +263,8 @@ async function refresh(username: string, state: SyncState, startedAt: number): P
     if (collected.length > 0) {
       await store.appendScrobbles(username, collected);
     }
+    // A ready state saved before the first play was set gets it, once.
+    if (!state.oldestIsFirstPlay) await setFirstPlay(state);
     state.updatedAt = Date.now();
     await store.setSyncState(state);
     if (await takeBack(username, startedAt)) return notStarted(username);

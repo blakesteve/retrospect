@@ -11,8 +11,10 @@
  * carries its `__NA` flag.
  */
 
-export type SheetKind = "song" | "night" | "q" | "planet" | "share";
-export const SHEET_KEYS: SheetKind[] = ["song", "night", "q", "planet", "share"];
+export type SheetKind = "song" | "night" | "q" | "planet" | "share" | "chart";
+/** `chart=you` is the Sky view's birth chart (8.6 item 5): the parameter
+    names the sheet only; the birth data never leaves the browser. */
+export const SHEET_KEYS: SheetKind[] = ["song", "night", "q", "planet", "share", "chart"];
 
 export interface SheetRef {
   kind: SheetKind;

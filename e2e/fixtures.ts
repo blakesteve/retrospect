@@ -41,8 +41,9 @@ export const smallTargets = (page: Page) =>
     const small: string[] = [];
     let reached = 0;
     for (const el of document.querySelectorAll("body a, body button, body input, body [role=button], body [role=slider]")) {
-      // The wheel's planets: a tap goes to the nearest within 22px, checked on Tonight.
-      if (el.closest("[data-body]")) continue;
+      // The wheels' planets and Sky's stars: a tap goes to the nearest within
+      // 22px, checked on Tonight and on Sky.
+      if (el.closest("[data-body], [data-star]")) continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0 || el.closest("[inert]") || getComputedStyle(el).visibility === "hidden") continue;
       reached++;

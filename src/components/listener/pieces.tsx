@@ -71,7 +71,7 @@ export function StormMeter({ kp }: { kp: number }) {
   );
 }
 
-const PATHS: Record<string, ReactNode> = {
+export const PATHS: Record<string, ReactNode> = {
   storm: (
     <>
       <path d="M3 13c2.5-3.5 5.5-3.5 9 0s6.5 3.5 9 0" />
@@ -254,7 +254,8 @@ export function Term({ name, label, className = "text-[13px] text-ink-2" }: { na
             setOpen(false);
           }
         }}
-        className={`inline-flex min-h-11 items-center underline decoration-dotted underline-offset-4 hover:text-gold ${className}`}
+        // 44 by 44 at least (11): a short term like "Kp" was 16px wide.
+        className={`inline-flex min-h-11 min-w-11 items-center underline decoration-dotted underline-offset-4 hover:text-gold ${className}`}
       >
         {label ?? name}
       </button>
