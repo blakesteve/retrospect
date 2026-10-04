@@ -5,12 +5,14 @@
    first-load JS, for a message most visits never see. */
 
 export const INVALID_LINK = "That link points to something that isn't in this history.";
+/** A planet's sheet on a date the sky data doesn't reach (8.7.4): it's the sky that ends, not the history. */
+export const OUTSIDE_THE_SKY = "Retrospect's sky runs from 2002 through 2035, so it can't show that date.";
 
 let host: Promise<typeof import("./toastHost")> | null = null;
 
-export const sayInvalidLink = () => {
+export const sayInvalidLink = (message: string = INVALID_LINK) => {
   host ??= import("./toastHost");
-  void host.then((h) => h.say(INVALID_LINK));
+  void host.then((h) => h.say(message));
 };
 /** A sheet that does open clears it. */
 export const clearInvalidLink = () => void host?.then((h) => h.clear());

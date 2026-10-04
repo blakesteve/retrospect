@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { aboutTheListener, planetSheetRef, planetSheetValue, SKY_FIRST_NIGHT, SKY_LAST_NIGHT } from "./planetSheet";
+import { aboutTheListener, outsideTheSky, planetSheetRef, planetSheetValue, SKY_FIRST_NIGHT, SKY_LAST_NIGHT } from "./planetSheet";
 import { SKY_RANGE } from "@/lib/sky/windows";
+import { OUTSIDE_THE_SKY } from "@/components/invalidLink";
 
 /* The planet sheet's URL value (spec 8.7.4): the planet tonight, or on any
    night inside the sky data, on every view; outside it, refused (8.7). */
@@ -43,6 +44,24 @@ describe("reading a planet sheet's value", () => {
     // SKY_RANGE's end is exclusive: its last night is the day before.
     expect(SKY_FIRST_NIGHT).toBe(new Date(SKY_RANGE.from).toISOString().slice(0, 10));
     expect(SKY_LAST_NIGHT).toBe(new Date(SKY_RANGE.to - 1).toISOString().slice(0, 10));
+  });
+});
+
+describe("a date the sky doesn't reach", () => {
+  it("is a planet on a real date before 2002 or after 2035", () => {
+    expect(outsideTheSky("venus-1999-06-15")).toBe(true);
+    expect(outsideTheSky("venus-2001-12-31")).toBe(true);
+    expect(outsideTheSky("mars-2036-01-01")).toBe(true);
+  });
+  it("is named in the words the view says, with the sky data's own years", () => {
+    expect(OUTSIDE_THE_SKY).toContain(`from ${SKY_FIRST_NIGHT.slice(0, 4)} through ${SKY_LAST_NIGHT.slice(0, 4)}`);
+  });
+  it("isn't a date inside it, tonight, a planet that isn't one, or a date that isn't one", () => {
+    expect(outsideTheSky("venus-2002-01-01")).toBe(false);
+    expect(outsideTheSky("venus-2035-12-31")).toBe(false);
+    expect(outsideTheSky("venus")).toBe(false);
+    expect(outsideTheSky("pluto-1999-06-15")).toBe(false);
+    expect(outsideTheSky("venus-1999-13-01")).toBe(false);
   });
 });
 
