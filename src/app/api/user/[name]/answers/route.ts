@@ -25,6 +25,10 @@ export const maxDuration = 60;
  *   first computation takes seconds, not minutes (step 0).
  * - While the history is still being read, nothing is computed: "computing",
  *   0 of 12, and the client keeps polling /status as it does today.
+ * - Without `tz`: 400, reason `tz_required`. Answers are stored per zone
+ *   (6.6), and a request that names none would store a UTC record no page
+ *   asked for. A zone that's named but refused still reads in UTC and says
+ *   so (`zoneFellBack`).
  */
 async function handler(req: Request, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
@@ -32,7 +36,14 @@ async function handler(req: Request, { params }: { params: Promise<{ name: strin
   if (!isValidUsername(username)) {
     return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
   }
-  const { zone, fellBack } = requestZone(new URL(req.url).searchParams);
+  const query = new URL(req.url).searchParams;
+  if (!query.get("tz")?.trim()) {
+    return NextResponse.json(
+      { error: "tz is required: answers are stored per time zone, as in ?tz=America/Chicago", reason: "tz_required", code: "server" },
+      { status: 400 },
+    );
+  }
+  const { zone, fellBack } = requestZone(query);
   const zoneFields = { zone, zoneFellBack: fellBack };
   // Taken before the history is read: a removal that lands any time after
   // this has the answers written below taken back.

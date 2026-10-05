@@ -212,9 +212,23 @@ describe("the answers route", () => {
     expect((await readAnswers("travels", "America/Sao_Paulo"))?.zone).toBe("America/Sao_Paulo");
   });
 
-  it("reads in UTC, and says so, when the zone is missing", async () => {
+  it("refuses a request without a zone, and stores nothing for it", async () => {
     await seed("nozone");
-    expect((await ask("nozone", "")).body).toMatchObject({ zone: "UTC", zoneFellBack: true });
+    for (const query of ["", "tz=", "tz=%20", "tzm=-300"]) {
+      const res = await ask("nozone", query);
+      expect(res.status, query).toBe(400);
+      expect(res.body, query).toMatchObject({ reason: "tz_required" });
+    }
+    await Promise.all(background);
+    expect(await getBlobStore().get(userKey("answers", "nozone"))).toBeNull();
+    // Control: with a zone, the same listener is answered and stored.
+    expect((await ask("nozone")).status).toBe(200);
+    expect(await readAnswers("nozone", "America/Chicago")).not.toBeNull();
+  });
+
+  it("reads in UTC, and says so, when the zone is named but refused", async () => {
+    await seed("badzone");
+    expect((await ask("badzone", "tz=Not/AZone")).body).toMatchObject({ zone: "UTC", zoneFellBack: true });
   });
 
   it("answers an empty history the way the other routes do", async () => {

@@ -1,0 +1,51 @@
+name: Null test
+
+# The full null-data test (spec 6.3): 1,000 made-up histories with no sky
+# effect, the 12 questions run on each as the answers endpoint runs them. It
+# fails when more than 13% of them get any Yes. It runs on pull requests that
+# touch anything it reads: the engine and the answer rule, and what they
+# import (walked from src/lib/answers/nullTrials.ts, 5 Oct 2026). An import
+# added outside these paths is caught by the Monday run, after the merge.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/lib/answers/**"
+      - "src/lib/analysis/**"
+      - "src/lib/sky/**"
+      - "src/lib/ephemeris/**"
+      - "src/lib/space/**"
+      - "src/lib/store/**"
+      - "src/lib/listener/songs.ts"
+      - "src/lib/listener/spaceNights.ts"
+      - "src/lib/zone.ts"
+      - "src/lib/noise.ts"
+      - "package-lock.json"
+      - "scripts/null-test.mjs"
+      - ".github/workflows/null-test.yml"
+  schedule:
+    # Mondays at 09:00 UTC, 4 a.m. CDT.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  null-test:
+    name: Null test
+    runs-on: ubuntu-latest
+    # About a minute locally on 11 threads; a runner has 3 to spare.
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Null test, 1,000 histories
+        run: npm run null-test
