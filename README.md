@@ -120,7 +120,8 @@ npm run space        # fill or refresh NASA's data in the local store (--all for
 
 All three of the first ones run in CI on every pull request, which is new — the
 lint errors they now catch had been sitting in the tree because nothing ran
-them on the way in.
+them on the way in. The null test runs in CI too (`null-test.yml`): on a pull
+request that touches anything it reads, and every Monday.
 
 ### Browser checks
 
@@ -338,8 +339,9 @@ history covers and binary-searches each play, because asking `Intl` about
 500,000 plays takes over a second. A zone is accepted if a formatter accepts
 it and it's a named zone rather than a bare offset like `+05:30`. It's never
 checked against `Intl.supportedValuesOf`, which leaves out UTC, Asia/Kolkata
-and Europe/Kyiv. A missing or refused zone reads in UTC, and the response says
-so with `zoneFellBack`. The `zone` a response names is a key, not a label:
+and Europe/Kyiv. A refused zone reads in UTC, and the response says so with
+`zoneFellBack`; so does a missing one, except on `/answers`, which needs it
+(below). The `zone` a response names is a key, not a label:
 aliases fold onto one name, often the old one (Europe/Kyiv comes back
 `Europe/Kiev`), so pages show the zone they sent.
 
@@ -352,7 +354,9 @@ streak, weekday and loudest month in nights.
 
 The redesign asks every listener the same 12 questions (`src/lib/answers/`),
 and `/api/user/{name}/answers?tz=…` answers them all in one pass: about 1.6
-seconds for 500,000 plays locally. Each is today's rotation test below, run by
+seconds for 500,000 plays locally. The `tz` is required: answers are stored per
+zone, so a request without one is refused (400, reason `tz_required`) rather
+than storing a UTC record no page asked for. Each is today's rotation test below, run by
 rotating the sky's windows instead of the plays, which gives identical counts
 (`rotation.test.ts` holds it to today's per-play test) at a fraction of the
 cost. Events merge as the spec says: Venus backing out of a sign and returning
