@@ -102,7 +102,7 @@ describe("a question's card", () => {
     if (d.kind !== "q") return;
     expect(d.question).toBe("Does a full moon change how late I listen?");
     // The made-up sample's word, and the same word its own page shows.
-    expect(d.says).toBe("Does a full moon change how late I listen? Maybe.");
+    expect(d.says).toBe("Does a full moon change how late I listen? Not clearly.");
     expect(d.word).toBe(pageWord);
     expect(d.line).toBe("Could be chance.");
   });

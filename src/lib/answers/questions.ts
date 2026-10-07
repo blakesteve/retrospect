@@ -46,7 +46,30 @@ export interface Question {
   eventNoun: { one: string; many: string };
   /** "How soon depends on how much you listen and how often {this}." */
   howOften: string;
+  /**
+   * Days its condition takes to come around again, for a question whose
+   * windows repeat (6.1a). Each of its rotations turns on its own circle of
+   * whole periods plus a seam, so the span's length can't decide which
+   * rotations exist. Share measures only: a rate would count the circle's
+   * stretch past the history as time spent not listening (`engine.ts`).
+   * Absent: the windows turn on the span's own length (6.1).
+   */
+  period?: number;
 }
+
+/* The periods, as the sky has them: the synodic month (new moon to new
+   moon), the tropical month (the Moon back in the same sign), and Mercury's
+   synodic period (retrograde to retrograde). Which questions get one was
+   measured, not assumed: each rotation's swing correlates with the swing one
+   period later at 0.49 to 0.89 for these four and Venus retrograde, and at
+   0.05 or less for every other question with a share measure (the median
+   over made-up histories, 5 Oct 2026).
+   Venus retrograde stays on 6.1's rule (6.1a): on whole periods it came out
+   slightly too ready to say yes on no-effect data, and on the span's length
+   its answer barely moves as a history grows. */
+const SYNODIC_MONTH = 29.530589;
+const TROPICAL_MONTH = 27.321582;
+const MERCURY_SYNODIC = 115.8775;
 
 export const QUESTIONS: readonly Question[] = [
   {
@@ -56,6 +79,7 @@ export const QUESTIONS: readonly Question[] = [
     story: "The famous one: in the lore, messages go astray, and old friends, exes and unfinished business come back around.",
     shortName: "Mercury retrograde",
     measure: "oldfavorites",
+    period: MERCURY_SYNODIC,
     warmupDays: 365,
     nasa: false,
     subject: "Mercury retrograde",
@@ -71,6 +95,7 @@ export const QUESTIONS: readonly Question[] = [
     story: "Opposite the Sun, the full Moon is said to bring things to a head, and folklore says nobody sleeps.",
     shortName: "Full moon",
     measure: "aftermidnight",
+    period: SYNODIC_MONTH,
     warmupDays: 0,
     nasa: false,
     subject: "a full moon",
@@ -86,6 +111,7 @@ export const QUESTIONS: readonly Question[] = [
     story: "A new moon is for beginnings: new starts, new sounds.",
     shortName: "New moon",
     measure: "firstlistens",
+    period: SYNODIC_MONTH,
     warmupDays: 365,
     nasa: false,
     subject: "the new moon",
@@ -118,6 +144,7 @@ export const QUESTIONS: readonly Question[] = [
     // Old favorites since 1 Oct 2026 (Blake, the folklore proposal): the lore's
     // comfort, memory and home. Before, how much you listen.
     measure: "oldfavorites",
+    period: TROPICAL_MONTH,
     warmupDays: 365,
     nasa: false,
     subject: "a strong Moon",

@@ -24,8 +24,10 @@ import { circle, countRotated, offsetOf, place, type Circle } from "./rotation";
 /** Bump when anything here changes what an answer would be. Stored answers
     from another version are served once, then recomputed (spec 6.6). */
 /** 2: questions 5 and 6 measure old favorites and how much you listen
-    (1 Oct 2026). The version is in every seed (6.6), so all 12 reshuffle. */
-export const ANSWERS_VERSION = 2;
+    (1 Oct 2026). 3: Mercury retrograde and the Moon's three questions turn
+    each rotation on its own circle of whole periods (6.1a, `rotationOf`, 6
+    Oct 2026). The version is in every seed (6.6), so all 12 reshuffle. */
+export const ANSWERS_VERSION = 3;
 /** The stored record's shape, apart from the analysis: a record in an older
     format is recomputed, with the same seeds (6.6 keeps the analysis version
     in the seed, and adding pairings changed no answer). 2: pairings. 3: each
@@ -222,6 +224,14 @@ export function drawsFor(username: string, id: QuestionId): number[] {
   return Array.from({ length: ROTATIONS }, () => rng());
 }
 
+/** Each rotation's seam, as a fraction of a period, for a question that turns
+    on whole periods (6.1a): from its own stream, apart from the draws, and
+    seeded the same way. */
+export function seamsFor(username: string, id: QuestionId): number[] {
+  const rng = mulberry32((seedFor(username, id) ^ 0x5bd1e995) >>> 0);
+  return Array.from({ length: ROTATIONS }, () => rng());
+}
+
 function overlapSeconds(windows: ConditionWindow[], S: number, E: number): number {
   let total = 0;
   for (const w of windows) {
@@ -324,9 +334,77 @@ const blank = (q: Question, rest: Partial<QuestionRecord>): QuestionRecord => ({
   ...rest,
 });
 
+/** How a question's windows turn (6.1, 6.1a). */
+interface Rotation {
+  /** The windows that turn: the span's own, and for a question on whole
+      periods the sky's windows past the history too. */
+  lattice: ConditionWindow[];
+  /** Rotation i's circle length and offset, seconds, from its draw. */
+  turn: (u: number, i: number) => { LC: number; o: number };
+  /** Every rotation turns on the span's own length, so the windows are placed once. */
+  shared: boolean;
+}
+
+/**
+ * Most questions turn on the span's own length, by a fraction of it (6.1).
+ * A question whose condition repeats (`period` in questions.ts) gives each
+ * rotation its own circle instead (6.1a): whole periods of its condition, as
+ * many as fit in the span, plus a seam drawn once for that rotation, with
+ * the sky's own windows filling the stretch past the history. Its offset is
+ * a fraction of that circle, as in 6.1.
+ *
+ * On the span's own length, the span measured against the period decided
+ * which rotations existed, so a few days of plays could move a word. On its
+ * own circle a rotation stays exactly as it was until the span grows past
+ * its seam, about one rotation in 30 each day for the Moon's questions. The
+ * seams differ from rotation to rotation, so how many rotations line the
+ * windows up with themselves no longer hangs on the span's length.
+ *
+ * Share measures only. The stretch past the history holds windows but no
+ * plays, which a share passes over: it compares plays with plays. A rate
+ * divides by time, and would count that stretch as time spent not listening.
+ */
+function rotationOf(
+  q: Question,
+  condition: Condition,
+  windows: ConditionWindow[],
+  S: number,
+  E: number,
+  rate: boolean,
+  seams: number[],
+): Rotation {
+  const L = E - S;
+  if (!q.period) return { lattice: windows, turn: (u) => ({ LC: L, o: offsetOf(u, L) }), shared: true };
+  if (rate) throw new Error(`${q.id} turns on whole periods, which a rate measure can't`);
+  const period = q.period;
+  // No circle is longer than the span plus a period (`seamCircle`).
+  const P = Math.round(period * DAY);
+  return {
+    lattice: condition.windows.filter((w) => w.end >= S && w.start < S + L + P),
+    turn: (u, i) => {
+      const seam = seams[i];
+      if (seam === undefined) throw new Error(`${q.id} needs a seam for every rotation`);
+      const LC = seamCircle(L, period, seam);
+      return { LC, o: Math.floor(u * LC) };
+    },
+    shared: false,
+  };
+}
+
+/** One rotation's circle on whole periods (6.1a), in seconds, for a span of
+    `L` seconds: as many whole periods as fit in the span, plus the seam (a
+    fraction of a period), and a period more when that would be no longer
+    than the span. The period is taken in whole seconds, as the plays are. */
+export function seamCircle(L: number, period: number, seam: number): number {
+  const P = Math.round(period * DAY);
+  const LC = Math.floor(L / P) * P + Math.floor(seam * P);
+  return LC <= L ? LC + P : LC;
+}
+
 /**
  * One question, start to finish: span, observed index, floors, rotations,
- * range and early reads. `draws` are its rotations' fractions (drawsFor).
+ * range and early reads. `draws` are its rotations' fractions (drawsFor);
+ * a question on whole periods also takes each rotation's seam (seamsFor).
  */
 export function runQuestion(
   q: Question,
@@ -334,6 +412,7 @@ export function runQuestion(
   measure: Tagged,
   history: { first: number; last: number },
   draws: number[],
+  seams: number[] = [],
 ): QuestionRecord {
   const S = measure.spanStart;
   const E = measure.spanEnd;
@@ -400,21 +479,25 @@ export function runQuestion(
   if (!Number.isFinite(index)) return { ...base, status: "no-comparison" };
 
   // The rotations.
-  const c = circle(times, tags, S, L);
-  const placed = windows.map((w) => place(w.start, w.end, S, L));
+  const rot = rotationOf(q, condition, windows, S, E, !tags, seams);
+  // Plays sit at their offset from the span's start, which no circle here is shorter than.
+  const c = circle(times, tags, S, rot.shared ? L : L + 1);
+  const shared = rot.shared ? rot.lattice.map((w) => place(w.start, w.end, S, L)) : null;
   const outSec = Math.max(1, L - inSec);
   const observed = Math.abs(Math.log(index));
   const sims: number[] = [];
   const logs: number[] = [];
   let matches = 0;
   const hit: [number, number] = [0, 0];
-  for (const u of draws) {
-    const o = offsetOf(u, L);
+  for (let i = 0; i < draws.length; i++) {
+    const { LC, o } = rot.turn(draws[i], i);
+    const ci = rot.shared ? c : { ...c, L: LC };
     let inN = 0;
     let inTag = 0;
-    for (const pw of placed) {
+    for (let k = 0; k < rot.lattice.length; k++) {
+      const pw = shared ? shared[k] : place(rot.lattice[k].start, rot.lattice[k].end, S, LC);
       if (!pw) continue;
-      countRotated(c, pw[0], pw[1], o, hit);
+      countRotated(ci, pw[0], pw[1], o, hit);
       inN += hit[0];
       inTag += hit[1];
     }
@@ -454,7 +537,7 @@ export function runQuestion(
     ...tested,
     status: "too-few-events",
     rangeC: null,
-    ...earlyReads(q, condition, windows, counted, { times, tags, totalTag, S, E, inSec, history, c, draws }),
+    ...earlyReads(q, condition, windows, counted, { times, tags, totalTag, S, E, inSec, history, c, rot, draws }),
   };
 }
 
@@ -527,10 +610,11 @@ function earlyReads(
     inSec: number;
     history: { first: number; last: number };
     c: Circle;
+    rot: Rotation;
     draws: number[];
   },
 ): { earlyReads: EarlyRead[]; typicalSingleSwing: number | null } {
-  const { times, tags, totalTag, S, E, inSec, history, c, draws } = ctx;
+  const { times, tags, totalTag, S, E, inSec, history, c, rot, draws } = ctx;
   const L = E - S;
   // Everything outside the windows, for each event's comparison.
   const all = countInside(times, tags, windowsInSpan);
@@ -569,25 +653,37 @@ function earlyReads(
   for (const w of windowsInSpan) lastEnd.set(w.event, Math.max(lastEnd.get(w.event) ?? 0, w.end));
   const finished = [...counted].filter((e) => (lastEnd.get(e) ?? 0) <= E);
   const pooled = new Set(finished.length > 0 ? finished : counted);
-  const placedAll = windowsInSpan.map((w) => place(w.start, w.end, S, L));
+  // Everything inside a window at a rotation includes the windows past the
+  // history that a rotation on whole periods brings in.
+  const shared = rot.shared ? rot.lattice.map((w) => place(w.start, w.end, S, L)) : null;
   const swings: number[] = [];
   const hit: [number, number] = [0, 0];
-  for (const u of draws) {
-    const o = offsetOf(u, L);
+  for (let r = 0; r < draws.length; r++) {
+    const { LC, o } = rot.turn(draws[r], r);
+    const ci = rot.shared ? c : { ...c, L: LC };
     let allN = 0;
     let allTag = 0;
     const perEvent = new Map<number, [number, number, number]>();
-    windowsInSpan.forEach((w, i) => {
-      const pw = placedAll[i];
+    rot.lattice.forEach((w, i) => {
+      const pw = shared ? shared[i] : place(w.start, w.end, S, LC);
       if (!pw) return;
-      countRotated(c, pw[0], pw[1], o, hit);
+      countRotated(ci, pw[0], pw[1], o, hit);
       allN += hit[0];
       allTag += hit[1];
+      // One stretch is its own windows inside the history, as it's read.
       if (!pooled.has(w.event)) return;
+      let own: [number, number] | null = pw;
+      if (!shared && w.end > E) {
+        // Still going at the history's end: the stretch stops there, as its
+        // row does. A window wholly past it places as nothing.
+        own = place(w.start, E, S, LC);
+        if (!own) return;
+        countRotated(ci, own[0], own[1], o, hit);
+      }
       const acc = perEvent.get(w.event) ?? [0, 0, 0];
       acc[0] += hit[0];
       acc[1] += hit[1];
-      acc[2] += pw[1] - pw[0];
+      acc[2] += own[1] - own[0];
       perEvent.set(w.event, acc);
     });
     const restN = c.n - allN;
@@ -740,7 +836,8 @@ export function computeAnswers(
         };
       }
       const condition = conditionFor(q.id)!;
-      return { ...runQuestion(q, condition, measures[q.measure], history, drawsFor(username, q.id)), pairings: pairingsOf(condition) };
+      const seams = q.period ? seamsFor(username, q.id) : [];
+      return { ...runQuestion(q, condition, measures[q.measure], history, drawsFor(username, q.id), seams), pairings: pairingsOf(condition) };
     } catch (err) {
       console.error(`[retrospect] question ${q.id} failed:`, err);
       record.incomplete = true;

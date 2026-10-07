@@ -535,6 +535,30 @@ often chance swings as far. Sleep-noise artists (rain sounds, ASMR) are
 always left out, so eight hours of Rolling Thunder doesn't drown your actual
 taste.
 
+Four questions turn their windows a little differently: Mercury retrograde
+and the Moon's three (full moon, new moon, strong Moon). Their windows come
+around on a schedule, every month or every 116 days, so a rotation by a
+fraction of your history lines them up with copies of themselves at some
+offsets and not others, and which offsets those are shifts as your history
+grows. A few more days of listening could then change an answer, and an
+answer that changes because you played one more day isn't an answer.
+
+So for those four, each rotation turns on a circle of its own: a whole number
+of the condition's periods, plus a short extra stretch drawn once for that
+rotation, with the sky's own windows filling the time past your history. A
+rotation then stays exactly as it was while your history grows, until the
+history passes its extra stretch, so a day's plays rarely flip a word. And
+because the extra stretches differ from one rotation to the next, how often
+chance lines the windows up with themselves no longer depends on how long
+your history happens to be. The test catches a real effect nearly as often
+as before (spec 6.1a has the figures).
+
+Venus retrograde repeats too, every 584 days, but it keeps the plain rule,
+like the other seven. On whole periods it came out slightly too ready to say
+yes on made-up histories with no effect, and on the plain rule its answer
+barely moves as a history grows. The null test runs on the engine with both
+rules in it (spec 6.1a).
+
 The p-value is (matches + 1) / (rotations + 1): the real sky counts as one
 possible outcome of chance, so p is never 0 and never claims more than the
 rotations can support (with 2,000 of them, the floor is about 0.0005). A
