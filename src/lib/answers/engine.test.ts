@@ -312,10 +312,11 @@ describe("early reads (6.5)", () => {
 
 describe("the seed (6.6)", () => {
   it("is FNV-1a of the lowercased username, the question and the version", () => {
-    // Written out independently: 32-bit FNV-1a of "engine-test|mercury|2",
-    // version 2 since questions 5 and 6 changed measures (1 Oct 2026).
+    // Written out independently: 32-bit FNV-1a of "engine-test|mercury|3",
+    // version 3 since the questions whose condition repeats turned on whole
+    // periods (6 Oct 2026).
     let h = 2166136261;
-    for (const ch of "engine-test|mercury|2") {
+    for (const ch of "engine-test|mercury|3") {
       h ^= ch.charCodeAt(0);
       h = Math.imul(h, 16777619) >>> 0;
     }

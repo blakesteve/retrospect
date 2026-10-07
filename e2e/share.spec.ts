@@ -72,7 +72,7 @@ test.describe("the share sheet (8.7.5)", () => {
       .poll(() => page.locator("[data-card-preview]").evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]), { timeout: 30_000 })
       .toEqual([1080, 1920]);
     // A word never without its question.
-    await expect(page.getByRole("dialog")).toContainText("Does a full moon change how late I listen? Maybe.");
+    await expect(page.getByRole("dialog")).toContainText("Does a full moon change how late I listen? Not clearly.");
     const { small, reached } = await smallTargets(page);
     expect(small).toEqual([]);
     // Close, Save image and Copy link at least (Share… only where the browser has it); the page behind is inert.
@@ -129,7 +129,7 @@ test.describe("the share sheet (8.7.5)", () => {
       .toEqual([
         {
           title: "Retrospect",
-          text: "Does a full moon change how late I listen? Maybe.",
+          text: "Does a full moon change how late I listen? Not clearly.",
           url: expect.stringMatching(/\/u\/sample\?q=fullmoon&tz=America%2FChicago$/),
         },
       ]);
