@@ -152,9 +152,20 @@ const PKG = "@blakesteve/roster";
  * (+23): 3.9% and 3.9% left. Over that (d282c84), dated planet links valid
  * across the sky data measured JS 1,733,273 (+241; Sky's first load
  * 801,117) and CSS 193,163.
+ *
+ * Lowered and raised 11 October 2026, JS 1,804,000 to 1,436,000 and CSS
+ * 201,000 to 209,000, measured on clean builds of cf2a08d and of b/next-16-4
+ * over it.
+ * Next 16.4.0 alone took client JS from 1,581,946 to 1,368,869 (-213,077,
+ * 13.5%): Turbopack's shared runtime chunk and export mangling. Left at
+ * 1,804,000, the ceiling sat 31.8% over that build, wide enough to pass the
+ * 18.49% class of regression this exists to catch. Roster 5.2.0 to 5.8.0
+ * then added 1,007 bytes of JS and 6,653 of CSS, 6,482 of them Roster's own
+ * stylesheet (148,466 to 154,948), which put CSS at 199,707, 99.4% of its
+ * ceiling. Both now carry about the slack they were set with: 4.8% and 4.7%.
  */
-const CLIENT_JS_CEILING = 1_804_000;
-const CLIENT_CSS_CEILING = 201_000;
+const CLIENT_JS_CEILING = 1_436_000;
+const CLIENT_CSS_CEILING = 209_000;
 
 const problems = [];
 
@@ -361,10 +372,12 @@ if (barrels.size === 0) {
  * DIVERGENCE FROM blakeb-dev, deliberate, and blakeb-dev needs the same fix.
  *
  * A manifest key is a resolved path that may carry a DECORATION after it, and
- * `endsWith` against the raw key can not match any decorated form. Next emits
- * every client module under two keys, the plain path and the same path plus
- * " <module evaluation>": 54 of this build's 108 client module entries are the
- * suffixed form. Turbopack also writes a bracketed layer form, " [postcss] (ecmascript)",
+ * `endsWith` against the raw key can not match any decorated form. Next 16.2
+ * emitted every client module under two keys, the plain path and the same path
+ * plus " <module evaluation>" (88 of this build's 176 entries on 16.2.10).
+ * 16.4.0 emits the plain path alone, 88 entries with no decoration (11 October
+ * 2026), so the cut below changes nothing today; it stays for the release
+ * that brings one back. Turbopack also writes a bracketed layer form, " [postcss] (ecmascript)",
  * which appears elsewhere in this same build, and module ids can carry a "?"
  * query.
  *

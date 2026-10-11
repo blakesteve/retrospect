@@ -311,7 +311,6 @@ function SameTwice({ a, b }: { a: string; b: string }) {
             label="Second listener"
             value={second}
             onChange={(e) => (setSecond(e.target.value), setError(null))}
-            aria-invalid={error ? true : undefined}
             errorMessage={error ?? undefined}
             autoComplete="off"
           />

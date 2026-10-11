@@ -422,6 +422,7 @@ function ZoneLine({ urlTz, browser, serverFellBack }: { urlTz: string | null; br
     const drop = () => {
       const url = new URL(window.location.href);
       url.searchParams.delete("tz");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load on purpose: everything on the page was read in the shared zone
       window.location.assign(`${url.pathname}${url.search}`);
     };
     return (

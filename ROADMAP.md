@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -21,6 +21,26 @@
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Next.js 16.4.0 and Roster 5.8.0 (11 October 2026)
+
+- **Next.js 16.2.10 to 16.4.0, for security.** 16.2.10 carried 17 Next.js
+  advisories, three of them critical. One is remote code execution in
+  `next/og`'s `ImageResponse` on the Node.js runtime (GHSA-vcvr-r3jv-pc5j),
+  which is how `/api/og` draws a visitor's `?u=`. `eslint-config-next` moved
+  with it. Every share card, at both sizes, renders pixel for pixel as it
+  did locally, and the generic cards match production's. Client JS fell
+  213,077 bytes (13.5%) with no source change, from Turbopack's shared
+  runtime and export mangling, so the bundle guard's JS ceiling came down
+  with it; its CSS ceiling went up for Roster's stylesheet
+  (`check-bundle-shape.mjs` says why).
+- **Roster 5.2.0 to 5.8.0.** The fields leave their invalid state to Roster
+  (5.2.1), so the five hand-set `aria-invalid` props are gone, and "Remove"
+  and "Check again" use `isLoading`, which keeps focus since 5.5.0. The
+  landing's "What you get" and the reveal's counts sit tighter, from 5.8.0's
+  line heights.
+- **Left for their own review:** `sky-card` onto the shape tokens, and the
+  hand-rolled skeletons onto `Skeleton`.
 
 ### Compare and the share cards (4 October 2026)
 
@@ -873,6 +893,11 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **A long name runs off the generic share card.** A `?u=` of about 25
+      characters with no space overflows `/api/og`'s generic card: the name
+      and the line under it run past the left edge, and the Moon off the
+      right. Production does the same today. The app accepts names up to 50
+      characters (`isValidUsername`), so a hand-made link gets there.
 - [ ] **Framework error pages a visitor can still reach.** There is no
       `src/app/error.tsx`, `global-error.tsx` or `not-found.tsx`, so a render
       exception would show Next's own "Application error" text. Nothing
