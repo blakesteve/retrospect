@@ -72,7 +72,6 @@ export function CompareForm() {
               setA(e.target.value);
               setErrors((x) => ({ ...x, a: undefined }));
             }}
-            aria-invalid={errors.a ? true : undefined}
             errorMessage={errors.a}
             {...field}
           />
@@ -85,7 +84,6 @@ export function CompareForm() {
               setB(e.target.value);
               setErrors((x) => ({ ...x, b: undefined }));
             }}
-            aria-invalid={errors.b ? true : undefined}
             errorMessage={errors.b}
             {...field}
           />

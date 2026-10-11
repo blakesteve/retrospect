@@ -54,7 +54,6 @@ export function UsernameForm() {
               setName(e.target.value);
               setInvalid(false);
             }}
-            aria-invalid={invalid || undefined}
             errorMessage={invalid ? "That doesn't look like a Last.fm username." : undefined}
             autoCapitalize="none"
             autoCorrect="off"

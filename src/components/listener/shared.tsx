@@ -86,7 +86,6 @@ export function CompareCard() {
                 setOther(e.target.value);
                 setError(null);
               }}
-              aria-invalid={error ? true : undefined}
               errorMessage={error ?? undefined}
               autoComplete="off"
             />

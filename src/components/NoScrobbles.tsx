@@ -93,9 +93,7 @@ export function NoScrobbles({
       </ol>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        {/* No `isLoading`: Roster turns it into `disabled`, and a disabled
-            button drops keyboard focus on every press. */}
-        <Button colorScheme="primary" variant="solid" size="lg" onClick={checkAgain}>
+        <Button colorScheme="primary" variant="solid" size="lg" onClick={checkAgain} isLoading={checking}>
           {checking ? "Checking\u2026" : "Check again"}
         </Button>
         <NextLink href="/" className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-gold">

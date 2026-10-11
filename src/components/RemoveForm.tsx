@@ -92,9 +92,7 @@ export function RemoveForm() {
           className="flex-1"
           inputClassName="placeholder:text-ink-3"
         />
-        {/* No `isLoading` either: Roster makes it `disabled`, which drops
-            focus mid-press. */}
-        <Button type="submit" colorScheme="error" variant="solid" size="lg">
+        <Button type="submit" colorScheme="error" variant="solid" size="lg" isLoading={sending}>
           {sending ? "Removing\u2026" : "Remove"}
         </Button>
       </div>
