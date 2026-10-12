@@ -90,10 +90,27 @@ for (const width of [375, 1280]) {
   });
 }
 
-test.describe("compare's sheet and states", () => {
-  test.use({ viewport: { width: 375, height: 812 } });
+/** The sheet's two words and its two sides' sentences, read in one frame: the
+    sheet may still be sliding in, which moves them all alike. */
+const sheetBoxes = (page: Page) =>
+  page.locator("[data-sheet-columns]").evaluate((columns) => {
+    const box = (el: Element) => el.getBoundingClientRect().toJSON() as DOMRect;
+    const sheet = columns.closest("[role=dialog]")!;
+    return {
+      words: [...sheet.querySelectorAll("[data-sheet-word]")].map(box),
+      sides: [...columns.querySelectorAll(":scope > section")].map(box),
+      width: box(columns).width,
+      // What a screen reader meets, in order: each listener's name, then their sentences.
+      order: [...columns.querySelectorAll(":scope h3, :scope > section")].map((el) => `${el.tagName}:${el.getAttribute("aria-label") ?? el.textContent}`),
+    };
+  });
 
-  test("a row whose words differ opens both answers side by side, as a URL; one whose words match doesn't", async ({ page }) => {
+test.describe("compare's question sheet on a phone (8.8)", () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test("a row whose words differ opens as a URL, the two words side by side and each side's sentences under its own name; one whose words match doesn't", async ({
+    page,
+  }) => {
     await openCompare(page);
     const all = await rows(page);
     const differ = all.find((r) => r.words[0] !== r.words[1])!;
@@ -104,23 +121,83 @@ test.describe("compare's sheet and states", () => {
     expect(same?.opens).toBe(false);
     // It shows that it opens something: a chevron (8.9).
     await expect(page.locator("[data-row='mercury'] button svg")).toHaveCount(1);
-    await page.locator("[data-row='mercury'] button").click();
+    await page.locator("[data-row='mercury'] button").tap();
     await expect(page).toHaveURL(/[?&]q=mercury(&|$)/);
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: "Question 1 of 12" })).toBeVisible();
     await expect(dialog).toContainText("Does Mercury retrograde change how often you go back to old favorites?");
-    const sample = dialog.getByRole("region", { name: "sample" });
-    const newcomer = dialog.getByRole("region", { name: "newcomer" });
+    // Named as typed, not as the label above them on a phone draws them (in capitals).
+    const sample = dialog.getByRole("region", { name: "sample", exact: true });
+    const newcomer = dialog.getByRole("region", { name: "newcomer", exact: true });
     await expect(sample).toContainText("No. While Mercury was retrograde");
     await expect(newcomer).toContainText("Too early.");
-    // Two columns, at 375 too (8.8).
-    // Measured together: the sheet may still be sliding in.
-    const [l, r] = await dialog.locator("[data-sheet-columns] > section").evaluateAll((cols) => cols.map((c) => c.getBoundingClientRect().toJSON()));
-    expect(r.x).toBeGreaterThan(l.x + 100);
-    expect(Math.abs(r.y - l.y)).toBeLessThan(2);
+    const { words, sides, width, order } = await sheetBoxes(page);
+    expect(order).toEqual(["H3:sample", "SECTION:sample", "H3:newcomer", "SECTION:newcomer"]);
+    // The two words side by side, under the two names, at 375 too.
+    expect(words).toHaveLength(2);
+    expect(Math.abs(words[1].y - words[0].y)).toBeLessThan(2);
+    expect(words[1].x).toBeGreaterThan(words[0].x + 100);
+    // Each side's sentences under the words, the sample's then the newcomer's, each the sheet's full width.
+    expect(sides).toHaveLength(2);
+    expect(sides[0].y).toBeGreaterThanOrEqual(words[0].y + words[0].height);
+    expect(sides[1].y).toBeGreaterThanOrEqual(sides[0].y + sides[0].height);
+    for (const side of sides) {
+      expect(Math.abs(side.x - words[0].x)).toBeLessThan(2);
+      expect(side.width).toBeGreaterThan(width - 2);
+    }
+    // Stacked, each says whose it is.
+    await expect(sample.getByText("sample", { exact: true })).toBeVisible();
+    await expect(newcomer.getByText("newcomer", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page).not.toHaveURL(/[?&]q=/);
   });
+});
+
+test.describe("compare's question sheet at 1280 (8.8)", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test("each side's sentences sit in two columns, each under its own name and word", async ({ page }) => {
+    await openCompare(page);
+    await page.locator("[data-row='mercury'] button").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Question 1 of 12" })).toBeVisible();
+    const { words, sides, order } = await sheetBoxes(page);
+    expect(order).toEqual(["H3:sample", "SECTION:sample", "H3:newcomer", "SECTION:newcomer"]);
+    expect(sides).toHaveLength(2);
+    expect(sides[0].y).toBeGreaterThanOrEqual(words[0].y + words[0].height);
+    expect(Math.abs(sides[1].y - sides[0].y)).toBeLessThan(2);
+    expect(sides[1].x).toBeGreaterThan(sides[0].x + 100);
+    for (const i of [0, 1]) expect(Math.abs(sides[i].x - words[i].x)).toBeLessThan(2);
+    // The name over each column is the one above its word; the regions keep it as their names.
+    const sample = dialog.getByRole("region", { name: "sample", exact: true });
+    await expect(sample).toContainText("No. While Mercury was retrograde");
+    await expect(sample.getByText("sample", { exact: true })).toHaveCount(1);
+    await expect(sample.getByText("sample", { exact: true })).toBeHidden();
+  });
+
+  test("a side still on its way holds its word's place at the pill's own height, and a side with no answer says so under its name", async ({ page }) => {
+    // A shared link straight to the sheet, with the newcomer still being checked.
+    await page.route("**/api/user/newcomer/answers?*", (r) => r.fulfill({ json: { status: "computing", done: 4, total: 12, questions: [] } }));
+    await page.goto("/vs/sample/newcomer?q=mercury");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("region", { name: "sample", exact: true })).toContainText("No. While Mercury was retrograde", { timeout: 60_000 });
+    // The word's skeleton is the pill's height, so the row doesn't move when the word lands.
+    const [pill, skeleton] = await dialog.locator("[data-sheet-word]").evaluateAll((cells) => cells.map((c) => c.lastElementChild!.getBoundingClientRect().height));
+    expect(skeleton).toBeCloseTo(pill, 1);
+
+    // A side that can't load: no region of sentences, and the reason right under its name.
+    await page.goto("/vs/sample/no!one?q=mercury");
+    await expect(dialog.getByRole("region", { name: "sample", exact: true })).toContainText("No. While Mercury was retrograde", { timeout: 60_000 });
+    await expect(dialog.locator("[data-sheet-columns] > section")).toHaveCount(1);
+    const missing = dialog.locator("[data-sheet-word]").nth(1);
+    await expect(missing).toContainText("No answer to show.");
+    const gap = await missing.evaluate((cell) => cell.lastElementChild!.getBoundingClientRect().top - cell.firstElementChild!.getBoundingClientRect().bottom);
+    expect(gap).toBeCloseTo(8, 0);
+  });
+});
+
+test.describe("compare's sheet and states", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
 
   test("a question that isn't one of the 12 opens nothing, says so, and leaves the URL", async ({ page }) => {
     await page.goto("/vs/sample/newcomer?q=pluto");

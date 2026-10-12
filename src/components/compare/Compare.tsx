@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, Input, Sheet, Spinner } from "@blakesteve/roster";
+import { Button, Card, Eyebrow, Input, Sheet, Spinner } from "@blakesteve/roster";
 import { QUESTIONS } from "@/lib/answers/questions";
 import type { AnswersPayload, ComputingPayload, QuestionPayload } from "@/lib/answers/payload";
 import { isValidUsername } from "@/lib/username";
@@ -216,9 +216,21 @@ export function Compare({ a, b }: { a: string; b: string }) {
         {sheetQ && (
           <div className="pb-4">
             <p className="font-display text-[22px] leading-snug text-ink">{sheetQ.question}</p>
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:gap-6" data-sheet-columns>
-              <SheetColumn name={a} q={qA(sheetQ.id)} side={sideA} />
-              <SheetColumn name={b} q={qB(sheetQ.id)} side={sideB} />
+            {/* The two words side by side at every width, in the first row;
+                each side's sentences under its own name, one side after the
+                other on a phone and in two columns from 640px (8.8). In the
+                page, each side's word comes just before its sentences, so a
+                screen reader hears one listener at a time. */}
+            <div className="mt-5 grid grid-cols-2 gap-x-4 sm:gap-x-6" data-sheet-columns>
+              <SheetWord name={a} q={qA(sheetQ.id)} side={sideA} className="col-start-1 row-start-1" />
+              <SheetSentences name={a} q={qA(sheetQ.id)} side={sideA} className="col-span-2 col-start-1 row-start-2 sm:col-span-1" />
+              <SheetWord name={b} q={qB(sheetQ.id)} side={sideB} className="col-start-2 row-start-1" />
+              <SheetSentences
+                name={b}
+                q={qB(sheetQ.id)}
+                side={sideB}
+                className="col-span-2 col-start-1 row-start-3 sm:col-span-1 sm:col-start-2 sm:row-start-2"
+              />
             </div>
           </div>
         )}
@@ -253,26 +265,45 @@ function Cell({ q, side }: { q: QuestionPayload | undefined; side: Side }) {
   );
 }
 
-/** One listener's answer in the sheet, or the skeleton while it's still on its way (8.7). */
-function SheetColumn({ name, q, side }: { name: string; q: QuestionPayload | undefined; side: Side }) {
+type SheetSide = { name: string; q: QuestionPayload | undefined; side: Side; className: string };
+
+/** One listener's name and word at the top of the sheet, the word's
+    skeleton (the pill's own height, so nothing moves when it lands) while
+    it's on its way (8.7), or, for a side with no answer, that it has none. */
+function SheetWord({ name, q, side, className }: SheetSide) {
   return (
-    <section aria-label={name} className="min-w-0">
+    <div className={`min-w-0 ${className}`} data-sheet-word>
       <h3 className="truncate font-display text-[19px] text-ink">{name}</h3>
-      {!q && side.state !== "error" ? (
-        <div className="mt-2 space-y-2" aria-hidden>
-          <div className="skeleton h-8 w-24 rounded-full" />
-          <div className="skeleton h-24" />
+      {q ? (
+        <div className="mt-2">
+          <AnswerPill word={q.word} />
         </div>
-      ) : q ? (
+      ) : side.state === "error" ? (
+        <p className="mt-2 text-ink-2">No answer to show.</p>
+      ) : (
+        <div className="skeleton mt-2 h-7 w-24 rounded-full" aria-hidden />
+      )}
+    </div>
+  );
+}
+
+/** One listener's sentences in the sheet, under the words. On a phone they
+    stack, so they carry the name; from 640px each sits under its own name
+    and word, and the name is the region's alone (8.8). */
+function SheetSentences({ name, q, side, className }: SheetSide) {
+  if (!q && side.state === "error") return null;
+  return (
+    <section aria-label={name} className={`mt-6 min-w-0 sm:mt-2 ${className}`}>
+      <Eyebrow as="p" aria-hidden size="sm" tone="default" className="mb-2 truncate sm:hidden">
+        {name}
+      </Eyebrow>
+      {q ? (
         <>
-          <div className="mt-2">
-            <AnswerPill word={q.word} />
-          </div>
-          <p className="mt-2 leading-relaxed text-ink">{q.phrases.wordLine}</p>
+          <p className="leading-relaxed text-ink">{q.phrases.wordLine}</p>
           {q.phrases.range && <p className="mt-2 text-[14px] leading-relaxed text-ink-2">{q.phrases.range}</p>}
         </>
       ) : (
-        <p className="mt-2 text-ink-2">No answer to show.</p>
+        <div className="skeleton h-24" aria-hidden />
       )}
     </section>
   );

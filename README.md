@@ -78,7 +78,8 @@ statistics is the answer.
   each side's words from its own stored answers. No winner and no score.
   Whatever stops one side (Too early, still reading, private, missing,
   failed) is said in that side's column, and a row whose words differ opens
-  both answers side by side.
+  both answers: the two words side by side, and each side's sentences under
+  its own name, one after the other on a phone.
 - **Share cards**: a song's sky, a night or a question's answer as an image,
   1200 by 630 for a link's unfurl and 1080 by 1920 to save. The share sheet
   previews it, saves it, copies the link (in the sharer's time zone) and

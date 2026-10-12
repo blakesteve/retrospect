@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -21,6 +21,19 @@
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Compare's question sheet on phones (12 October 2026)
+
+- **The two words side by side at every width, and each side's sentences
+  under its own name** (spec 8.8): one side after the other below 640px, and
+  in two columns from 640px, as before (with both answers in, pixel for
+  pixel). At 375px the sheet had squeezed each side's sentences into a column
+  about 160px wide. Each side's name comes just before its sentences for a
+  screen reader. Browser checks on a phone (touch, 375px) and at 1280px
+  measure both layouts, a side still loading, and a side with no answer.
+- **`agentRules: false`**: from Next.js 16.3, `next dev` writes an
+  `AGENTS.md` into the project when it detects a coding agent. This app opts
+  out.
 
 ### Next.js 16.4.0 and Roster 5.8.0 (11 October 2026)
 
@@ -41,6 +54,35 @@
   line heights.
 - **Left for their own review:** `sky-card` onto the shape tokens, and the
   hand-rolled skeletons onto `Skeleton`.
+
+### Whole periods for the four periodic questions (6 October 2026)
+
+- **Mercury retrograde, the full moon, the new moon and the strong Moon**
+  now turn each rotation on its own circle: whole periods of the condition
+  plus a seam drawn for that rotation, with the sky's own windows filling
+  the time past the history (spec 6.1a). On 6.1's rule their windows lined
+  up with themselves at offsets that shifted as a history grew, so a few
+  more days of plays could flip a word. Venus retrograde and the other seven
+  keep 6.1's rule.
+- **Measured on the final tree:** with the engine as shipped, 7.1% of 1,000
+  made-up histories with no sky effect get any Yes, against the 13% bound
+  (8.3% on 6.1's rule). Words that flipped after 1, 3 and 7 more days on the
+  four questions: 2, 4 and 4 on made-up histories (7, 16 and 22 before), and
+  none on a real listener's history (1, 1 and 3 before). A planted full-moon
+  effect still reads Yes.
+- **The analysis version went to 3**, so stored answers recompute in the
+  background, without "Checking". The made-up sample's full moon moved from
+  Maybe to Not clearly, and its reveal line with it.
+
+### Answers need a zone, and the null test in CI (5 October 2026)
+
+- **`/api/user/{name}/answers` without a `tz`** gets a 400 (`tz_required`)
+  and stores nothing. Before, it stored a UTC record no page asked for. A
+  zone that's named but refused still reads in UTC, as before.
+- **The null test runs in CI** (`.github/workflows/null-test.yml`): 1,000
+  made-up histories with no sky effect, failing when more than 13% get any
+  Yes. It runs on pull requests that touch the engine, the answer rule or
+  what they import, every Monday, and by hand.
 
 ### Compare and the share cards (4 October 2026)
 
