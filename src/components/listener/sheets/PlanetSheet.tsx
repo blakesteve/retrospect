@@ -87,7 +87,7 @@ export default function PlanetSheet({ value: raw, setTitle, setBusy, invalid, re
   useEffect(() => setBusy(data === null), [data, setBusy]);
 
   if (data === "failed") return <SheetFailed retry={retry} />;
-  if (!data) return <SheetSkeleton />;
+  if (!data) return <SheetSkeleton fill />;
 
   const t = data.tonight;
   const possessive = value === "venus" || value === "moon" ? "her" : value === "mercury" ? "its" : "his";

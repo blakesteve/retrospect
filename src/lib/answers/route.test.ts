@@ -203,6 +203,7 @@ describe("the answers route", () => {
     expect(await readAnswers("reading", "America/Chicago")).toBeNull();
   });
 
+  // Five zones, five computes: under 2s, but over 5s on a loaded machine (12 Oct 2026).
   it("keeps a record per zone, the newest few", async () => {
     await seed("travels");
     const zones = ["America/Chicago", "Europe/Berlin", "Asia/Tokyo", "Australia/Sydney", "America/Sao_Paulo"];
@@ -210,7 +211,7 @@ describe("the answers route", () => {
     expect(MAX_ZONES).toBe(4);
     expect(await readAnswers("travels", "America/Chicago")).toBeNull(); // the oldest went
     expect((await readAnswers("travels", "America/Sao_Paulo"))?.zone).toBe("America/Sao_Paulo");
-  });
+  }, 20_000);
 
   it("refuses a request without a zone, and stores nothing for it", async () => {
     await seed("nozone");

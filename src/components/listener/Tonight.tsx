@@ -9,8 +9,9 @@ import { HAS_SWITCHER, useListener, VIEW_HEADING } from "./Shell";
 import { getJson, type ComingUpItem, type Genres, type SkyNow } from "./api";
 import { nightDateText } from "./format";
 import { SheetLink, SongCard, WildCard } from "./cards";
-import { AnswerPill, Chevron, Icon, Row, RowFailed } from "./pieces";
+import { AnswerPill, Chevron, Icon, Row, RowFailed, SkySkeleton } from "./pieces";
 import { RailRow, WILD_PER_VIEW } from "./rail";
+import { ComingUpCardSkeleton, GenreCardSkeleton, RailSkeleton, RestOfTonightSkeleton, SongCardSkeleton, WheelSkeleton, WildCardSkeleton } from "./skeletons";
 import { CompareCard, QuestionsGrid } from "./shared";
 import { DIGNITY_COLOR, MoonDrawing, SkyWheel, WheelKey, planetGlyph, type SkyWheelProps } from "./sky";
 import { sheetFrom } from "./sheetUrl";
@@ -106,7 +107,7 @@ export function Tonight() {
       <ForYou rows={rows} onHighlight={setHover} />
       {/* "Surprise me" waits until the list has scrolled above it (8.4 item 7). */}
       <div ref={forYouEnd} aria-hidden className="h-px" />
-      <RestOfTonight sky={sky} rows={rows} />
+      <RestOfTonight sky={sky} loading={L.skyNow.state === "loading"} rows={rows} />
       <ComingUpRow onShow={show} />
       <History />
       <CompareCard />
@@ -189,7 +190,7 @@ function SkyRightNow({
         </h1>
       ) : (
         <h1 id={VIEW_HEADING} tabIndex={-1} className="mt-1 font-display text-[34px] leading-tight text-ink outline-none">
-          {L.skyNow.state === "loading" && <span className="skeleton inline-block h-9 w-56 align-middle" aria-hidden />}
+          {L.skyNow.state === "loading" && <SkySkeleton shape="line" size="inherit" width="14rem" />}
           <span className="sr-only">Tonight</span>
         </h1>
       )}
@@ -228,7 +229,7 @@ function SkyRightNow({
         ) : L.skyNow.state === "failed" ? (
           <RowFailed name="Tonight's sky" />
         ) : (
-          <div className="skeleton size-[280px] rounded-full min-[400px]:size-[300px]" aria-hidden />
+          WheelSkeleton
         )}
       </div>
       <p className="sr-only" aria-live="polite">
@@ -242,8 +243,8 @@ function SkyRightNow({
 
 /* ---- The rest of tonight's sky (8.4 item 4) ------------------------------- */
 
-function RestOfTonight({ sky, rows }: { sky: SkyNow | null; rows: ForYouRow[] }) {
-  if (!sky) return null;
+function RestOfTonight({ sky, loading, rows }: { sky: SkyNow | null; loading: boolean; rows: ForYouRow[] }) {
+  if (!sky) return loading ? RestOfTonightSkeleton : null;
   // A row above that names her sign leaves it off here (8.4 item 4).
   const moonLine = sky.moon ? (namesMoonSign(rows) ? (sky.moon.lineNoSign ?? sky.moon.line) : sky.moon.line) : null;
   return (
@@ -313,8 +314,11 @@ function ComingUpRow({ onShow }: { onShow: (c: ComingUpItem, button: HTMLElement
       </Row>
     );
   }
+  // Still on its way: the row's skeleton, since a sky almost always has
+  // something within 45 days.
+  if (!sky) return <RailRow id="coming" title="Coming up in your sky" loading={{ skeleton: <RailSkeleton card={ComingUpCardSkeleton} /> }} />;
   // Nothing in 45 days: the row is left out (8.4).
-  if (!sky || sky.comingUp.length === 0) return null;
+  if (sky.comingUp.length === 0) return null;
   return (
     <RailRow
       id="coming"
@@ -365,7 +369,7 @@ function History() {
           `${h.length} under the sky`
         ) : L.highlights.state === "loading" ? (
           <>
-            <span className="skeleton inline-block h-8 w-64 align-middle" aria-hidden />
+            <SkySkeleton shape="line" size="inherit" width="16rem" />
             <span className="sr-only">Your history under the sky</span>
           </>
         ) : (
@@ -391,10 +395,7 @@ function SongsRow() {
     L.songs.state === "failed" ? (
       <RowFailed name="The sky of your songs" />
     ) : !songs ? (
-      <div className="flex gap-3 overflow-hidden" aria-hidden>
-        <div className="skeleton h-72 w-60 shrink-0" />
-        <div className="skeleton h-72 w-60 shrink-0" />
-      </div>
+      <></>
     ) : songs.state === "too-few-plays" || row.length === 0 ? (
       <p className="text-ink-2">Your songs&rsquo; skies appear once a song has a few plays.</p>
     ) : null;
@@ -412,6 +413,8 @@ function SongsRow() {
         title="The sky of your songs"
         action={seeAll}
         rail={!state && !all ? { label: "Songs", noun: "songs", children: row.map((s) => <SongCard key={s.songId} song={s} />) } : undefined}
+        // Its heading holds "See all"'s place, which a history with songs has.
+        loading={L.songs.state === "loading" ? { skeleton: <RailSkeleton card={SongCardSkeleton} />, hold: true } : undefined}
       >
         {state ?? (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -437,11 +440,10 @@ function WildRow() {
       level={3}
       title="Your wildest nights"
       rail={wild.length > 0 ? { label: "Wild nights", noun: "wild nights", perView: WILD_PER_VIEW, children: wild.map((w) => <WildCard key={w.date} night={w} />) } : undefined}
+      loading={L.highlights.state === "loading" ? { skeleton: <RailSkeleton perView={WILD_PER_VIEW} card={WildCardSkeleton} /> } : undefined}
     >
       {L.highlights.state === "failed" ? (
         <RowFailed name="Your wildest nights" />
-      ) : !h ? (
-        <div className="skeleton h-80 w-72" aria-hidden />
       ) : (
         <p className="text-ink-2">No wild nights yet. The sky&rsquo;s been calm while you listened.</p>
       )}
@@ -501,12 +503,11 @@ function GenresRow() {
             }
           : undefined
       }
+      loading={g === null ? { skeleton: <RailSkeleton card={GenreCardSkeleton} /> } : undefined}
     >
       {g === "failed" || g?.status === "failed" ? (
         <p className="text-ink-2">Your genres didn&rsquo;t load. They&rsquo;ll try again on your next visit.</p>
-      ) : !g ? (
-        <div className="skeleton h-40 w-60" aria-hidden />
-      ) : g.status === "building" ? (
+      ) : !g ? null : g.status === "building" ? (
         <p className="text-ink-2" role="status">
           Reading the liner notes&hellip; {g.done.toLocaleString("en-US")} of {g.total.toLocaleString("en-US")} artists
         </p>

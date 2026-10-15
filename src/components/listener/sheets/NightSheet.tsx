@@ -10,7 +10,7 @@ import { comboUrl, historySpan, isLit, litSelection, nightsCombo, nightsYear, wi
 import { genreMix, nightTitle, nightWeekday, songIndex, tonightDate, utsAtLocal } from "../format";
 import { SheetLink } from "../cards";
 import { sheetFrom } from "../sheetUrl";
-import { AnswerPill, Chevron, Icon, SheetFailed, SheetSkeleton, Term } from "../pieces";
+import { AnswerPill, Chevron, Icon, SheetFailed, SheetSkeleton, SkySkeleton, Term } from "../pieces";
 import { DIGNITY_COLOR, SkyWheel, planetGlyph } from "../sky";
 import { Gallery, NightFacts, useNight, useSkyAt } from "./nightParts";
 
@@ -45,7 +45,7 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
   useEffect(() => setBusy(load.state === "loading"), [load.state, setBusy]);
 
   if (load.state === "failed") return <SheetFailed retry={retry} />;
-  if (load.state === "loading") return <SheetSkeleton />;
+  if (load.state === "loading") return <SheetSkeleton fill />;
   if (!night || (night.plays === 0 && night.date !== tonight)) return null;
 
   // The previous and next night with listening (or tonight), or, with Every
@@ -198,7 +198,7 @@ export default function NightSheet({ value, setTitle, setBusy, invalid, lead, re
         ) : sky ? (
           <SkyWheel bodies={sky.bodies} size={260} />
         ) : (
-          <div className="skeleton size-[260px] rounded-full" aria-hidden />
+          <SkySkeleton shape="block" height={260} width={260} radius="full" />
         )}
       </div>
       {/* The wheel shows one minute and the night lasts 24 hours, so every

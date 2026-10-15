@@ -46,7 +46,7 @@ export default function QuestionSheet({ value, setTitle, setBusy, invalid, retry
     return (
       <div>
         {head}
-        {L.answers.state === "failed" ? <SheetFailed retry={retry} /> : <SheetSkeleton />}
+        {L.answers.state === "failed" ? <SheetFailed retry={retry} /> : <SheetSkeleton fill />}
       </div>
     );
   }

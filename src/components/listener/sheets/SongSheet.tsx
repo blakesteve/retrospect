@@ -7,7 +7,7 @@ import { useListener } from "../Shell";
 import type { SheetBodyProps } from "../SheetHost";
 import { nightShort, songIndex, weekdayShortAt } from "../format";
 import { SheetLink } from "../cards";
-import { Icon, SheetFailed, SheetSkeleton } from "../pieces";
+import { Icon, SheetFailed, SheetSkeleton, SkySkeleton } from "../pieces";
 import { SkyWheel, WheelKey } from "../sky";
 import { Gallery, NightFacts, useNight, useSkyAt } from "./nightParts";
 
@@ -29,7 +29,7 @@ export default function SongSheet({ value, setTitle, setBusy, invalid, retry }: 
   useEffect(() => setBusy(song === undefined || night.state === "loading"), [song, night.state, setBusy]);
 
   if (L.songs.state === "failed") return <SheetFailed retry={retry} />;
-  if (song === undefined) return <SheetSkeleton />;
+  if (song === undefined) return <SheetSkeleton fill />;
   if (!song) return null;
 
   const answers = L.answers.state === "ready" && L.answers.data.status !== "computing" ? L.answers.data : null;
@@ -67,7 +67,7 @@ export default function SongSheet({ value, setTitle, setBusy, invalid, retry }: 
         ) : sky === "failed" ? (
           <SheetFailed retry={retry} />
         ) : (
-          <div className="skeleton size-[300px] rounded-full" aria-hidden />
+          <SkySkeleton shape="block" height={300} width={300} radius="full" />
         )}
       </div>
 
@@ -77,7 +77,7 @@ export default function SongSheet({ value, setTitle, setBusy, invalid, retry }: 
       ) : night.state === "failed" ? (
         <SheetFailed retry={retry} />
       ) : (
-        <div className="skeleton mt-3 h-40" aria-hidden />
+        <SkySkeleton shape="block" height="10rem" className="mt-3" />
       )}
 
       {since > 0 && (

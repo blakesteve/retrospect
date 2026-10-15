@@ -16,6 +16,7 @@ import { dropSheet, sheetDepth, sheetFrom, type SheetKind, type SheetRef } from 
 import { QUESTIONS } from "@/lib/answers/questions";
 import { isNightDate, songIndex, tonightDate } from "./format";
 import { SheetSkeleton } from "./pieces";
+import { ShareSheetSkeleton } from "./skeletons";
 import { outsideTheSky, planetSheetValue } from "@/lib/client/planetSheet";
 import { OUTSIDE_THE_SKY } from "@/components/invalidLink";
 
@@ -65,14 +66,17 @@ export interface SheetBodyProps {
   lead?: string;
 }
 
-const Skeleton = SheetSkeleton;
+/** Each body's skeleton while its code loads: the share sheet's its own, the
+    rest `SheetSkeleton`, as tall as the sheet for the bodies that fill it. */
+const Fill = () => <SheetSkeleton fill />;
+const Skeleton = () => <SheetSkeleton />;
 
 const BODIES: Record<SheetKind, React.ComponentType<SheetBodyProps>> = {
-  song: dynamic(() => import("./sheets/SongSheet"), { loading: Skeleton }),
-  night: dynamic(() => import("./sheets/NightSheet"), { loading: Skeleton }),
-  q: dynamic(() => import("./sheets/QuestionSheet"), { loading: Skeleton }),
-  planet: dynamic(() => import("./sheets/PlanetSheet"), { loading: Skeleton }),
-  share: dynamic(() => import("./sheets/ShareSheet"), { loading: Skeleton }),
+  song: dynamic(() => import("./sheets/SongSheet"), { loading: Fill }),
+  night: dynamic(() => import("./sheets/NightSheet"), { loading: Fill }),
+  q: dynamic(() => import("./sheets/QuestionSheet"), { loading: Fill }),
+  planet: dynamic(() => import("./sheets/PlanetSheet"), { loading: Fill }),
+  share: dynamic(() => import("./sheets/ShareSheet"), { loading: () => <ShareSheetSkeleton /> }),
   // The birth chart and its math (natal.ts, with SiderealTime and
   // SunPosition) load only when this opens (8.6 item 5, 13).
   chart: dynamic(() => import("./sheets/ChartSheet"), { loading: Skeleton }),

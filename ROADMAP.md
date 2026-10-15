@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -21,6 +21,34 @@
 - **Next, quality:** framework error pages a visitor can still reach
 
 ## Done
+
+### Skeletons on Roster's, and the dial's touch drag (15 October 2026)
+
+- **The dial follows a finger again** (ClickUp 86e3qqbhp). On a phone, a
+  touch drag that started on the Sky dial's drawing moved one step and froze:
+  the drawing's own lost capture bubbled up and ended the press. The dial
+  and Every night's year strip now let go only for their own capture.
+  `e2e/dial-touch.spec.ts` drags with a real touch through Chromium.
+- **Roster 5.8.0 to 5.11.0, and every loading skeleton on Roster's
+  `Skeleton`** in the app's look: the warm fill, a 50% pulse over 1.6s, 14px
+  corners on blocks and pills for text lines. Each one is drawn in the boxes
+  and line boxes of what it stands in for, and the rows' skeletons sit on
+  the row's own carousel. "Coming up in your sky" and the rest of tonight's
+  sky (the Moon's card and the seven) now have one: they used to appear
+  from nothing, and the rest of the sky pushed everything under it down
+  146px. The share sheet has its own, with the browser's Share button where
+  it has one. Measured on the made-up sample at 375 and 1280px wide (900px
+  tall), Every night, the question, planet, night, song and share sheets,
+  the landing's sheets but its answers sample, compare's sheet, the songs,
+  wild-night and coming-up rows and the rest of tonight's sky land with no
+  shift. `e2e/skeletons.spec.ts` holds
+  back the data for the ones whose size doesn't follow their text, and
+  checks nothing moves: the wild-night row, Every night's first month, the
+  question and planet sheets (which fill the sheet), compare's sheet, and
+  the share sheet at 1280px.
+- **Three unit tests get their own 20s timeout:** two in `nasa.test.ts` and
+  "keeps a record per zone" in `route.test.ts`. Each takes one to two
+  seconds, and went past the 5s default on a loaded machine.
 
 ### Compare's question sheet on phones (12 October 2026)
 
@@ -935,6 +963,30 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **Loading shifts that follow the data.** Measured 15 Oct on the made-up
+      sample: these still move when their content lands, because their size
+      depends on tonight's sky, the hour or the listener's text, not the
+      layout. Tonight's heading (one line or two at 375px, by weekday and
+      hour: +42.5px), "Tonight, for you" (its rows follow tonight's sky:
+      +39px at 375px, -50px at 1280px), the genre row (+11px, the tallest
+      card's text), the habits panel (-58px and +56px: how many archetypes,
+      and how their lines wrap) and compare's rows (+89px and +36px over 12
+      rows: the swing lines). Compare's "Checking" line also leaves when its
+      side lands (-45px), and on the Sky view something above "Your nights"
+      grows 27.5px. The landing's answers sample, which never fills the
+      sheet, opens on the short sheet skeleton and grows 197px. On a screen
+      1,300px tall, the question, planet and landing Tonight sheets don't
+      fill the sheet, so their full-height skeleton shrinks when they land
+      (-69, -215 and -319px at 1280px wide; before, they grew from 459px).
+      From 476 to 639px wide, the share sheet's words take fewer lines than
+      its skeleton draws (-20 to -50px). By reading the code, not measured:
+      Earth from NASA's camera lands inside the rest of tonight's sky on a
+      day there's a picture; a row of one or two cards at 1280px shows no
+      arrows, so its heading line is shorter than its skeleton's; the songs
+      row's skeleton draws a title of two lines under 640px and one above,
+      and a title can run to two either way; and the chart sheet keeps the
+      short sheet skeleton. Each needs either space held in the content or a
+      skeleton that knows more than the layout.
 - [ ] **A long name runs off the generic share card.** A `?u=` of about 25
       characters with no space overflows `/api/og`'s generic card: the name
       and the line under it run past the left edge, and the Moon off the

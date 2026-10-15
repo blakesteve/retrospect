@@ -90,6 +90,8 @@ describe("questions 7 and 8 against the log", () => {
   const answer = (kp: [string, number][], xflares: [string, string][] = []) =>
     computeAnswers("nasa-test", plays, "UTC", 0, nasaLogFrom(synthCompact(refreshed, { kp, xflares })));
 
+  // This and the storms' phrasing below each compute whole records: about a
+  // second, but over 5s on a loaded machine (12 Oct 2026), so they get longer.
   it("tests only whole nights inside NASA's coverage: from its first records to 3 days before its refresh", () => {
     const record = answer([
       ["2009-06-01T03:00:00Z", 7], // before DONKI's log starts
@@ -115,7 +117,7 @@ describe("questions 7 and 8 against the log", () => {
     // The same storm a week earlier is inside, and counts.
     const earlier = answer([["2026-09-20T12:00:00Z", 6]]).questions.find((q) => q.id === "storms")!;
     expect(earlier.events).toBe(1);
-  });
+  }, 20_000);
 
   it("shows no early read for a night outside NASA's coverage", () => {
     // A play every 2 minutes from Aug 1 to Sept 30, 2026 (720 a night, over
@@ -168,7 +170,7 @@ describe("questions 7 and 8 against the log", () => {
     expect(storms.events).toBeGreaterThan(200);
     expect(storms.eventsNote).toBeNull();
     expect(storms.nextStart).toBeNull();
-  });
+  }, 20_000);
 
   it("leaves both not checked without a log, and stamps none", () => {
     const record = computeAnswers("nasa-test", plays, "UTC", 0, null);

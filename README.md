@@ -178,8 +178,10 @@ birth chart that draws its planets and sends nothing. CI runs them in the
 
 Controls come from Roster, not hand-rolled markup: sheets are Roster's
 `Sheet`, rows its `Carousel`, the view switcher its `LiquidNav` (shown once
-there are two views), a page-level fatal state its `EmptyState`, and fields,
-buttons, pills, switches and disclosures its own. What Roster has nothing for
+there are two views), a page-level fatal state its `EmptyState`, loading
+states its `Skeleton` (in the app's warm fill and pulse, each drawn in the
+boxes of what it stands in for), and fields, buttons, pills, switches and
+disclosures its own. What Roster has nothing for
 is the app's own, in `src/components/listener/`: the sky wheel and its travel,
 the Moon, the jar, the meters' labels and the icon set. The pure pieces they
 use (which "for you" rows show, the fluke meter's fill, the wheel's path math,

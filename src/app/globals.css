@@ -434,20 +434,16 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   overflow: hidden;
 }
 
-@keyframes skeleton-pulse {
-  50% {
-    opacity: 0.5;
-  }
+/* Roster's Skeleton (5.10.0) in the app's look: a 50% fade over 1.6s and
+   14px corners, as the hand-drawn skeletons had. The fill is set on each
+   skeleton (`SkySkeleton`), never :root, because --roster-skeleton also
+   tints Progress tracks. Only skeleton blocks read the radius token. */
+:root {
+  --roster-skeleton-pulse-duration: 1.6s;
+  --roster-skeleton-radius: 14px;
 }
-.skeleton {
-  background: rgba(242, 239, 230, 0.06);
-  border-radius: 14px;
-  animation: skeleton-pulse 1.6s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    animation: none;
-  }
+.sky-skeleton {
+  --roster-skeleton: rgba(242, 239, 230, 0.06);
 }
 
 /* Every night's doors (spec 8.5, 10): 7 doors of at least 44px with 5px

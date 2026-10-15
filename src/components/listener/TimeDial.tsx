@@ -135,8 +135,11 @@ export function TimeDial({ count, value, at, label, valueText, keyStep, onDrag, 
       onPointerMove={move}
       onPointerUp={(e) => end(e, false)}
       onPointerCancel={(e) => end(e, true)}
-      // A capture lost without a pointerup (the browser took the touch) still lets go.
-      onLostPointerCapture={(e) => end(e, true)}
+      // The dial's own capture lost without a pointerup (the browser took the
+      // touch) still lets go. A capture its drawing gives up doesn't: a finger
+      // on the drawing is captured there, the dial takes the pointer mid-drag
+      // (above), and that loss bubbles up here (86e3qqbhp).
+      onLostPointerCapture={(e) => e.target === e.currentTarget && end(e, true)}
       className="relative select-none rounded-xl outline-offset-4"
       style={{ height: DIAL_TRACK_H + HANDLE_H, touchAction: "pan-y", cursor: disabled ? "default" : "pointer" }}
       data-dial

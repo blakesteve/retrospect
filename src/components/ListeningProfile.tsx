@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@blakesteve/roster";
 import { percentWords } from "@/lib/listener/words";
 import type { ProfileResponse } from "@/lib/profile";
-import { Row, RowFailed } from "./listener/pieces";
+import { Row, RowFailed, SkySkeleton } from "./listener/pieces";
 
 /* Tonight's "Your habits" row (spec 8.4): when you listen, how much and what
    you reach for, read from every play with noise excluded. The server writes
@@ -180,17 +180,50 @@ function MiniTile({ label, value, sub }: { label: string; value: string; sub: st
   );
 }
 
-/** Blocks the size of the panel while it loads; never a spinner over content. */
+/** The panel while it loads, in its own boxes and line boxes (`Habits`):
+    three archetype tiles, the four small tiles, the hour bars and their
+    labels. Never a spinner over content. */
 function HabitsSkeleton() {
   return (
     <div aria-hidden="true" className={`${PANEL} border p-5`}>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-[92px] rounded-md bg-surface-2 motion-safe:animate-pulse" />
+      <div className="grid sm:grid-cols-3 gap-3 mb-5">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rounded-md border border-transparent bg-surface-2 p-3">
+            <p className="text-sm">
+              <SkySkeleton shape="line" size="inherit" width="50%" />
+            </p>
+            <p className="text-xs mt-1.5 leading-relaxed">
+              <SkySkeleton shape="line" size="inherit" lines={2} />
+            </p>
+          </div>
         ))}
       </div>
-      <div className="h-14 rounded-md bg-surface-2 motion-safe:animate-pulse" />
-      <div className="h-[15px] mt-1" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-md border border-transparent bg-surface-2 p-3">
+            {/* Centered, as the tiles' text is: the bar takes its wrapper's width. */}
+            <p className="text-[10px]">
+              <span className="mx-auto block w-3/5">
+                <SkySkeleton shape="line" size="inherit" />
+              </span>
+            </p>
+            <p className="font-display text-lg mt-1">
+              <span className="mx-auto block w-1/2">
+                <SkySkeleton shape="line" size="inherit" />
+              </span>
+            </p>
+            <p className="text-[11px] mt-0.5">
+              <span className="mx-auto block w-4/5">
+                <SkySkeleton shape="line" size="inherit" />
+              </span>
+            </p>
+          </div>
+        ))}
+      </div>
+      <SkySkeleton shape="block" height={56} radius="md" />
+      <p className="text-[10px] mt-1">
+        <SkySkeleton shape="line" size="inherit" />
+      </p>
     </div>
   );
 }

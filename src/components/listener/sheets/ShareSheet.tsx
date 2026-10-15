@@ -7,7 +7,8 @@ import { cardImage, cardRef, nightSays, questionSays, shareLink, songSays } from
 import { useListener } from "../Shell";
 import type { SheetBodyProps } from "../SheetHost";
 import { nightDateText, songIndex } from "../format";
-import { Icon, SheetFailed, SheetSkeleton } from "../pieces";
+import { Icon, SheetFailed } from "../pieces";
+import { ShareSheetSkeleton } from "../skeletons";
 import { useNight } from "./nightParts";
 
 /* The share sheet (spec 8.7.5): a preview of the card (9:16), what it says
@@ -65,7 +66,7 @@ export default function ShareSheet({ value, setTitle, setBusy, invalid, retry }:
   }, [missing]);
   useEffect(() => setBusy(loading), [loading, setBusy]);
   if (failed) return <SheetFailed retry={retry} />;
-  if (loading || missing || !ref) return <SheetSkeleton />;
+  if (loading || missing || !ref) return <ShareSheetSkeleton />;
 
   const link = shareLink(window.location.origin, L.username, ref, L.zone);
   const tall = cardImage(L.username, ref, L.zone, "tall");
