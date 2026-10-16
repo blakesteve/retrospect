@@ -41,7 +41,7 @@ import { SheetLink } from "./cards";
 import { ForYou } from "./forYou";
 import { CompareCard, QuestionsGrid } from "./shared";
 import { prefersReducedMotion, usePauseWhenHidden } from "./media";
-import { RowFailed } from "./pieces";
+import { RowFailed, SkySkeleton } from "./pieces";
 import { sheetFrom } from "./sheetUrl";
 
 /* Sky (spec 8.6): the wheel with your songs as stars, and a dial that moves
@@ -699,7 +699,7 @@ export function SkyView() {
                   <p className="truncate text-[13.5px] text-ink-2">{valueText(at).replace(/^[^:]*: /, "")}</p>
                 </>
               ) : (
-                <div className="skeleton h-10 w-2/3" />
+                <SkySkeleton shape="block" height={40} width="66%" />
               )}
             </div>
             <TimeDial
@@ -856,7 +856,7 @@ function DialTrack({
     );
     return at.filter((e) => keep.has(e.x));
   }, [data, n, width]);
-  if (!data) return <div className="skeleton h-full w-full rounded-lg" />;
+  if (!data) return <SkySkeleton shape="block" height="100%" radius="lg" />;
   return (
     <svg width={width} height={76} viewBox={`0 0 ${width} 76`} aria-hidden className="block overflow-visible">
       <defs>

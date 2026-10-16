@@ -8,6 +8,7 @@ import { useListener } from "./Shell";
 import type { Planet, QuestionPayload } from "./api";
 import { SheetLink } from "./cards";
 import { AnswerPill, Chevron, Icon, RowFailed } from "./pieces";
+import { ForYouSkeleton } from "./skeletons";
 import { DIGNITY_COLOR, planetGlyph } from "./sky";
 import type { SheetRef } from "./sheetUrl";
 
@@ -181,7 +182,7 @@ export function ForYou({ rows, onHighlight }: { rows?: ForYouRow[]; onHighlight?
   }, [litKey, onHighlight]);
 
   return (
-    <section aria-labelledby="foryou-h" className="mt-6">
+    <section aria-labelledby="foryou-h" aria-busy={L.skyNow.state === "loading" || undefined} className="mt-6">
       <h2 id="foryou-h" className="font-display text-[25px] leading-tight text-ink">
         Tonight, for you
       </h2>
@@ -190,11 +191,7 @@ export function ForYou({ rows, onHighlight }: { rows?: ForYouRow[]; onHighlight?
           <RowFailed name="Tonight, for you" />
         </div>
       ) : !sky ? (
-        <div className="mt-3 space-y-2" aria-hidden>
-          <div className="skeleton h-16" />
-          <div className="skeleton h-16" />
-          <div className="skeleton h-16" />
-        </div>
+        <ForYouSkeleton />
       ) : (
         <Card padding="none" className="sky-card mt-3 p-1">
           <ul className="divide-y divide-[var(--line)]">

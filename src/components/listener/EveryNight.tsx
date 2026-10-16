@@ -41,7 +41,7 @@ import { tonightDate } from "./format";
 import { comboUrl, isLit, litSelection, nightsCombo, nightsYear, withCounts, yearUrl as cacheYearUrl, type NightsYear } from "./nightsCache";
 import { replaceParams } from "./sheetUrl";
 import { SheetLink } from "./sheetLink";
-import { Chevron, Icon, type IconName } from "./pieces";
+import { Chevron, Icon, type IconName, SkySkeleton } from "./pieces";
 import { prefersReducedMotion, useMedia } from "./media";
 import { CompareCard, QuestionsGrid } from "./shared";
 
@@ -459,7 +459,7 @@ export function EveryNight() {
         {loadingBar ? (
           <div className="flex gap-1.5 overflow-hidden px-4 py-1" aria-hidden>
             {[0, 1, 2, 3].map((i) => (
-              <span key={i} className="skeleton h-11 w-28 shrink-0 rounded-full" />
+              <SkySkeleton key={i} shape="block" height={44} width={112} radius="full" className="shrink-0" />
             ))}
           </div>
         ) : (
@@ -591,7 +591,7 @@ export function EveryNight() {
               </Button>
             </p>
           ) : (
-            <span className="skeleton block h-7 w-3/4" aria-hidden />
+            <SkySkeleton shape="block" height={28} width="75%" />
           )}
           <div className="mt-1 flex items-center justify-end gap-2">
             <Button size="lg" variant="outline" startIcon={<Icon name="shuffle" />} onClick={() => void randomDoor()} disabled={!litMonths || !litTotal}>
@@ -759,7 +759,7 @@ function YearStrip({
     <div className="grid grid-cols-[88px_1fr] items-center gap-2 px-4">
       {/* One line each, whatever the month: two would push the bar past 112px (10). */}
       <p className="font-display text-[17px] leading-tight whitespace-nowrap text-ink" aria-hidden>
-        {loading ? <span className="skeleton block h-5 w-20" /> : monthShort(current)}
+        {loading ? <SkySkeleton shape="line" size="inherit" width={80} /> : monthShort(current)}
         {lit && <small className="block font-body text-[11px] text-ink-2">{(lit[current] ?? 0).toLocaleString("en-US")} lit</small>}
       </p>
       <div
@@ -774,9 +774,11 @@ function YearStrip({
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
-        onLostPointerCapture={() => {
-          // However a drag ends (canceled, or its capture lost), it lets go: what's near loads.
-          if (!dragging.current) return;
+        onLostPointerCapture={(e) => {
+          // However a drag ends (canceled, or its capture lost), it lets go:
+          // what's near loads. Only the strip's own capture: one a child gives
+          // up bubbles here too, as TimeDial's did (86e3qqbhp).
+          if (e.target !== e.currentTarget || !dragging.current) return;
           dragging.current = false;
           onSeek(current, true);
         }}
@@ -885,7 +887,7 @@ const MonthBlock = memo(function MonthBlock({
               "No listening"
             )
           ) : (
-            <span className="skeleton inline-block h-3.5 w-28 align-middle" aria-hidden />
+            <SkySkeleton shape="line" size="inherit" width="7rem" className="ml-auto" />
           )}
         </p>
       </div>
@@ -919,7 +921,9 @@ const MonthBlock = memo(function MonthBlock({
         </div>
       ) : (
         // The month's exact height, so nothing jumps when its doors arrive.
-        <div className={`door-ph ${near ? "skeleton" : ""}`} style={{ "--rows": rows } as CSSProperties} aria-hidden />
+        <div className="door-ph" style={{ "--rows": rows } as CSSProperties} aria-hidden>
+          {near && <SkySkeleton shape="block" height="100%" className="[--roster-skeleton-radius:9px]" />}
+        </div>
       )}
     </section>
   );

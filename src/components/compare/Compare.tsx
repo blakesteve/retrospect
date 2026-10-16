@@ -8,7 +8,7 @@ import type { AnswersPayload, ComputingPayload, QuestionPayload } from "@/lib/an
 import { isValidUsername } from "@/lib/username";
 import { apiError, toVisitorErrorCode, visitorError, visitorErrorCodeOf, type VisitorErrorCode } from "@/lib/visitorErrors";
 import { sayInvalidLink } from "@/components/invalidLink";
-import { AnswerPill, Chevron } from "@/components/listener/pieces";
+import { AnswerPill, Chevron, SkyRegion, SkySkeleton } from "@/components/listener/pieces";
 import { closeSheets, dropSheet, finishClose, openSheet } from "@/components/listener/sheetUrl";
 
 /* Compare (spec 8.8): two listeners on the same 12 questions, each side's
@@ -255,13 +255,30 @@ function ColumnHead({ name, side }: { name: string; side: Side }) {
 /** One side's answer: its word, and under it the swing, or why there's no word yet. */
 function Cell({ q, side }: { q: QuestionPayload | undefined; side: Side }) {
   if (side.state === "error") return <div />;
-  if (!q) return <div className="skeleton h-12 rounded-lg" aria-hidden />;
-  const under = q.status === "tested" && !q.updating ? q.phrases.swing : q.phrases.tonightLine;
+  const under = q ? (q.status === "tested" && !q.updating ? q.phrases.swing : q.phrases.tonightLine) : null;
   return (
-    <div data-cell data-word={q.word}>
-      <AnswerPill word={q.word} />
-      {under && <p className="mt-1.5 text-[13px] leading-snug text-ink-2">{under}</p>}
-    </div>
+    <SkyRegion
+      loading={!q}
+      skeleton={
+        <>
+          <SkySkeleton shape="block" height={28} width={96} radius="full" />
+          {/* The swing's line, and a second in a phone's narrower column. */}
+          <p className="mt-1.5 text-[13px] leading-snug">
+            <SkySkeleton shape="line" size="inherit" width="85%" />
+            <span className="block sm:hidden">
+              <SkySkeleton shape="line" size="inherit" width="55%" />
+            </span>
+          </p>
+        </>
+      }
+    >
+      {q && (
+        <div data-cell data-word={q.word}>
+          <AnswerPill word={q.word} />
+          {under && <p className="mt-1.5 text-[13px] leading-snug text-ink-2">{under}</p>}
+        </div>
+      )}
+    </SkyRegion>
   );
 }
 
@@ -281,7 +298,9 @@ function SheetWord({ name, q, side, className }: SheetSide) {
       ) : side.state === "error" ? (
         <p className="mt-2 text-ink-2">No answer to show.</p>
       ) : (
-        <div className="skeleton mt-2 h-7 w-24 rounded-full" aria-hidden />
+        <div className="mt-2" aria-hidden>
+          <SkySkeleton shape="block" height={28} width={96} radius="full" />
+        </div>
       )}
     </div>
   );
@@ -297,14 +316,21 @@ function SheetSentences({ name, q, side, className }: SheetSide) {
       <Eyebrow as="p" aria-hidden size="sm" tone="default" className="mb-2 truncate sm:hidden">
         {name}
       </Eyebrow>
-      {q ? (
-        <>
-          <p className="leading-relaxed text-ink">{q.phrases.wordLine}</p>
-          {q.phrases.range && <p className="mt-2 text-[14px] leading-relaxed text-ink-2">{q.phrases.range}</p>}
-        </>
-      ) : (
-        <div className="skeleton h-24" aria-hidden />
-      )}
+      <SkyRegion
+        loading={!q}
+        skeleton={
+          <p className="leading-relaxed">
+            <SkySkeleton shape="line" size="inherit" lines={3} />
+          </p>
+        }
+      >
+        {q && (
+          <>
+            <p className="leading-relaxed text-ink">{q.phrases.wordLine}</p>
+            {q.phrases.range && <p className="mt-2 text-[14px] leading-relaxed text-ink-2">{q.phrases.range}</p>}
+          </>
+        )}
+      </SkyRegion>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { Button, Pill, SegmentBar } from "@blakesteve/roster";
+import { Button, Pill, SegmentBar, Skeleton, SkeletonRegion, type SkeletonProps } from "@blakesteve/roster";
 import type { AnswerWord } from "@/lib/answers/words";
 import { FLUKE_CAPTION, FLUKE_LABELS, flukeFill } from "@/lib/client/fluke";
 import { Jar, WORD_COLOR } from "./jar";
@@ -287,12 +287,38 @@ export function SheetFailed({ retry }: { retry: () => void }) {
   );
 }
 
-/** A sheet still loading (8.7): a skeleton under the header. */
-export const SheetSkeleton = () => (
+/** Roster's Skeleton in Retrospect's look: the warm fill, set on the
+    skeleton itself (`.sky-skeleton`) so nothing it stands in for inherits it,
+    and the pulse at the app's pace (the tokens in globals.css). A text line's
+    bar is a pill, as 14px corners make of any bar under 28px tall. */
+export const SkySkeleton = ({ className = "", radius, ...props }: Omit<SkeletonProps, "animation">) => (
+  <Skeleton animation="pulse" radius={radius ?? ((props.shape ?? "line") === "line" ? "full" : undefined)} className={`sky-skeleton ${className}`} {...props} />
+);
+
+/** The box a skeleton stands in for (Roster's SkeletonRegion): busy while
+    loading, and the content lands in the same box, so a skeleton drawn at the
+    content's size means nothing moves. Silent, as the app's skeletons always
+    were: the page's own lines say what's still on its way (11). */
+export function SkyRegion({ loading, skeleton, children, className }: { loading: boolean; skeleton: ReactNode; children?: ReactNode; className?: string }) {
+  return (
+    <SkeletonRegion loading={loading} skeleton={skeleton} animation="pulse" announce={false} className={className}>
+      {children}
+    </SkeletonRegion>
+  );
+}
+
+/** A sheet still loading (8.7): a skeleton under the header. With `fill`, for
+    the bodies that fill the sheet on a phone and a laptop (a question, a
+    planet, a night, a song and the landing's Tonight, on the sample at 375
+    and 1280px wide, 900px tall), it's as tall as the sheet can be, so the
+    sheet opens at the height it lands at. The chart and the landing's
+    answers keep the short one; the share sheet has its own
+    (`ShareSheetSkeleton`). */
+export const SheetSkeleton = ({ fill = false }: { fill?: boolean }) => (
   <div className="space-y-3 py-2" aria-hidden>
-    <div className="skeleton h-40" />
-    <div className="skeleton h-6 w-2/3" />
-    <div className="skeleton h-24" />
+    <SkySkeleton shape="block" height="10rem" />
+    <SkySkeleton shape="block" height="1.5rem" width="66%" />
+    <SkySkeleton shape="block" height={fill ? "100vh" : "6rem"} />
   </div>
 );
 

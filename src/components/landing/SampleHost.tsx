@@ -36,14 +36,18 @@ export interface SampleHostProps {
 type Open = SheetRef | { kind: "sample"; value: string };
 type BodyKind = Exclude<SheetRef["kind"], "share" | "chart"> | SampleSheet;
 
-const Skeleton = SheetSkeleton;
+/** Each body's skeleton while its sample or its code loads: as tall as the
+    sheet for the bodies that fill it (`SheetSkeleton`). */
+const FILLS = new Set<BodyKind>(["song", "night", "q", "planet", "tonight"]);
+const Fill = () => <SheetSkeleton fill />;
+const Skeleton = () => <SheetSkeleton />;
 
 const BODIES: Record<BodyKind, ComponentType<SheetBodyProps>> = {
-  song: dynamic(() => import("@/components/listener/sheets/SongSheet"), { loading: Skeleton }),
-  night: dynamic(() => import("@/components/listener/sheets/NightSheet"), { loading: Skeleton }),
-  q: dynamic(() => import("@/components/listener/sheets/QuestionSheet"), { loading: Skeleton }),
-  planet: dynamic(() => import("@/components/listener/sheets/PlanetSheet"), { loading: Skeleton }),
-  tonight: dynamic(() => import("./TonightSample"), { loading: Skeleton }),
+  song: dynamic(() => import("@/components/listener/sheets/SongSheet"), { loading: Fill }),
+  night: dynamic(() => import("@/components/listener/sheets/NightSheet"), { loading: Fill }),
+  q: dynamic(() => import("@/components/listener/sheets/QuestionSheet"), { loading: Fill }),
+  planet: dynamic(() => import("@/components/listener/sheets/PlanetSheet"), { loading: Fill }),
+  tonight: dynamic(() => import("./TonightSample"), { loading: Fill }),
   answers: dynamic(() => import("./AnswersSample"), { loading: Skeleton }),
 };
 
@@ -305,7 +309,7 @@ export default function SampleHost({ onInvalid, onValid }: SampleHostProps) {
                 }}
               />
             ) : (
-              <Skeleton />
+              <SheetSkeleton fill={FILLS.has(shown.kind)} />
             )}
           </>
         )}
