@@ -1,6 +1,7 @@
 /**
- * Fails the build if Roster's barrel got pinned as a client reference, or if
- * emitted client JS or CSS crossed its ceiling.
+ * Fails the build if Roster's barrel got pinned as a client reference, if
+ * emitted client JS or the app's own CSS crossed its ceiling, or if Roster's
+ * stylesheets moved off their pinned size.
  *
  * Ported from blakeb-dev, which took five defects to get right: three false
  * passes caught in review and two failed deploys. The comments below are kept
@@ -47,7 +48,9 @@
  * JS emission can not touch a single precompiled sheet. So the JS ceiling is
  * blind to the whole 85%, and the next queued Roster change is to that
  * stylesheet, across all six apps. A JS-only guard would watch the half that
- * already got fixed and miss the half that did not.
+ * already got fixed and miss the half that did not. Since 16 October 2026 the
+ * CSS is two numbers, Roster's sheets, pinned, and the app's own, under a
+ * ceiling (see the ceilings).
  *
  * Three things this gets right on purpose, each of which has been got wrong
  * once already:
@@ -163,9 +166,69 @@ const PKG = "@blakesteve/roster";
  * then added 1,007 bytes of JS and 6,653 of CSS, 6,482 of them Roster's own
  * stylesheet (148,466 to 154,948), which put CSS at 199,707, 99.4% of its
  * ceiling. Both now carry about the slack they were set with: 4.8% and 4.7%.
+ *
+ * Split 16 October 2026: the one CSS ceiling becomes two numbers, Roster's
+ * stylesheets and the app's own CSS, measured on clean builds of main at
+ * 5b9ec62 (Roster 5.8.0) and of bb/skeletons over it (5.11.0). Four times the
+ * one ceiling went up to restore its slack, whichever part had grown:
+ * Roster's sheet (3,890 bytes on 2 October, 2,150 on 3 October, 6,482 on 11
+ * October) or the app's own (the redesign's views). One number couldn't say
+ * which part was over, so a Roster bump spent the app's headroom and the next
+ * raise gave it back. The two parts cost the app for different reasons, so
+ * each has its own:
+ *
+ * ROSTER_CSS_BYTES is every Roster stylesheet the app's CSS imports (today
+ * `style.css` and `tokens.css`), each found through the installed package's
+ * `exports` and read off disk, pinned at exactly 5.11.0's size. It is a
+ * dependency's fixed cost: precompiled sheets the app takes whole. About a
+ * third of 5.11.0's `style.css`, 50,722 bytes (31%), styles `rst:` classes
+ * written nowhere in this app's client JS, so the app is unlikely ever to
+ * render them. That's an estimate: it keeps a rule if any one of its
+ * selectors could match, and a class Roster built at run time would lower
+ * it. The lever for that is in Roster, not here. A pin, not a ceiling: the
+ * sheets change only with a Roster bump or a change to which of them
+ * globals.css imports, and either is a commit that should say what it costs,
+ * so any change, up or down, fails until it is restated there with the
+ * delta (5.8.0 to 5.11.0: 157,738 to 165,941, +8,203, all of it
+ * `style.css`). A sheet that shrank and wasn't restated would leave slack
+ * nobody chose.
+ *
+ * APP_CSS_CEILING is the emitted CSS less those sheets: Tailwind's base and
+ * theme, the utilities the markup uses (28,068 bytes) and the app's own
+ * rules in globals.css (its palette over Roster's tokens, the cards, the
+ * wheel, the Moon, the jar, the doors and their keyframes: about 8,400 in a
+ * build without Roster's imports). It grew with the redesign and has held
+ * since it finished: less `style.css` alone, as this guard measured it until
+ * now, 44,697 on 4 October and 45,146 on main at 5b9ec62; less both sheets,
+ * 42,356 on main and 41,982 on bb/skeletons, whose skeletons came to -374
+ * net. Every surface the spec names is built, and what's left is fixes, which
+ * cost tens to hundreds of bytes (+23 for the 4 October rulings, -374 for
+ * this branch), and a pass on the Sky view's look cost 989 on 3 October. So
+ * the app should cost what it does now plus room for about one change that
+ * size: 43,000 leaves 1,018. A new surface raises it in its own commit,
+ * saying what it adds.
+ *
+ * The subtraction puts on Roster's side what both sides declare. Tailwind
+ * emits `@property` rules and a fallback layer for the utilities the app
+ * uses, and 5.11.0's sheet carries the same ones, so the emitted CSS has them
+ * once: a build with both of Roster's imports removed emits 47,381 bytes for
+ * the app alone, 5,399 more than the subtraction, and Tailwind's own
+ * `@property` rules and fallback layer are 5,394 of that. So a Roster release
+ * that dropped those declarations would move about 5,400 bytes onto the
+ * app's side with no change here; if the app's number jumps with a bump,
+ * look there first.
+ *
+ * Tailwind reads every file it isn't told to skip, the e2e specs included,
+ * so a scratch spec left in a copy changes these bytes (by 46 and 107 here):
+ * measure a clean tree.
+ *
+ * On the wire, the 207,923 bytes are 31,241 gzipped at level 9 (Roster's
+ * `style.css` alone 21,100), and the stylesheet blocks rendering on every
+ * route.
  */
 const CLIENT_JS_CEILING = 1_436_000;
-const CLIENT_CSS_CEILING = 209_000;
+const ROSTER_CSS_BYTES = 165_941;
+const APP_CSS_CEILING = 43_000;
 
 const problems = [];
 
@@ -180,6 +243,8 @@ function walk(dir) {
 }
 
 function fail(message) {
+  // Whatever was already found is said too, not lost to the exit.
+  if (problems.length > 0) console.error(`[check-bundle-shape] found first:\n\n${problems.join("\n\n")}\n`);
   console.error(`[check-bundle-shape] ${message}`);
   process.exit(1);
 }
@@ -494,13 +559,16 @@ if (barrelPins.length > 0) {
 /* ---- 3. Size budgets ----------------------------------------------------- */
 
 const emitted = walk(staticDir);
+const totals = {};
 
 for (const [label, extension, ceiling] of [
   ["JS", ".js", CLIENT_JS_CEILING],
-  ["CSS", ".css", CLIENT_CSS_CEILING],
+  // CSS's two ceilings are below, once its floor holds.
+  ["CSS", ".css", Infinity],
 ]) {
   const files = emitted.filter((file) => file.endsWith(extension));
   const totalBytes = files.reduce((sum, file) => sum + statSync(file).size, 0);
+  totals[label] = totalBytes;
 
   /* A ceiling with no floor under it is satisfied by an empty build.
      Not hypothetical, and not a fresh worry: the comment on the ceilings
@@ -540,6 +608,90 @@ for (const [label, extension, ceiling] of [
   }
 }
 
+/* CSS, in its two parts (the ceilings' comment says why). Roster's part is
+   every Roster stylesheet the app's own CSS imports, each found through the
+   installed package's `exports`, as the barrel is, never hardcoded: an entry
+   is a string or a condition map. */
+const rosterImport = new RegExp(String.raw`@import\s+(?:url\()?["']${PKG.replace(/[/.]/g, "\\$&")}/([^"')]+)["']`, "g");
+const importedSheets = new Set();
+for (const file of walk(join(root, "src")).filter((path) => path.endsWith(".css"))) {
+  for (const [, subpath] of readFileSync(file, "utf8").matchAll(rosterImport)) importedSheets.add(subpath);
+}
+if (importedSheets.size === 0) {
+  fail(
+    `found no ${PKG} stylesheet import in src/'s CSS.\n` +
+      `  The app imports Roster's sheets, so finding none means this scan is ` +
+      `broken, and\n  without them the app's own CSS can not be told from Roster's.`,
+  );
+}
+const sheetFiles = [];
+for (const subpath of [...importedSheets].sort()) {
+  const paths = new Set();
+  const collect = (value) => {
+    if (typeof value === "string") paths.add(value.replace(/^\.\//, ""));
+    else if (Array.isArray(value)) value.forEach(collect);
+    else if (value && typeof value === "object") Object.values(value).forEach(collect);
+  };
+  collect(pkg.exports?.[`./${subpath}`]);
+  const css = [...paths].filter((path) => path.endsWith(".css"));
+  if (css.length !== 1) {
+    fail(
+      `could not derive the file behind "${PKG}/${subpath}" from its exports ` +
+        `(found ${css.length ? css.join(", ") : "none"}).\n` +
+        `  Without it the app's own CSS can not be told from Roster's, so this ` +
+        `stops.`,
+    );
+  }
+  const file = join(root, "node_modules", PKG, css[0]);
+  if (!existsSync(file)) fail(`${PKG}/${subpath} is missing: ${file}.`);
+  sheetFiles.push({ subpath, bytes: statSync(file).size });
+}
+const rosterCss = sheetFiles.reduce((total, sheet) => total + sheet.bytes, 0);
+const sheetList = sheetFiles.map((sheet) => `${sheet.subpath} ${sheet.bytes.toLocaleString("en-US")}`).join(", ");
+const appCss = totals.CSS - rosterCss;
+
+/* Each sheet is imported whole, so the emitted CSS is bigger than they are.
+   Not bigger means they aren't in this build (an import gone, or the
+   stylesheet moved somewhere this check is not looking), and the subtraction
+   below would grade a number that means nothing. */
+if (appCss <= 0) {
+  fail(
+    `the emitted CSS is ${totals.CSS.toLocaleString("en-US")} bytes, no more ` +
+      `than ${PKG}'s stylesheets alone (${sheetList}).\n` +
+      `  They are not in this build, so the app's own CSS can not be read.`,
+  );
+}
+
+if (rosterCss !== ROSTER_CSS_BYTES) {
+  const delta = rosterCss - ROSTER_CSS_BYTES;
+  problems.push(
+    `${PKG}'s stylesheets are ${rosterCss.toLocaleString("en-US")} bytes ` +
+      `(${sheetList}; ${pkg.version}), ${delta > 0 ? "over" : "under"} the ` +
+      `pinned ${ROSTER_CSS_BYTES.toLocaleString("en-US")} by ` +
+      `${Math.abs(delta).toLocaleString("en-US")}.\n\n` +
+      (delta > 0
+        ? `  Only a Roster bump, or a change to which of its sheets globals.css ` +
+          `imports, changes\n  them. Decide the app takes the growth, then ` +
+          `restate ROSTER_CSS_BYTES in that\n  commit, with the delta.`
+        : `  Lower ROSTER_CSS_BYTES to match in the commit that changed them, ` +
+          `with the delta,\n  so the room doesn't become slack nobody chose.`),
+  );
+}
+
+if (appCss > APP_CSS_CEILING) {
+  const over = appCss - APP_CSS_CEILING;
+  problems.push(
+    `the app's own CSS is ${appCss.toLocaleString("en-US")} bytes (the emitted ` +
+      `${totals.CSS.toLocaleString("en-US")} less ${PKG}'s ` +
+      `${rosterCss.toLocaleString("en-US")}),\n  over its ` +
+      `${APP_CSS_CEILING.toLocaleString("en-US")} ceiling by ` +
+      `${over.toLocaleString("en-US")}.\n\n` +
+      `  Find what grew. A new surface raises it in its own commit, saying what ` +
+      `it adds.\n  If it grew with a Roster bump and nothing here changed, look ` +
+      `first at the\n  declarations both sides make (the ceilings' comment).`,
+  );
+}
+
 if (problems.length > 0) {
   console.error(`[check-bundle-shape] ${problems.length} problem(s).\n`);
   console.error(problems.join("\n\n"));
@@ -564,7 +716,9 @@ console.log(
     `(${entryCount} client modules, ${componentPins} Roster components pinned ` +
     `individually), client JS ${sum(".js").toLocaleString("en-US")} of ` +
     `${CLIENT_JS_CEILING.toLocaleString("en-US")} bytes, CSS ` +
-    `${sum(".css").toLocaleString("en-US")} of ` +
-    `${CLIENT_CSS_CEILING.toLocaleString("en-US")} bytes, ` +
+    `${sum(".css").toLocaleString("en-US")} (Roster's stylesheets ` +
+    `${rosterCss.toLocaleString("en-US")}, as pinned, the app's own ` +
+    `${appCss.toLocaleString("en-US")} of ` +
+    `${APP_CSS_CEILING.toLocaleString("en-US")}), ` +
     `build at ${relative(root, distDir) || distDir} ${age}`,
 );

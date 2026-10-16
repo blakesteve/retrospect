@@ -94,12 +94,19 @@ export const GenreCardSkeleton = (
   </div>
 );
 
-/** "Tonight, for you" (`ForYou`): its card of rows, each a glyph, the sky line and a line under it. */
-export function ForYouSkeleton({ rows = 3 }: { rows?: number }) {
+/** "Tonight, for you" (`ForYou`): its card of rows, each a glyph, the sky line
+    and a line under it. Two rows from 640px, the commonest count (a year of
+    nights from 17 Oct 2026, before any heads-up: one row on 34%, two on 38%,
+    three on 28%), and three under it, where the rows' lines wrap. Measured
+    16 Oct over nights of one, two and three rows, weighted by how often each
+    comes, the average shift at 1280px is 61px with two rows, 85 with three
+    and 76 with main's skeleton; at 375px, 102 with three, 104 with two and
+    101 with main's, a tie the data decides night by night. */
+export function ForYouSkeleton() {
   return (
     <div aria-hidden className="mt-3 border border-transparent p-1">
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className={`flex min-h-11 items-start gap-3 px-3 py-3 ${i > 0 ? "border-t border-transparent" : ""}`}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={`flex min-h-11 items-start gap-3 px-3 py-3 ${i > 0 ? "border-t border-transparent" : ""} ${i === 2 ? "sm:hidden" : ""}`}>
           <span className="flex w-7 shrink-0 justify-center pt-0.5">
             <SkySkeleton shape="block" height={20} width={20} radius="full" />
           </span>

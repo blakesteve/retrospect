@@ -41,11 +41,27 @@
   tall), Every night, the question, planet, night, song and share sheets,
   the landing's sheets but its answers sample, compare's sheet, the songs,
   wild-night and coming-up rows and the rest of tonight's sky land with no
-  shift. `e2e/skeletons.spec.ts` holds
-  back the data for the ones whose size doesn't follow their text, and
-  checks nothing moves: the wild-night row, Every night's first month, the
-  question and planet sheets (which fill the sheet), compare's sheet, and
-  the share sheet at 1280px.
+  shift. `e2e/skeletons.spec.ts` holds back the data for the ones whose
+  size doesn't follow their text, and checks nothing moves: the wild-night
+  row, Every night's first month, the question and planet sheets (which
+  fill the sheet), compare's sheet, and the share sheet at 1280px.
+- **Against main, measured 16 Oct on builds of 5b9ec62 and this branch:**
+  each skeleton that still shifts with the data moves less than on main or
+  the same, within a pixel. On 16 Oct's sky, "Tonight, for you" +39 and
+  +23px (main +57 and -32), the genre row +11 (+43 and +60), the habits
+  panel -58 and +56 (+258 and +166) and compare's rows at 375px +89 (+143);
+  Tonight's heading (+42.5 against +42.1 on two lines), the landing's
+  answers sample (+197) and compare's rows at 1280px (+36) are the same.
+  "For you" now draws two rows from 640px and three under it: over a year
+  of nights, before any heads-up, it has one row on 34%, two on 38% and
+  three on 28%, and the first cut's three rows at 1280px had shifted more
+  than main's. Weighted over that year, it shifts 61 against main's 76 at
+  1280px, and 102 against 101 at 375px.
+- **The bundle guard's CSS is two numbers:** Roster's stylesheets
+  (`style.css` and `tokens.css`) pinned at 5.11.0's exact 165,941 bytes and
+  restated with each bump, and the app's own CSS, the rest, under 43,000
+  (41,982 now), set from what the app should cost rather than raised to
+  today's size (`check-bundle-shape.mjs` says why).
 - **Three unit tests get their own 20s timeout:** two in `nasa.test.ts` and
   "keeps a record per zone" in `route.test.ts`. Each takes one to two
   seconds, and went past the 5s default on a loaded machine.
@@ -963,30 +979,30 @@ the `threshold` refactor.
 
 ### Quality
 
-- [ ] **Loading shifts that follow the data.** Measured 15 Oct on the made-up
-      sample: these still move when their content lands, because their size
-      depends on tonight's sky, the hour or the listener's text, not the
+- [ ] **Loading shifts that follow the data.** Measured 15 and 16 Oct on the
+      made-up sample: these still move when their content lands, because their
+      size depends on tonight's sky, the hour or the listener's text, not the
       layout. Tonight's heading (one line or two at 375px, by weekday and
-      hour: +42.5px), "Tonight, for you" (its rows follow tonight's sky:
-      +39px at 375px, -50px at 1280px), the genre row (+11px, the tallest
-      card's text), the habits panel (-58px and +56px: how many archetypes,
-      and how their lines wrap) and compare's rows (+89px and +36px over 12
-      rows: the swing lines). Compare's "Checking" line also leaves when its
-      side lands (-45px), and on the Sky view something above "Your nights"
-      grows 27.5px. The landing's answers sample, which never fills the
-      sheet, opens on the short sheet skeleton and grows 197px. On a screen
-      1,300px tall, the question, planet and landing Tonight sheets don't
-      fill the sheet, so their full-height skeleton shrinks when they land
-      (-69, -215 and -319px at 1280px wide; before, they grew from 459px).
-      From 476 to 639px wide, the share sheet's words take fewer lines than
-      its skeleton draws (-20 to -50px). By reading the code, not measured:
-      Earth from NASA's camera lands inside the rest of tonight's sky on a
-      day there's a picture; a row of one or two cards at 1280px shows no
-      arrows, so its heading line is shorter than its skeleton's; the songs
-      row's skeleton draws a title of two lines under 640px and one above,
-      and a title can run to two either way; and the chart sheet keeps the
-      short sheet skeleton. Each needs either space held in the content or a
-      skeleton that knows more than the layout.
+      hour: +42.5px on two), "Tonight, for you" (its rows follow tonight's
+      sky: +39px at 375px, +23px at 1280px on 16 Oct), the genre row (+11px,
+      the tallest card's text), the habits panel (-58px and +56px: how many
+      archetypes, and how their lines wrap) and compare's rows (+89px and
+      +36px over 12 rows: the swing lines). Compare's "Checking" line also
+      leaves when its side lands (-45px), and on the Sky view something above
+      "Your nights" grows 27.5px. The landing's answers sample, which never
+      fills the sheet, opens on the short sheet skeleton and grows 197px. On a
+      screen 1,300px tall, the question, planet and landing Tonight sheets
+      don't fill the sheet, so their full-height skeleton shrinks when they
+      land (-69, -215 and -319px at 1280px wide; before, they grew from
+      459px). From 476 to 639px wide, the share sheet's words take fewer lines
+      than its skeleton draws (-20 to -50px). By reading the code, not
+      measured: Earth from NASA's camera lands inside the rest of tonight's
+      sky on a day there's a picture; a row of one or two cards at 1280px
+      shows no arrows, so its heading line is shorter than its skeleton's; the
+      songs row's skeleton draws a title of two lines under 640px and one
+      above, and a title can run to two either way; and the chart sheet keeps
+      the short sheet skeleton. Each needs either space held in the content or
+      a skeleton that knows more than the layout.
 - [ ] **A long name runs off the generic share card.** A `?u=` of about 25
       characters with no space overflows `/api/og`'s generic card: the name
       and the line under it run past the left edge, and the Moon off the
