@@ -37,7 +37,9 @@ statistics is the answer.
   stay in view as you scroll (the header compacts to them, 165px on a
   phone), with a "Back to top" button.
 - **Sky**: a chart wheel with the seven planets on their own orbits at their
-  real longitudes, your songs as stars on a spiral around the signs (each
+  real longitudes (planets close enough to cover each other stand apart
+  along their orbits, a dot or a ring marking a true place that falls beside
+  its glyph), your songs as stars on a spiral around the signs (each
   where the Sun was at its first play), and a dial under it that moves the
   sky through every night of your history: drag it, tap the track, use the
   keys, jump to a wild night, or play your years in 15 seconds. The planets
@@ -185,7 +187,7 @@ disclosures its own. What Roster has nothing for
 is the app's own, in `src/components/listener/`: the sky wheel and its travel,
 the Moon, the jar, the meters' labels and the icon set. The pure pieces they
 use (which "for you" rows show, the fluke meter's fill, the wheel's path math,
-its glyph layout and the trip controller the Sky view will share) live in
+its glyph layout and the Sky view's, and the trip controller both share) live in
 `src/lib/client/` and `src/lib/motion/`, where tests reach them, and import
 nothing that reaches the sky data. The threshold slider that used to be the exception is
 gone with the report.
