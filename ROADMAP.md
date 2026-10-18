@@ -33,17 +33,30 @@
   glyph, a dot marks it, the orbit picked out from there to the glyph, under
   the glyphs so it covers no ink; where a neighbor's glyph sits on it (the
   middle of a tight cluster can't clear both neighbors'), a ring over the
-  glyphs marks it instead (92 of the sample's 580 marks); nearer, the glyph
-  still stands over its true place. The dial's trips blend each glyph from its layout where a trip
-  sets off to where it ends, as Tonight's do, and the offsets grow in with
-  the opening, so nothing jumps; the arrow keys go round in the order the
-  glyphs are drawn. Over the sample's 1,115 nights a glyph moves on 777, by
-  26° at most. `e2e/sky.spec.ts` draws every glyph and ℞ again, outline and
-  all, in the font the page used, and finds no pixel two planets share and
-  each dot at least three quarters in view, at 375 and 1280px on Sunday,
-  March 23, 2025, when Mercury and Venus, both retrograde, stood within 3° of
-  the Sun, and on Jan 12, 2026, when Venus's true place lay under the Sun's
-  glyph.
+  glyphs marks it instead (55 of the sample's 326 marks); nearer, the glyph
+  still stands over its true place. The dial's trips blend each glyph from
+  its layout where a trip sets off to where it ends, as Tonight's do, and
+  the offsets grow in with the opening, so nothing jumps; the arrow keys go
+  round in the order the glyphs are drawn. Over the sample's 1,115 nights a
+  glyph moves on 603, by 22° at most. `e2e/sky.spec.ts` draws every glyph
+  and ℞ again, outline and all, in the wheels' own font, and finds no pixel
+  two planets share and each dot at least three quarters in view (in
+  Chromium on a Mac, 17 Oct; CI runs the same checks on Linux), at 375 and
+  1280px on Sunday, March 23, 2025, when Mercury and Venus, both
+  retrograde, stood within 3° of the Sun, and on Jan 12, 2026, when Venus's
+  and Mars's true places lay under a neighbor's glyph.
+- **The wheels draw their glyphs in their own font,** Retrospect Sky
+  Glyphs: the seven planets from Noto Sans Symbols and Symbols 2, and ℞
+  from Noto Sans (all OFL 1.1), 1,488 bytes of woff2, the same bytes every
+  run of `scripts/sky-glyph-font.py`. Apple Symbols isn't on Linux, Android
+  or Windows, and on CI's Linux the fallback drew Mercury's ℞ into Mercury.
+  The layout's circles are measured from this font's outlines. Only the
+  wheels' planets, ℞ and natal planets use it (`.wheel-glyph`), and each
+  wheel preloads it; glyphs elsewhere keep the machine's own, and a page
+  with no wheel never fetches it. The other wheel (Tonight's, the sheets'
+  and the landing's) now places its glyphs by .35em, as the Sky view does,
+  not by the machine's font's middle. Its CSS
+  is 274 bytes of the app's own (42,256 of 43,000).
 - **The ℞ is 12.6px at 375px** (it was 9.4px), clear of its own planet's
   glyph, and a retrograde planet still says "retrograde" to a screen
   reader. The same check reads both on March 23, 2025 and on the calm first

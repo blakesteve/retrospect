@@ -16,6 +16,10 @@ const PLANET_GLYPHS: Record<string, string> = {
   Saturn: "♄",
 };
 
+/** The wheels' own font for the seven planets and ℞ (`globals.css`'s
+    @font-face, cut by `scripts/sky-glyph-font.py`); each wheel preloads it. */
+export const SKY_GLYPH_FONT = "/fonts/retrospect-sky-glyphs.woff2";
+
 export const signGlyph = (sign: string) => `${SIGN_GLYPHS[SIGNS.indexOf(sign)] ?? ""}${VS15}`;
 export const planetGlyph = (body: string) => `${PLANET_GLYPHS[body] ?? ""}${VS15}`;
 /** The planets in the cards' order, then the signs: U+E000 onward in the share cards' font. */

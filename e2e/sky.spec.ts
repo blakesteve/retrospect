@@ -237,8 +237,9 @@ for (const width of [375, 1280]) {
 /* The planets' glyphs (ClickUp 86e3jrztm): none covers another, a moved
    one's true place is marked, and the ℞ reads at 375 and is spoken. Each
    glyph and ℞ is drawn again, outline and all, in the font the page drew it
-   in (whatever this machine has), and no two planets may share a pixel of
-   ink, so "covers" is what's on screen, not the layout's own model. */
+   in, the wheels' own (the check fails if it isn't), and no two planets may
+   share a pixel of ink, so "covers" is what's on screen, not the layout's
+   own model. */
 
 type Mask = { body: string; mark: boolean; ink: number; px: number; font: string };
 /** Every planet's glyph and ℞, and each true-place dot, drawn alone at twice
@@ -351,6 +352,9 @@ async function toNight(page: Page, keys: string[], said: string, retrograde: str
   await expect(dial).toHaveAttribute("aria-valuetext", new RegExp(`^${said}: `));
   // Still: the ℞ waits for a trip's end, where the sky is exact.
   for (const body of retrograde) await expect(page.locator(`[data-sky-wheel] [data-glyph="${body}"] [data-rx]`)).toBeVisible();
+  // The glyphs' own font has come, so they're drawn in it and measured in it.
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check(`21px "Retrospect Sky Glyphs"`, "\u263F\u211E"))).toBe(true);
   await settle(page);
 }
 
@@ -360,6 +364,8 @@ function drawn(ink: Awaited<ReturnType<typeof inks>>, retrograde: readonly strin
   expect(ink.masks.filter((m) => m.mark).map((m) => m.body).sort()).toEqual([...retrograde].sort());
   for (const m of ink.masks) {
     expect(parseFloat(m.font), `${m.body}'s font`).toBeCloseTo(m.px * 2, 1);
+    // In the wheels' own font, the same on every machine.
+    expect(m.font, `${m.body}'s font`).toContain('"Retrospect Sky Glyphs"');
     expect(m.ink, `${m.body}'s ink`).toBeGreaterThan(40);
   }
 }
@@ -417,12 +423,30 @@ for (const width of [375, 1280]) {
       expect(moved.map((p) => p.body)).toEqual(expect.arrayContaining(["Mercury", "Venus"]));
     });
 
-    test("on Monday, Jan 12, 2026, Venus's true place under the Sun's glyph is ringed over it, and Mars's dotted beside its own", async ({ page }) => {
+    test("the glyphs' own font is fetched where a wheel draws, and not where other glyphs do", async ({ page }) => {
+      const fetched: number[] = [];
+      page.on("response", (r) => {
+        if (r.url().endsWith("/fonts/retrospect-sky-glyphs.woff2")) fetched.push(r.status());
+      });
+      // Every night draws planet glyphs (its filter chips) and no wheel.
+      await returnVisit(page);
+      await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+      await page.goto("/u/sample/nights");
+      const glyphs = page.locator("main .font-glyph").filter({ hasText: /[\u2609\u263D\u263F\u2640\u2642-\u2644]/ });
+      await expect(glyphs.first()).toBeVisible({ timeout: 30_000 });
+      await page.evaluate(() => document.fonts.ready);
+      expect(fetched, "on Every night, with no wheel").toEqual([]);
+      await openSky(page);
+      await page.evaluate(() => document.fonts.ready);
+      expect(fetched.length, "on Sky").toBeGreaterThan(0);
+      expect(fetched.every((s) => s === 200 || s === 304)).toBe(true);
+    });
+
+    test("on Monday, Jan 12, 2026, Venus's and Mars's true places, under a neighbor's glyph, are ringed over the glyphs", async ({ page }) => {
       await openSky(page);
       await toNight(page, JAN_12_2026, "Monday, Jan 12, 2026", ["Jupiter"]);
       const at = await places(page);
-      expect(at.find((p) => p.body === "Venus")!.dot).toMatchObject({ over: true, afterGlyphs: true });
-      expect(at.find((p) => p.body === "Mars")!.dot).toMatchObject({ over: false });
+      for (const body of ["Venus", "Mars"]) expect(at.find((p) => p.body === body)!.dot, body).toMatchObject({ over: true, afterGlyphs: true });
       await fannedOut(page, at, ["Jupiter"], width);
     });
 

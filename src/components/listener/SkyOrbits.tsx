@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import { preload } from "react-dom";
 import type { Dignity, Planet } from "./api";
-import { DIGNITY_COLOR, SIGNS, planetGlyph, signGlyph } from "./sky";
+import { DIGNITY_COLOR, SIGNS, SKY_GLYPH_FONT, planetGlyph, signGlyph } from "./sky";
 import { moonLit } from "@/lib/client/moon";
 import { pt } from "@/lib/client/spiral";
-import { ORBITS, RR, movedOff, orbitGlyph, orbitGlyphSize, placeCovered, retroMark, truePlace, type OrbitGlyph } from "@/lib/client/orbitGlyphs";
+import { ORBITS, RR, arcEdge, movedOff, orbitGlyph, orbitGlyphSize, placeCovered, retroMark, truePlace, turn, type OrbitGlyph } from "@/lib/client/orbitGlyphs";
 import { PATHS } from "./pieces";
 
 /* The Sky view's wheel (spec 8.6 item 2, 8.9): the seven planets on their
@@ -135,6 +136,8 @@ export function SkyOrbits({
   nudges,
   still,
 }: SkyOrbitsProps) {
+  // The glyphs' own font, asked for as the wheel first draws.
+  preload(SKY_GLYPH_FONT, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   const uid = useId().replace(/:/g, "");
   const svgRef = useRef<SVGSVGElement>(null);
   const pressedAt = useRef<number | null>(null);
@@ -214,11 +217,11 @@ export function SkyOrbits({
             if (!movedOff(g.longitude, angle)) return [];
             const place = truePlace(g, angle);
             if (!place.beside) return [];
-            const nudge = angle - g.longitude;
-            // The arc runs to the glyph's edge, 0.55 of its size from its anchor.
-            const edge = nudge - Math.sign(nudge) * ((0.55 * g.size) / g.r) * (180 / Math.PI);
-            const [ex, ey] = pt(g.longitude + edge, g.r);
-            const arc = edge * nudge > 0 ? `M${f(place.x)} ${f(place.y)}A${g.r} ${g.r} 0 0 ${nudge > 0 ? 0 : 1} ${f(ex)} ${f(ey)}` : null;
+            // The arc runs along the orbit from the true place to the glyph's ink circle.
+            const edge = arcEdge(g, angle);
+            const ahead = turn(g.longitude, angle) > 0;
+            const [ex, ey] = edge === null ? [0, 0] : pt(edge, g.r);
+            const arc = edge === null ? null : `M${f(place.x)} ${f(place.y)}A${g.r} ${g.r} 0 0 ${ahead ? 0 : 1} ${f(ex)} ${f(ey)}`;
             return [{ g, place, arc, over: placeCovered(g, placed) }];
           }),
     [placed, still],
@@ -432,7 +435,7 @@ export function SkyOrbits({
             fill="none"
             stroke="var(--text-primary)"
             strokeWidth={1.1}
-            className="font-glyph"
+            className="wheel-glyph"
             aria-hidden
           >
             {planetGlyph(n.body)}
@@ -543,7 +546,7 @@ export function SkyOrbits({
                 strokeWidth={4.5}
                 paintOrder="stroke"
                 strokeLinejoin="round"
-                className="font-glyph"
+                className="wheel-glyph"
               >
                 {planetGlyph(o)}
               </text>
@@ -560,6 +563,7 @@ export function SkyOrbits({
                   strokeWidth={3}
                   paintOrder="stroke"
                   strokeLinejoin="round"
+                  className="wheel-glyph"
                 >
                   {"℞"}
                 </text>

@@ -6,15 +6,14 @@
  * neighboring orbits drew over each other (ClickUp 86e3jrztm). Plain math, so
  * the wheel, its trips (`createTrips`'s `layout`) and its checks share it.
  *
- * Each glyph, and its ℞ when it has one, counts as a disc around its ink.
- * Apple Symbols' planets, outline included, reach 11.7 below where they're
- * anchored and 8.2 above (☿, ♀ and ♃'s crosses hang lowest; measured 17 Oct
- * 2026), so each disc sits 0.08 of the font size below the anchor and
- * reaches 0.55 of it: about as far as the widest, ♃, reaches with its
- * outline, `GAP` keeping two of them apart. Another font's ink is measured
- * where it's drawn (`e2e/sky.spec.ts` counts shared pixels in whatever font
- * the page used). Two planets' discs never meet, and only planets that would
- * meet move.
+ * The wheels draw their glyphs in their own font, Retrospect Sky Glyphs
+ * (`public/fonts`, cut by `scripts/sky-glyph-font.py`), so the ink is the
+ * same on every machine. Before it, Apple Symbols drew them on a Mac, and
+ * CI's Linux fallback drew a ℞ into Mercury. Each glyph, and its ℞ when it
+ * has one, counts as the least circle around its outline points and its
+ * drawn outline, measured from that font (`INK`, `MARK`). Two planets'
+ * circles never meet, with `GAP` to spare, and only planets that would meet
+ * move.
  *
  * Two planets that would meet keep their order. Each such pair gets the
  * least angle between them that keeps them apart, read off the drawing at
@@ -51,8 +50,10 @@ const big = (body: string) => body === "Sun" || body === "Moon";
 /** A planet's glyph size, the Sun and Moon larger. */
 export const orbitGlyphSize = (body: string) => (big(body) ? 26 : 21);
 /** The ℞ beside a retrograde planet: up and to its right, 16 across, so 12.6px
-    on the 343px wheel at 375 (it was 12, 9.4px: ClickUp 86e3jrztm). */
-export const retroMark = (body: string) => ({ dx: big(body) ? 16 : 13, dy: -10, size: 16 });
+    on the 343px wheel at 375 (it was 12, 9.4px: ClickUp 86e3jrztm). 14 to the
+    right, its ink and outline clear the widest planet's, Jupiter's (13 met it
+    by 0.2); the Sun and Moon are never retrograde. */
+export const retroMark = (body: string) => ({ dx: big(body) ? 16 : 14, dy: -10, size: 16 });
 
 export interface OrbitGlyph {
   body: string;
@@ -73,17 +74,37 @@ export function orbitGlyph(b: { body: string; longitude: number; retrograde: boo
 
 /** Room left between two planets' discs, in the drawing's units. */
 export const GAP = 1;
-/** A glyph's disc: its center this far below the anchor, and its reach, each a share of the font size. */
-const GLYPH = { drop: 0.08, reach: 0.55 };
-/** The ℞'s: its ink reaches 7.1 below its anchor and 4.8 above at 16, outline included. */
-const MARK = { drop: 0.07, reach: 0.45 };
+/** Each glyph's least circle in Retrospect Sky Glyphs, outline (4.5) included,
+    in shares of its font size: its center from the anchor (x from the middle
+    of its advance, y down, the baseline .35em below) and its reach. Measured
+    17 Oct 2026 from the font's outline points, which bound its curves. */
+export const INK: Record<OrbitBody, { cx: number; cy: number; reach: number }> = {
+  Sun: { cx: 0, cy: -0.003, reach: 0.479 },
+  Moon: { cx: -0.107, cy: -0.003, reach: 0.444 },
+  Mercury: { cx: 0, cy: -0.031, reach: 0.541 },
+  Venus: { cx: 0, cy: 0.02, reach: 0.438 },
+  Mars: { cx: 0.028, cy: 0.055, reach: 0.438 },
+  Jupiter: { cx: 0.049, cy: 0.003, reach: 0.529 },
+  Saturn: { cx: 0.019, cy: -0.026, reach: 0.537 },
+};
+/** The ℞'s, its outline 3. */
+export const MARK = { cx: 0.042, cy: -0.007, reach: 0.533 };
 
 type Disc = { x: number; y: number; r: number };
 
-const discs = (g: OrbitGlyph, angle: number): Disc[] => {
+/** A glyph's ink circle where it's drawn. */
+const inkDisc = (g: OrbitGlyph, angle: number): Disc => {
   const [x, y] = pt(angle, g.r);
-  const out = [{ x, y: y + GLYPH.drop * g.size, r: GLYPH.reach * g.size }];
-  if (g.mark) out.push({ x: x + g.mark.dx, y: y + g.mark.dy + MARK.drop * g.mark.size, r: MARK.reach * g.mark.size });
+  const ink = INK[g.body as OrbitBody];
+  return { x: x + ink.cx * g.size, y: y + ink.cy * g.size, r: ink.reach * g.size };
+};
+
+const discs = (g: OrbitGlyph, angle: number): Disc[] => {
+  const out = [inkDisc(g, angle)];
+  if (g.mark) {
+    const [x, y] = pt(angle, g.r);
+    out.push({ x: x + g.mark.dx + MARK.cx * g.mark.size, y: y + g.mark.dy + MARK.cy * g.mark.size, r: MARK.reach * g.mark.size });
+  }
   return out;
 };
 
@@ -93,6 +114,26 @@ export function overlap(a: OrbitGlyph, aAngle: number, b: OrbitGlyph, bAngle: nu
   for (const p of discs(a, aAngle))
     for (const q of discs(b, bAngle)) most = Math.max(most, p.r + q.r + GAP - Math.hypot(p.x - q.x, p.y - q.y));
   return most;
+}
+
+/** Where a moved glyph's orbit leaves its ink circle on the way to its true
+    place, as an angle; null when the true place is inside the circle. */
+export function arcEdge(g: OrbitGlyph, angle: number): number | null {
+  const ink = inkDisc(g, angle);
+  const toward = turn(angle, g.longitude);
+  const outside = (t: number) => {
+    const [x, y] = pt(angle + t * toward, g.r);
+    return Math.hypot(x - ink.x, y - ink.y) > ink.r;
+  };
+  if (!outside(1)) return null;
+  let lo = 0;
+  let hi = 1;
+  for (let k = 0; k < 30; k++) {
+    const m = (lo + hi) / 2;
+    if (outside(m)) hi = m;
+    else lo = m;
+  }
+  return angle + hi * toward;
 }
 
 /** Whether `b`'s true place falls inside another planet's glyph or ℞, where
@@ -204,6 +245,6 @@ export const BESIDE = 0.45;
     ink, so a dot marks it; nearer, the glyph still stands over its true place. */
 export function truePlace(g: OrbitGlyph, angle: number): { x: number; y: number; beside: boolean } {
   const [x, y] = pt(g.longitude, g.r);
-  const [gx, gy] = pt(angle, g.r);
-  return { x, y, beside: Math.hypot(x - gx, y - (gy + GLYPH.drop * g.size)) > BESIDE * g.size };
+  const ink = inkDisc(g, angle);
+  return { x, y, beside: Math.hypot(x - ink.x, y - ink.y) > BESIDE * g.size };
 }

@@ -1,17 +1,18 @@
 "use client";
 
 import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { preload } from "react-dom";
 import { BODY_ORDER, C, R0, R1, RA, RP, VB, glyphAngles, glyphSize } from "@/lib/motion/wheelLayout";
 import type { Dignity, Planet } from "./api";
 import { moonLit, phaseName } from "@/lib/client/moon";
-import { SIGNS, planetGlyph, signGlyph } from "@/lib/sky/glyphs";
+import { SIGNS, SKY_GLYPH_FONT, planetGlyph, signGlyph } from "@/lib/sky/glyphs";
 
 /* The sky wheel and the Moon (spec 8.9). Drawn from the numbers the sky
    routes send; nothing here knows any sky data. Glyphs carry U+FE0E so they
    never render as emoji, and are aria-hidden beside text (11). */
 
 export { BODY_ORDER };
-export { SIGNS, planetGlyph, signGlyph };
+export { SIGNS, SKY_GLYPH_FONT, planetGlyph, signGlyph };
 
 export const DIGNITY_COLOR: Record<Dignity, string | null> = {
   home: "var(--home)",
@@ -66,6 +67,8 @@ export function SkyWheel({
   glyphs = null,
   onArrived,
 }: SkyWheelProps) {
+  // The glyphs' own font, asked for as the wheel first draws.
+  preload(SKY_GLYPH_FONT, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   const uid = useId().replace(/:/g, "");
   const svgRef = useRef<SVGSVGElement>(null);
   const interactive = Boolean(onPlanet);
@@ -275,11 +278,12 @@ export function SkyWheel({
                       <circle className="pl-sel" r={(r * 0.86 + 2.5).toFixed(1)} fill="none" stroke="var(--gold)" strokeWidth={2.2} opacity={0} />
                     </>
                   )}
-                  <text fontSize={r.toFixed(1)} textAnchor="middle" dominantBaseline="central" fill="var(--text-primary)" className="font-glyph" aria-hidden>
+                  {/* Placed by .35em, not the machine's own font's middle, as the Sky view's are. */}
+                  <text dy=".35em" fontSize={r.toFixed(1)} textAnchor="middle" fill="var(--text-primary)" className="wheel-glyph" aria-hidden>
                     {planetGlyph(p.body)}
                   </text>
                   {planet.retrograde && (
-                    <text x={f(rx - gx)} y={f(ry - gy)} fontSize={(r * 0.42).toFixed(1)} textAnchor="middle" dominantBaseline="central" fill="var(--text-secondary)" aria-hidden>
+                    <text x={f(rx - gx)} y={f(ry - gy)} dy=".35em" fontSize={(r * 0.42).toFixed(1)} textAnchor="middle" fill="var(--text-secondary)" className="wheel-glyph" aria-hidden>
                       {"℞"}
                     </text>
                   )}

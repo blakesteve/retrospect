@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { skyBodies } from "./skyCompute";
-import { ORBITS, glyphNudges, orbitGlyph, orbitGlyphAngles, overlap, retroMark, truePlace, type OrbitGlyph } from "./orbitGlyphs";
+import { ORBITS, arcEdge, glyphNudges, orbitGlyph, orbitGlyphAngles, overlap, retroMark, truePlace, type OrbitGlyph } from "./orbitGlyphs";
 
 /** 9 p.m. in Chicago on a date, as the dial samples it. */
 const ninePmChicago = (date: string) => {
@@ -115,5 +115,21 @@ describe("the Sky view's planet glyphs (spec 8.6, 8.9)", () => {
       const at = orbitGlyphAngles(glyphs);
       for (const [p, q] of meetingPairs(glyphs)) expect(Math.sign(turn(at[p.body], at[q.body])), `cluster ${k} ${p.body} ${q.body}`).toBe(Math.sign(turn(p.longitude, q.longitude)));
     }
+  });
+
+  it("ends a true place's arc where the orbit leaves the glyph's ink, either way round and across 0°", () => {
+    const venus = (longitude: number) => orbitGlyph({ body: "Venus", longitude, retrograde: false })!;
+    // Its true place 15° behind, at 355°, the glyph drawn at 10°: the arc
+    // leaves the ink between them, closer to the glyph.
+    const edge = arcEdge(venus(355), 10)!;
+    expect(turn(355, edge)).toBeGreaterThan(0);
+    expect(turn(edge, 10)).toBeGreaterThan(0);
+    expect(turn(edge, 10)).toBeLessThan(8);
+    // The same ahead of it, the other way.
+    const ahead = arcEdge(venus(25), 10)!;
+    expect(turn(10, ahead)).toBeGreaterThan(0);
+    expect(turn(ahead, 25)).toBeGreaterThan(0);
+    // A true place under the glyph's own ink has no arc.
+    expect(arcEdge(venus(11), 10)).toBeNull();
   });
 });
