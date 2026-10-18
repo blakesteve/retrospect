@@ -234,6 +234,247 @@ for (const width of [375, 1280]) {
   });
 }
 
+/* The planets' glyphs (ClickUp 86e3jrztm): none covers another, a moved
+   one's true place is marked, and the ℞ reads at 375 and is spoken. Each
+   glyph and ℞ is drawn again, outline and all, in the font the page drew it
+   in, the wheels' own (the check fails if it isn't), and no two planets may
+   share a pixel of ink, so "covers" is what's on screen, not the layout's
+   own model. */
+
+type Mask = { body: string; mark: boolean; ink: number; px: number; font: string };
+/** Every planet's glyph and ℞, and each true-place dot, drawn alone at twice
+    the CSS size: the pixels any two glyphs or ℞s share, and how much of each
+    dot lies under any of them. */
+const inks = (page: Page) =>
+  page.evaluate(() => {
+    const svg = document.querySelector<SVGSVGElement>("[data-sky-wheel]")!;
+    const box = svg.getBoundingClientRect();
+    const k = 2;
+    const W = Math.ceil(box.width * k);
+    const H = Math.ceil(box.height * k);
+    const canvas = () => Object.assign(document.createElement("canvas"), { width: W, height: H }).getContext("2d", { willReadFrequently: true })!;
+    const solid = (ctx: CanvasRenderingContext2D) => {
+      const alpha = ctx.getImageData(0, 0, W, H).data;
+      const on = new Uint8Array(W * H);
+      for (let i = 0; i < on.length; i++) on[i] = alpha[i * 4 + 3] > 128 ? 1 : 0;
+      return on;
+    };
+    const masks: (Mask & { on: Uint8Array })[] = [];
+    for (const g of svg.querySelectorAll<SVGGElement>("[data-glyph]")) {
+      for (const t of g.querySelectorAll<SVGTextElement>(":scope > text")) {
+        const ctx = canvas();
+        const ctm = t.getScreenCTM()!;
+        const fs = Number(t.getAttribute("font-size"));
+        ctx.font = `${fs * ctm.a * k}px ${getComputedStyle(t).fontFamily}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        // Anchored at its middle, its baseline .35em below its y.
+        const at = new DOMPoint(Number(t.getAttribute("x") ?? 0), Number(t.getAttribute("y") ?? 0) + 0.35 * fs).matrixTransform(ctm);
+        const [x, y] = [(at.x - box.left) * k, (at.y - box.top) * k];
+        ctx.lineWidth = Number(t.getAttribute("stroke-width") ?? 0) * ctm.a * k;
+        ctx.lineJoin = "round";
+        if (ctx.lineWidth > 0) ctx.strokeText(t.textContent ?? "", x, y);
+        ctx.fillText(t.textContent ?? "", x, y);
+        const on = solid(ctx);
+        masks.push({ body: g.dataset.glyph!, mark: t.hasAttribute("data-rx"), ink: on.reduce((n, v) => n + v, 0), px: fs * ctm.a, font: ctx.font, on });
+      }
+    }
+    const shared: { a: string; b: string; pixels: number }[] = [];
+    const name = (m: Mask) => `${m.body}${m.mark ? " ℞" : ""}`;
+    for (let i = 0; i < masks.length; i++)
+      for (let j = i + 1; j < masks.length; j++) {
+        let pixels = 0;
+        for (let p = 0; p < W * H; p++) if (masks[i].on[p] && masks[j].on[p]) pixels++;
+        shared.push({ a: name(masks[i]), b: name(masks[j]), pixels });
+      }
+    const dots: { body: string; pixels: number; hidden: number }[] = [];
+    for (const c of [...svg.querySelectorAll("[data-true]")].map((g) => g.querySelector<SVGCircleElement>("circle")!)) {
+      const ctx = canvas();
+      const ctm = c.getScreenCTM()!;
+      const at = new DOMPoint(Number(c.getAttribute("cx")), Number(c.getAttribute("cy"))).matrixTransform(ctm);
+      ctx.beginPath();
+      ctx.arc((at.x - box.left) * k, (at.y - box.top) * k, (Number(c.getAttribute("r")) + Number(c.getAttribute("stroke-width")) / 2) * ctm.a * k, 0, 2 * Math.PI);
+      ctx.fill();
+      const on = solid(ctx);
+      let pixels = 0;
+      let hidden = 0;
+      for (let p = 0; p < W * H; p++)
+        if (on[p]) {
+          pixels++;
+          if (masks.some((m) => m.on[p])) hidden++;
+        }
+      dots.push({ body: c.closest<SVGGElement>("[data-true]")!.dataset.true!, pixels, hidden });
+    }
+    return { masks: masks.map((m) => ({ body: m.body, mark: m.mark, ink: m.ink, px: m.px, font: m.font })), shared, dots };
+  });
+
+/** Each planet's true longitude, the angle and radius its glyph is drawn at,
+    how far its true place is from the glyph's anchor (in its font size), and
+    its true-place dot if any. */
+const places = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll<SVGGElement>("[data-sky-wheel] [data-body]")].map((g) => {
+      const body = g.dataset.body!;
+      const drawn = document.querySelector<SVGGElement>(`[data-sky-wheel] [data-glyph="${body}"]`)!;
+      const [x, y] = (drawn.getAttribute("transform") ?? "").match(/-?[\d.]+/g)!.map(Number);
+      const dot = document.querySelector(`[data-sky-wheel] [data-true="${body}"] circle`);
+      const angle = (px: number, py: number) => ((((Math.atan2(py, -px) * 180) / Math.PI) % 360) + 360) % 360;
+      const longitude = Number(g.dataset.longitude);
+      const radius = Math.hypot(x, y);
+      const a = (longitude * Math.PI) / 180;
+      const size = Number(drawn.querySelector("text")!.getAttribute("font-size"));
+      const [dx, dy] = dot ? [Number(dot.getAttribute("cx")), Number(dot.getAttribute("cy"))] : [0, 0];
+      return {
+        body,
+        longitude,
+        glyph: { angle: angle(x, y), radius },
+        trueOff: Math.hypot(-radius * Math.cos(a) - x, radius * Math.sin(a) - y) / size,
+        dot: dot
+          ? {
+              angle: angle(dx, dy),
+              radius: Math.hypot(dx, dy),
+              // A ring over a neighbor's glyph comes after the glyphs.
+              over: dot.closest("[data-over]") !== null,
+              afterGlyphs: Boolean(drawn.compareDocumentPosition(dot) & Node.DOCUMENT_POSITION_FOLLOWING),
+            }
+          : null,
+        label: g.getAttribute("aria-label") ?? "",
+      };
+    }),
+  );
+const turn = (a: number, b: number) => ((((b - a) % 360) + 540) % 360) - 180;
+
+/** The dial at a night, by its keys from the first night, and the planets still there. */
+async function toNight(page: Page, keys: string[], said: string, retrograde: string[]) {
+  const dial = slider(page);
+  await dial.focus();
+  for (const key of keys) await page.keyboard.press(key);
+  await expect(dial).toHaveAttribute("aria-valuetext", new RegExp(`^${said}: `));
+  // Still: the ℞ waits for a trip's end, where the sky is exact.
+  for (const body of retrograde) await expect(page.locator(`[data-sky-wheel] [data-glyph="${body}"] [data-rx]`)).toBeVisible();
+  // The glyphs' own font has come, so they're drawn in it and measured in it.
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check(`21px "Retrospect Sky Glyphs"`, "\u263F\u211E"))).toBe(true);
+  await settle(page);
+}
+
+/** What was drawn: every planet, each ℞ wanted, in a font the canvas took, with ink. */
+function drawn(ink: Awaited<ReturnType<typeof inks>>, retrograde: readonly string[]) {
+  expect(ink.masks.filter((m) => !m.mark).map((m) => m.body).sort()).toEqual(["Jupiter", "Mars", "Mercury", "Moon", "Saturn", "Sun", "Venus"]);
+  expect(ink.masks.filter((m) => m.mark).map((m) => m.body).sort()).toEqual([...retrograde].sort());
+  for (const m of ink.masks) {
+    expect(parseFloat(m.font), `${m.body}'s font`).toBeCloseTo(m.px * 2, 1);
+    // In the wheels' own font, the same on every machine.
+    expect(m.font, `${m.body}'s font`).toContain('"Retrospect Sky Glyphs"');
+    expect(m.ink, `${m.body}'s ink`).toBeGreaterThan(40);
+  }
+}
+
+/** The dial's keys to Sunday, March 23, 2025, from the first night, Sept 28, 2023: 18 months on, then 5 nights back. */
+const MAR_23_2025 = ["Home", ...Array<string>(18).fill("PageUp"), ...Array<string>(5).fill("ArrowLeft")];
+/** To Monday, Jan 12, 2026: 27 months on, to Dec 28, 2025, then 2 weeks and a night. */
+const JAN_12_2026 = ["Home", ...Array<string>(27).fill("PageUp"), "Shift+ArrowRight", "Shift+ArrowRight", "ArrowRight"];
+
+/** None covers another, and every moved planet's true place is marked: by a
+    dot on its orbit, under the glyphs with three quarters of it in view or,
+    where a neighbor's glyph sits on it, a ring over the glyphs; or, near
+    enough, by the glyph itself standing over it. */
+async function fannedOut(page: Page, at: Awaited<ReturnType<typeof places>>, retrograde: string[], width: number) {
+  const ink = await inks(page);
+  drawn(ink, retrograde);
+  // No two planets share a pixel of ink, nor a ℞ its own planet's.
+  for (const { a, b, pixels } of ink.shared) expect(pixels, `${a} and ${b}`).toBe(0);
+  const moved = at.filter((p) => Math.abs(turn(p.longitude, p.glyph.angle)) > 0.5);
+  expect(ink.dots.length).toBeGreaterThan(0);
+  for (const p of at) {
+    if (!moved.includes(p)) expect(p.dot, p.body).toBeNull();
+    else if (p.dot) {
+      // Both drawn to a tenth of a unit.
+      expect(Math.abs(turn(p.longitude, p.dot.angle)), p.body).toBeLessThan(0.2);
+      expect(p.dot.radius, p.body).toBeCloseTo(p.glyph.radius, 0);
+      const dot = ink.dots.find((d) => d.body === p.body)!;
+      expect(dot.pixels, `${p.body}'s dot`).toBeGreaterThan(20);
+      if (p.dot.over) expect(p.dot.afterGlyphs, `${p.body}'s ring over the glyphs`).toBe(true);
+      else expect(dot.hidden / dot.pixels, `${p.body}'s dot in view`).toBeLessThanOrEqual(0.25);
+    } else expect(p.trueOff, `${p.body} over its true place`).toBeLessThan(0.6);
+  }
+  test.info().annotations.push({
+    type: "measured",
+    description: `at ${width}px, moved ${moved.map((p) => `${p.body} ${turn(p.longitude, p.glyph.angle).toFixed(1)}°`).join(", ")}; dots ${ink.dots
+      .map((d) => `${d.body} ${at.find((p) => p.body === d.body)!.dot!.over ? "ringed over" : `${Math.round((100 * (d.pixels - d.hidden)) / d.pixels)}% in view`}`)
+      .join(", ")}`,
+  });
+  return moved;
+}
+
+for (const width of [375, 1280]) {
+  test.describe(`the planets' glyphs at ${width}px`, () => {
+    test.use({ viewport: { width, height: width === 375 ? 812 : 900 } });
+
+    test("at the Sun on Sunday, March 23, 2025, Mercury and Venus fan out, none covering another, their true places marked", async ({ page }) => {
+      await openSky(page);
+      await toNight(page, MAR_23_2025, "Sunday, Mar 23, 2025", ["Mercury", "Venus"]);
+      const at = await places(page);
+      const lon = Object.fromEntries(at.map((p) => [p.body, p.longitude]));
+      // A real conjunction: Venus within 2° of the Sun, Mercury within 3°.
+      expect(Math.abs(turn(lon.Sun, lon.Venus))).toBeLessThan(2);
+      expect(Math.abs(turn(lon.Sun, lon.Mercury))).toBeLessThan(3);
+      const moved = await fannedOut(page, at, ["Mercury", "Venus"], width);
+      expect(moved.map((p) => p.body)).toEqual(expect.arrayContaining(["Mercury", "Venus"]));
+    });
+
+    test("the glyphs' own font is fetched where a wheel draws, and not where other glyphs do", async ({ page }) => {
+      const fetched: number[] = [];
+      page.on("response", (r) => {
+        if (r.url().endsWith("/fonts/retrospect-sky-glyphs.woff2")) fetched.push(r.status());
+      });
+      // Every night draws planet glyphs (its filter chips) and no wheel.
+      await returnVisit(page);
+      await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+      await page.goto("/u/sample/nights");
+      const glyphs = page.locator("main .font-glyph").filter({ hasText: /[\u2609\u263D\u263F\u2640\u2642-\u2644]/ });
+      await expect(glyphs.first()).toBeVisible({ timeout: 30_000 });
+      await page.evaluate(() => document.fonts.ready);
+      expect(fetched, "on Every night, with no wheel").toEqual([]);
+      await openSky(page);
+      await page.evaluate(() => document.fonts.ready);
+      expect(fetched.length, "on Sky").toBeGreaterThan(0);
+      expect(fetched.every((s) => s === 200 || s === 304)).toBe(true);
+    });
+
+    test("on Monday, Jan 12, 2026, Venus's and Mars's true places, under a neighbor's glyph, are ringed over the glyphs", async ({ page }) => {
+      await openSky(page);
+      await toNight(page, JAN_12_2026, "Monday, Jan 12, 2026", ["Jupiter"]);
+      const at = await places(page);
+      for (const body of ["Venus", "Mars"]) expect(at.find((p) => p.body === body)!.dot, body).toMatchObject({ over: true, afterGlyphs: true });
+      await fannedOut(page, at, ["Jupiter"], width);
+    });
+
+    test("the ℞ reads at 12px or more and the planet says retrograde, on March 23, 2025 and on the calm first night", async ({ page }) => {
+      await openSky(page);
+      for (const [keys, said, retrograde] of [
+        [MAR_23_2025, "Sunday, Mar 23, 2025", ["Mercury", "Venus"]],
+        // The pair: Sept 28, 2023, where nothing overlaps, Jupiter and Saturn retrograde, nothing moved.
+        [["Home"], "Thursday, Sept 28, 2023", ["Jupiter", "Saturn"]],
+      ] as const) {
+        await toNight(page, [...keys], said, [...retrograde]);
+        const ink = await inks(page);
+        drawn(ink, retrograde);
+        const at = await places(page);
+        for (const body of retrograde) {
+          const mark = ink.masks.find((m) => m.body === body && m.mark)!;
+          expect(mark.px, `${said} ${body}`).toBeGreaterThanOrEqual(12);
+          // Clear of its own planet's glyph, and of every other.
+          for (const { a, b, pixels } of ink.shared.filter((x) => x.a === `${body} ℞` || x.b === `${body} ℞`)) expect(pixels, `${said}: ${a} and ${b}`).toBe(0);
+          expect(at.find((p) => p.body === body)!.label, `${said} ${body}`).toMatch(/, retrograde$/);
+        }
+        if (said.startsWith("Thursday")) for (const p of at) expect(Math.abs(turn(p.longitude, p.glyph.angle)), p.body).toBeLessThan(0.5);
+        test.info().annotations.push({ type: "measured", description: `at ${width}px, ${said}: the ℞ at ${ink.masks.find((m) => m.mark)!.px.toFixed(1)}px, in ${ink.masks[0].font}` });
+      }
+    });
+  });
+}
+
 test.describe("moving the sky (8.6, 8.11)", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
@@ -407,17 +648,20 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     await page.goto(SKY);
     const wheel = page.locator("[data-sky-wheel]");
     await expect(wheel.locator("[data-body='Saturn']")).toBeAttached({ timeout: 30_000 });
-    // Nothing between a planet and the screen hides it.
-    const shown = await page.evaluate(() => {
-      let el: Element | null = document.querySelector("[data-sky-wheel] [data-body='Saturn']");
-      let opacity = 1;
-      while (el && el.tagName !== "svg") {
-        opacity *= Number(getComputedStyle(el).opacity);
-        el = el.parentElement;
-      }
-      return opacity;
-    });
-    expect(shown).toBe(1);
+    // Nothing between a planet and the screen hides it: its button, nor its
+    // glyph, drawn in a layer of its own.
+    const shown = await page.evaluate(() =>
+      ["[data-body='Saturn']", "[data-glyph='Saturn'] text"].map((sel) => {
+        let el: Element | null = document.querySelector(`[data-sky-wheel] ${sel}`);
+        let opacity = el ? 1 : 0;
+        while (el && el.tagName !== "svg") {
+          opacity *= Number(getComputedStyle(el).opacity);
+          el = el.parentElement;
+        }
+        return opacity;
+      }),
+    );
+    expect(shown).toEqual([1, 1]);
     await expect(wheel).toHaveAttribute("data-opening", "run");
     expect(await page.locator("[data-star]").count()).toBe(0);
     // It began as the planets came, not after waiting for anything.

@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -16,11 +16,59 @@
   confidence (28 Sept) · A young history gets a real report (28 Sept) · The
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
-- **Next, product:** nothing queued after the redesign. Filed: glyphs overlapping
-  at conjunctions (ClickUp 86e3jrztm)
-- **Next, quality:** framework error pages a visitor can still reach
+- **Next, product:** nothing queued after the redesign.
+- **Next, quality:** loading shifts that follow the data · a long name runs
+  off the generic share card · framework error pages a visitor can still reach
 
 ## Done
+
+### The Sky wheel's glyphs, and Roster 5.12.0 (17 October 2026)
+
+- **Planets close together no longer cover each other on the Sky wheel**
+  (ClickUp 86e3jrztm). The orbits are 12 apart and a glyph is 21 across, so
+  planets within a few degrees on neighboring orbits drew over each other.
+  A glyph that would cover another planet's glyph or ℞ now stands off along
+  its own orbit, two that would meet kept in their order
+  (`src/lib/client/orbitGlyphs.ts`). Where its true place falls beside the
+  glyph, a dot marks it, the orbit picked out from there to the glyph, under
+  the glyphs so it covers no ink; where a neighbor's glyph sits on it (the
+  middle of a tight cluster can't clear both neighbors'), a ring over the
+  glyphs marks it instead (55 of the sample's 326 marks); nearer, the glyph
+  still stands over its true place. The dial's trips blend each glyph from
+  its layout where a trip sets off to where it ends, as Tonight's do, and
+  the offsets grow in with the opening, so nothing jumps; the arrow keys go
+  round in the order the glyphs are drawn. Over the sample's 1,115 nights a
+  glyph moves on 603, by 22° at most. `e2e/sky.spec.ts` draws every glyph
+  and ℞ again, outline and all, in the wheels' own font, and finds no pixel
+  two planets share and each dot at least three quarters in view (in
+  Chromium on a Mac, 17 Oct; CI runs the same checks on Linux), at 375 and
+  1280px on Sunday, March 23, 2025, when Mercury and Venus, both
+  retrograde, stood within 3° of the Sun, and on Jan 12, 2026, when Venus's
+  and Mars's true places lay under a neighbor's glyph.
+- **The wheels draw their glyphs in their own font,** Retrospect Sky
+  Glyphs: the seven planets from Noto Sans Symbols and Symbols 2, and ℞
+  from Noto Sans (all OFL 1.1), 1,488 bytes of woff2, the same bytes every
+  run of `scripts/sky-glyph-font.py`. Apple Symbols isn't on Linux, Android
+  or Windows, and on CI's Linux the fallback drew Mercury's ℞ into Mercury.
+  The layout's circles are measured from this font's outlines. Only the
+  wheels' planets, ℞ and natal planets use it (`.wheel-glyph`), and each
+  wheel preloads it; glyphs elsewhere keep the machine's own, and a page
+  with no wheel never fetches it. The other wheel (Tonight's, the sheets'
+  and the landing's) now places its glyphs by .35em, as the Sky view does,
+  not by the machine's font's middle. Its CSS
+  is 274 bytes of the app's own (42,256 of 43,000).
+- **The ℞ is 12.6px at 375px** (it was 9.4px), clear of its own planet's
+  glyph, and a retrograde planet still says "retrograde" to a screen
+  reader. The same check reads both on March 23, 2025 and on the calm first
+  night, Sept 28, 2023, where nothing moves.
+- **Play's flashes stay at two a second.** The event flash and a star's
+  title were keyed by counts that could both be 1, and while they matched,
+  React put the flash back on the page every frame (about 40 a second); each
+  key now says which it is.
+- **Roster 5.11.0 to 5.12.0:** no code change; Roster's own focus rings now
+  show for the keyboard in Safari. Its stylesheet grew 550 bytes, so the
+  bundle guard's Roster pin is restated (165,941 to 166,491); the app's own
+  CSS is unchanged at 41,982.
 
 ### Skeletons on Roster's, and the dial's touch drag (15 October 2026)
 

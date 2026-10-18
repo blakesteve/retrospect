@@ -31,6 +31,7 @@ import {
 } from "@/lib/client/dial";
 import { buildSpiral, spiralAt, spiralPieces, spiralStrokes, TAIL_SECONDS } from "@/lib/client/spiral";
 import { planetSheetRef } from "@/lib/client/planetSheet";
+import { skyGlyphLayout, turn } from "@/lib/client/orbitGlyphs";
 import { NATAL_EVENT, readStoredBirth } from "@/lib/client/natalStore";
 import { useListener, VIEW_HEADING } from "./Shell";
 import { getJson, type DialData, type Dignity, type Planet } from "./api";
@@ -334,6 +335,9 @@ export function SkyView() {
         reduced: prefersReducedMotion,
         raf: (cb) => requestAnimationFrame(cb),
         cancelRaf: (id) => cancelAnimationFrame(id),
+        // Each glyph on its own orbit, clear of its neighbors' (orbitGlyphs.ts),
+        // blended over a trip from where it sets off to where it ends.
+        layout: skyGlyphLayout,
       },
       setTrip,
     );
@@ -357,6 +361,14 @@ export function SkyView() {
   const shown = useMemo(
     () => (opening.p >= 1 ? bodies : bodies.map((b) => ({ ...b, longitude: openingLongitude(b.longitude, Math.max(0, ORDER.indexOf(b.body)), opening.p) }))),
     [bodies, opening.p],
+  );
+  // Glyphs that would cover each other stand off along their orbits
+  // (orbitGlyphs.ts): the trips' layout, never laid out afresh mid-trip, and
+  // grown in as the planets wind into place, so none jumps when the opening ends.
+  const glyphAt = useMemo(() => state?.glyphs ?? (nowSky ? skyGlyphLayout(nowSky.bodies) : {}), [state, nowSky]);
+  const nudges = useMemo(
+    () => Object.fromEntries(bodies.map((b) => [b.body, turn(b.longitude, glyphAt[b.body] ?? b.longitude) * Math.min(1, opening.p)])),
+    [bodies, glyphAt, opening.p],
   );
   const pos = state && d ? posOf(state.uts) : Math.max(0, n - 1);
   // Where the dial stands: where a trip is going while it travels, so a key
@@ -626,6 +638,8 @@ export function SkyView() {
           pulse={pulse}
           opening={opening}
           playing={playing}
+          nudges={nudges}
+          still={opening.p >= 1 && !state?.moving && !playing}
         />
       </div>
       {bodies.length > 0 && <WheelKey bodies={bodies} className="mt-2" />}

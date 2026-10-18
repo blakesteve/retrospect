@@ -272,6 +272,23 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   font-variant-emoji: text;
 }
 
+/* The wheels' own glyphs (`.wheel-glyph`, on the wheels' planets, ℞ and
+   natal planets only): the seven planets and ℞ from Noto Sans Symbols, Noto
+   Sans Symbols 2 and Noto Sans (OFL 1.1), cut by scripts/sky-glyph-font.py
+   to 1,488 bytes, so their ink, and the layout's circles measured from it
+   (orbitGlyphs.ts), are the same on every machine. Glyphs elsewhere keep the
+   machine's own; a page with no wheel never fetches it. */
+@font-face {
+  font-family: "Retrospect Sky Glyphs";
+  src: url("/fonts/retrospect-sky-glyphs.woff2") format("woff2");
+  unicode-range: U+211E, U+2609, U+263D, U+263F-2640, U+2642-2644;
+  font-display: block;
+}
+.wheel-glyph {
+  font-family: "Retrospect Sky Glyphs", var(--font-glyph);
+  font-variant-emoji: text;
+}
+
 /* Motion (spec 8.11): transform and opacity only; nothing under reduced
    motion; held still while the tab is hidden (`data-hidden`, set by the
    listener views). The final state is each element's own style, so the

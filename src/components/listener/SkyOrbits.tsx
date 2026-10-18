@@ -1,10 +1,12 @@
 "use client";
 
 import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from "react";
+import { preload } from "react-dom";
 import type { Dignity, Planet } from "./api";
-import { DIGNITY_COLOR, SIGNS, planetGlyph, signGlyph } from "./sky";
+import { DIGNITY_COLOR, SIGNS, SKY_GLYPH_FONT, planetGlyph, signGlyph } from "./sky";
 import { moonLit } from "@/lib/client/moon";
 import { pt } from "@/lib/client/spiral";
+import { ORBITS, RR, arcEdge, movedOff, orbitGlyph, orbitGlyphSize, placeCovered, retroMark, truePlace, turn, type OrbitGlyph } from "@/lib/client/orbitGlyphs";
 import { PATHS } from "./pieces";
 
 /* The Sky view's wheel (spec 8.6 item 2, 8.9): the seven planets on their
@@ -15,27 +17,8 @@ import { PATHS } from "./pieces";
    drawing is 436 across, centered on 0. */
 
 export const H = 218;
-/** Each orbit's radius, and the rings around them: the Orrery's, the orbits
-    drawn a little tighter so the natal planets get a ring of their own (nt)
-    just inside the signs, their glyphs 16px at 375 like every other (10). */
-export const RR = {
-  c: 40,
-  Moon: 53,
-  Mercury: 65,
-  Venus: 77,
-  Sun: 89,
-  Mars: 101,
-  Jupiter: 113,
-  Saturn: 125,
-  nt: 139,
-  zi: 150,
-  zo: 181,
-  si: 189,
-  so: 207,
-} as const;
-const ORBITS = ["Moon", "Mercury", "Venus", "Sun", "Mars", "Jupiter", "Saturn"] as const;
 
-export { pt };
+export { pt, RR };
 const f = (n: number) => n.toFixed(1);
 
 /** A four-pointed sparkle, r from its center to each point (the Orrery's). */
@@ -120,6 +103,11 @@ export interface SkyOrbitsProps {
   opening: { state: "wait" | "run" | null; p: number; stars: number | null; endedBy: RefObject<number | null> };
   /** "Play your years" is running: the stars twinkle while it does. */
   playing: boolean;
+  /** How far each planet's glyph stands off its longitude, in degrees, so
+      none covers another (`orbitGlyphs.ts`); null: none does. */
+  nudges: Record<string, number> | null;
+  /** The planets are still (no trip, no opening), so a nudged glyph's true place is marked. */
+  still: boolean;
 }
 
 type Item = { kind: "planet" | "star"; id: string; angle: number; x: number; y: number };
@@ -145,7 +133,11 @@ export function SkyOrbits({
   pulse,
   opening,
   playing,
+  nudges,
+  still,
 }: SkyOrbitsProps) {
+  // The glyphs' own font, asked for as the wheel first draws.
+  preload(SKY_GLYPH_FONT, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   const uid = useId().replace(/:/g, "");
   const svgRef = useRef<SVGSVGElement>(null);
   const pressedAt = useRef<number | null>(null);
@@ -158,8 +150,10 @@ export function SkyOrbits({
     for (const b of bodies) {
       const r = RR[b.body as (typeof ORBITS)[number]];
       if (!r) continue;
-      const [x, y] = pt(b.longitude, r);
-      out.push({ kind: "planet", id: b.body, angle: b.longitude, x, y });
+      // Hit, and ordered for the arrow keys, where the glyph is drawn.
+      const angle = b.longitude + (nudges?.[b.body] ?? 0);
+      const [x, y] = pt(angle, r);
+      out.push({ kind: "planet", id: b.body, angle: ((angle % 360) + 360) % 360, x, y });
     }
     for (const s of stars) {
       const [x, y] = pt(s.angle, s.r);
@@ -167,7 +161,7 @@ export function SkyOrbits({
     }
     // Arrow keys move in angular order (11).
     return out.sort((a, b) => a.angle - b.angle || (a.kind === b.kind ? 0 : a.kind === "planet" ? -1 : 1));
-  }, [bodies, stars]);
+  }, [bodies, stars, nudges]);
   const [focusId, setFocusId] = useState<string | null>(null);
   const tabStop = items.some((i) => `${i.kind}:${i.id}` === focusId) ? focusId : items[0] ? `${items[0].kind}:${items[0].id}` : null;
 
@@ -205,6 +199,33 @@ export function SkyOrbits({
     return best?.it ?? null;
   };
 
+  // Each planet's glyph where it's drawn, and the true places to mark.
+  const placed = useMemo(
+    () =>
+      ORBITS.flatMap((o) => {
+        const b = bodies.find((p) => p.body === o);
+        const g = b && orbitGlyph(b);
+        return g ? [[g, g.longitude + (nudges?.[o] ?? 0)] as [OrbitGlyph, number]] : [];
+      }),
+    [bodies, nudges],
+  );
+  const marks = useMemo(
+    () =>
+      !still
+        ? []
+        : placed.flatMap(([g, angle]) => {
+            if (!movedOff(g.longitude, angle)) return [];
+            const place = truePlace(g, angle);
+            if (!place.beside) return [];
+            // The arc runs along the orbit from the true place to the glyph's ink circle.
+            const edge = arcEdge(g, angle);
+            const ahead = turn(g.longitude, angle) > 0;
+            const [ex, ey] = edge === null ? [0, 0] : pt(edge, g.r);
+            const arc = edge === null ? null : `M${f(place.x)} ${f(place.y)}A${g.r} ${g.r} 0 0 ${ahead ? 0 : 1} ${f(ex)} ${f(ey)}`;
+            return [{ g, place, arc, over: placeCovered(g, placed) }];
+          }),
+    [placed, still],
+  );
   const lit2 = lit ? stars.find((s) => s.id === lit.id) : null;
   const moon = moonPhase === null ? null : moonLit(moonPhase, 0, 14);
   const focusRing = (r: number) => (
@@ -414,7 +435,7 @@ export function SkyOrbits({
             fill="none"
             stroke="var(--text-primary)"
             strokeWidth={1.1}
-            className="font-glyph"
+            className="wheel-glyph"
             aria-hidden
           >
             {planetGlyph(n.body)}
@@ -448,14 +469,16 @@ export function SkyOrbits({
         )}
       </g>
 
-      {/* The planets on their orbits, a dignity halo and a small ℞ when retrograde. */}
+      {/* The planets on their orbits: each a button with its glow, dignity
+          halo and rings here; its true place's mark over that; its glyph and
+          ℞ over those, so a dot never covers ink. A glyph that would cover a
+          neighbor's stands off along its orbit (orbitGlyphs.ts). */}
       <g>
         {ORBITS.map((o) => {
           const b = bodies.find((p) => p.body === o);
           if (!b) return null;
-          const [x, y] = pt(b.longitude, RR[o]);
+          const [x, y] = pt(b.longitude + (nudges?.[o] ?? 0), RR[o]);
           const big = o === "Sun" || o === "Moon";
-          const fs = big ? 26 : 21;
           const halo = big ? 16 : 12.5;
           const color = DIGNITY_COLOR[b.dignity];
           const key = `planet:${o}`;
@@ -465,6 +488,7 @@ export function SkyOrbits({
               key={o}
               data-item={key}
               data-body={o}
+              data-longitude={b.longitude.toFixed(2)}
               transform={`translate(${f(x)} ${f(y)})`}
               role="button"
               tabIndex={tabStop === key ? 0 : -1}
@@ -485,32 +509,61 @@ export function SkyOrbits({
               {color && <circle r={halo} fill={color} fillOpacity={0.22} stroke={color} strokeWidth={1.6} />}
               {on && <circle r={halo + 3.5} fill="none" stroke="var(--text-primary)" strokeWidth={1.2} strokeDasharray="2 2" />}
               {focusRing(halo + 5)}
+            </g>
+          );
+        })}
+      </g>
+
+      {/* A moved glyph's true place, once the planets are still, where it
+          falls beside the glyph's ink: the orbit picked out from there to the
+          glyph's edge, and a dot, here under the glyphs so it covers no ink. */}
+      {marks.length > 0 && (
+        <g aria-hidden pointerEvents="none">
+          {marks.map((m) => (
+            <g key={m.g.body} data-true={m.over ? undefined : m.g.body}>
+              {m.arc && <path d={m.arc} fill="none" stroke="rgba(242,239,230,.6)" strokeWidth={1.2} />}
+              {!m.over && <circle cx={f(m.place.x)} cy={f(m.place.y)} r={2.6} fill="var(--text-primary)" stroke="#0b1026" strokeWidth={1.4} />}
+            </g>
+          ))}
+        </g>
+      )}
+
+      {/* The glyphs and their ℞, over the planets and the marks; taps and keys go to the planets. */}
+      <g aria-hidden pointerEvents="none">
+        {ORBITS.map((o) => {
+          const b = bodies.find((p) => p.body === o);
+          if (!b) return null;
+          const [x, y] = pt(b.longitude + (nudges?.[o] ?? 0), RR[o]);
+          const mark = retroMark(o);
+          return (
+            <g key={o} data-glyph={o} transform={`translate(${f(x)} ${f(y)})`}>
               <text
                 dy=".35em"
-                fontSize={fs}
+                fontSize={orbitGlyphSize(o)}
                 textAnchor="middle"
                 fill={o === "Sun" ? "#ffe39a" : "var(--text-primary)"}
                 stroke="#0b1026"
                 strokeWidth={4.5}
                 paintOrder="stroke"
                 strokeLinejoin="round"
-                className="font-glyph"
-                aria-hidden
+                className="wheel-glyph"
               >
                 {planetGlyph(o)}
               </text>
               {b.retrograde && (
                 <text
-                  x={big ? 14 : 11}
-                  y={-8}
+                  data-rx
+                  x={mark.dx}
+                  y={mark.dy}
                   dy=".35em"
-                  fontSize={12}
+                  fontSize={mark.size}
                   textAnchor="middle"
                   fill="var(--text-secondary)"
                   stroke="#0b1026"
                   strokeWidth={3}
                   paintOrder="stroke"
-                  aria-hidden
+                  strokeLinejoin="round"
+                  className="wheel-glyph"
                 >
                   {"℞"}
                 </text>
@@ -520,10 +573,28 @@ export function SkyOrbits({
         })}
       </g>
 
-      {/* A night's events flash as the dial crosses it (8.6, 8.11); none under reduced motion. */}
-      {flash && <FlashMark key={flash.n} kind={flash.kind} />}
+      {/* A true place under a neighbor's glyph (the middle of a tight cluster
+          can't clear both of its neighbors'): a ring over it, so the ink
+          shows through. */}
+      {marks.some((m) => m.over) && (
+        <g aria-hidden pointerEvents="none">
+          {marks
+            .filter((m) => m.over)
+            .map((m) => (
+              <g key={m.g.body} data-true={m.g.body} data-over>
+                <circle cx={f(m.place.x)} cy={f(m.place.y)} r={3} fill="none" stroke="#0b1026" strokeWidth={2.6} />
+                <circle cx={f(m.place.x)} cy={f(m.place.y)} r={3} fill="none" stroke="var(--text-primary)" strokeWidth={1.2} />
+              </g>
+            ))}
+        </g>
+      )}
+
+      {/* A night's events flash as the dial crosses it (8.6, 8.11); none under
+          reduced motion. Each key says which: the two count separately, and
+          sharing one ("1" and "1") had React re-insert the flash every frame. */}
+      {flash && <FlashMark key={`flash-${flash.n}`} kind={flash.kind} />}
       {lit2 && lit && (
-        <g key={lit.n} className="sky-flash" style={{ animationDuration: "2.4s" } as CSSProperties} aria-hidden>
+        <g key={`lit-${lit.n}`} className="sky-flash" style={{ animationDuration: "2.4s" } as CSSProperties} aria-hidden>
           <StarTitle star={lit2} title={lit.title} />
         </g>
       )}

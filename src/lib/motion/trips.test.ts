@@ -34,7 +34,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function harness({ reduced = false } = {}) {
+function harness({ reduced = false, layout }: { reduced?: boolean; layout?: (bodies: Body[]) => Record<string, number> } = {}) {
   let queue: ((ts: number) => void)[] = [];
   let clock = 0;
   const states: TripState<Body, Moment>[] = [];
@@ -61,6 +61,7 @@ function harness({ reduced = false } = {}) {
       cancelRaf: () => {
         queue = [];
       },
+      layout,
     },
     (s) => states.push(s),
   );
@@ -170,6 +171,27 @@ describe("the wheel's trips (8.11 item 1)", () => {
     expect(separation("Sun", "Moon")).toBeGreaterThan(20);
     expect(Math.max(...steps)).toBeLessThan(1);
     expect(h.trips.state.glyphs).toEqual(glyphAngles(atSky(A.uts)));
+  });
+
+  it("lays a wheel's glyphs out its own way at a trip's ends only, blending between them (the Sky view's, 8.6)", async () => {
+    const laid: string[] = [];
+    // The Sun's glyph 10° ahead of it, the Moon's 10° behind, whatever the sky.
+    const layout = (bodies: Body[]) => {
+      laid.push(bodies[0].tag);
+      return Object.fromEntries(bodies.map((b) => [b.body, b.longitude + (b.body === "Sun" ? 10 : -10)]));
+    };
+    const h = harness({ layout });
+    const out = h.trips.goTo(A);
+    await h.settle();
+    h.frames(60);
+    await out;
+    // At now, and at the moment's own sky; never mid-trip.
+    expect(laid).toEqual(["now", `at ${A.uts}`]);
+    for (const s of h.states) {
+      const sun = s.bodies.find((b) => b.body === "Sun")!;
+      expect(((s.glyphs.Sun - sun.longitude + 540) % 360) - 180).toBeCloseTo(10, 6);
+    }
+    expect(h.trips.state.glyphs).toEqual({ Sun: 110, Moon: atSky(A.uts)[1].longitude - 10 });
   });
 
   it("jumps straight to a moment while the dial is dragged, stopping a trip, and travels on from there (8.6)", async () => {

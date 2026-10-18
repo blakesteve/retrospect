@@ -46,6 +46,10 @@ export interface TripDeps<B extends TripBody> {
   reduced: () => boolean;
   raf: (cb: (ts: number) => void) => number;
   cancelRaf: (id: number) => void;
+  /** Each glyph's angle for a sky: Tonight's wheel's (`glyphAngles`) unless
+      a wheel lays its glyphs out its own way, as the Sky view's do
+      (`skyGlyphLayout`, each on its own orbit). */
+  layout?: (bodies: B[]) => Record<string, number>;
 }
 
 const wrap = (d: number) => ((((d + 540) % 360) + 360) % 360) - 180;
@@ -55,7 +59,8 @@ const nudges = (bodies: readonly TripBody[], glyphs: Record<string, number>) =>
 
 export function createTrips<B extends TripBody, M extends { uts: number }>(deps: TripDeps<B>, emit: (s: TripState<B, M>) => void) {
   const { now } = deps;
-  let state: TripState<B, M> = { bodies: now.bodies, glyphs: glyphAngles(now.bodies), uts: now.uts, moving: false, moment: null, arrived: null };
+  const layout = deps.layout ?? glyphAngles;
+  let state: TripState<B, M> = { bodies: now.bodies, glyphs: layout(now.bodies), uts: now.uts, moving: false, moment: null, arrived: null };
   /** Where the wheel is in time; null at now. */
   let at: number | null = null;
   let request = 0;
@@ -82,7 +87,7 @@ export function createTrips<B extends TripBody, M extends { uts: number }>(deps:
   function travel(id: number, toUts: number, end: B[], path: SkyPath, to: M | null): Promise<boolean> {
     const fromUts = at ?? now.uts;
     const from = nudges(state.bodies, state.glyphs);
-    const endGlyphs = glyphAngles(end);
+    const endGlyphs = layout(end);
     const into = nudges(end, endGlyphs);
     const finish = () => {
       at = to ? toUts : null;
@@ -136,7 +141,7 @@ export function createTrips<B extends TripBody, M extends { uts: number }>(deps:
       halt();
       if (at === null || !outbound) {
         at = null;
-        set({ bodies: now.bodies, glyphs: glyphAngles(now.bodies), uts: now.uts, moving: false, moment: null, arrived: null });
+        set({ bodies: now.bodies, glyphs: layout(now.bodies), uts: now.uts, moving: false, moment: null, arrived: null });
         return true;
       }
       return travel(id, now.uts, now.bodies, outbound, null);
@@ -148,10 +153,9 @@ export function createTrips<B extends TripBody, M extends { uts: number }>(deps:
       halt();
       at = m.uts;
       outbound = null;
-      // Laid out afresh each time. The Sky wheel draws each planet on its own
-      // orbit at its true longitude and reads no glyph angles; a wheel that
-      // does would see a pair swap at a conjunction mid-drag.
-      set({ bodies, glyphs: glyphAngles(bodies), uts: m.uts, moving: false, moment: m, arrived: null });
+      // Laid out afresh for each night: a pair that crosses between two
+      // nights swaps sides between them, as the planets do.
+      set({ bodies, glyphs: layout(bodies), uts: m.uts, moving: false, moment: m, arrived: null });
     },
     dispose() {
       request++;
