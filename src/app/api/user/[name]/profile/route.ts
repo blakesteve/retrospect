@@ -9,6 +9,7 @@ import {
 import { getStore } from "@/lib/store/jsonStore";
 import { isNoiseArtist } from "@/lib/noise";
 import { emptyHistoryResponse } from "@/lib/emptyHistory";
+import { decodeName, isValidUsername } from "@/lib/username";
 import { requestZone } from "@/lib/zone";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,10 @@ async function handler(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const username = decodeURIComponent(name).trim();
+  const username = decodeName(name).trim();
+  if (!isValidUsername(username)) {
+    return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
+  }
   const { zone, fellBack } = requestZone(new URL(req.url).searchParams);
 
   const stored = await getStore().getScrobbles(username);

@@ -1,6 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import PageError from "@/app/error";
+import GlobalError from "@/app/global-error";
+import NotFound from "@/app/not-found";
+import TryAgain from "@/components/TryAgain";
 import { VISITOR_ERROR_CODES, toVisitorErrorCode, visitorError } from "./visitorErrors";
 import { LastfmError, getRecentTracksPage, syncErrorCode } from "./lastfm";
 import { REMOVAL_OUTCOMES, removalMessage, toRemovalOutcome } from "./removalCopy";
@@ -78,6 +84,59 @@ describe("syncErrorCode", () => {
     const code = syncErrorCode(new Error("LASTFM_API_KEY is not set (add it to .env.local)"));
     const { title, body } = visitorError(code, "example-listener");
     expect(`${title} ${body}`).not.toContain("LASTFM");
+  });
+});
+
+/** Words a visitor shouldn't meet on a page that only says something went
+    wrong: the numbers' and the sky's (Retrospect's own rule, everywhere). */
+const STATS_OR_SKY =
+  /\b(p ?[<=]|p-values?|significan\w*|statistic\w*|correlat\w*|random\w*|odds|chance|shuffles?|planets?|stars?|sky|skies|moon|sun|retrograde|zodiac|signs?|horoscopes?|astrolog\w*|transits?|charts?|cosmic|mercury|venus|mars)\b/i;
+
+describe("the error pages (not-found, error, global-error)", () => {
+  const error = Object.assign(new Error("Cannot read properties of undefined (reading 'bodies')"), { digest: "123" });
+  const pages = [
+    ["not-found", renderToStaticMarkup(createElement(NotFound))],
+    ["error", renderToStaticMarkup(createElement(PageError, { error, retry: () => {} }))],
+    ["global-error", renderToStaticMarkup(createElement(GlobalError, { error }))],
+  ] as const;
+  /** What a visitor reads: the markup's text, entities as characters. */
+  const words = (html: string) =>
+    html
+      .replace(/<title>[^<]*<\/title>/, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&#x27;|&rsquo;|&#8217;/g, "\u2019")
+      .replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  it.each(pages)("%s says what happened in plain English, with a way back to the start", (_name, html) => {
+    const text = words(html);
+    expect(text.length).toBeGreaterThan(60);
+    expect(html).toMatch(/<h1[^>]*>[^<]+<\/h1>/);
+    expect(html).toMatch(/<a [^>]*href="\/"[^>]*>Back to the start<\/a>/);
+    expect(text, "a stats or sky word").not.toMatch(STATS_OR_SKY);
+    for (const [what, pattern] of DEVELOPER_TEXT) expect(text, `contains ${what}`).not.toMatch(pattern);
+    // Never the error's own text.
+    expect(html).not.toContain("Cannot read");
+  });
+
+  it("would catch a sky word, and a page that showed the error's own text", () => {
+    expect("Something in the stars went wrong.").toMatch(STATS_OR_SKY);
+    expect("Your sky didn't load.").toMatch(STATS_OR_SKY);
+    expect(words("<p>Cannot read properties of undefined</p>")).toMatch(DEVELOPER_TEXT.find(([w]) => w === "a code identifier")![1]);
+  });
+
+  it("holds Try again's place until Roster's button loads, and draws a whole document when the root layout fails", () => {
+    // The button loads when the page draws (error.tsx), in a box its height.
+    expect(pages[1][1]).toContain('<span class="block h-11"></span>');
+    expect(renderToStaticMarkup(createElement(TryAgain, { onClick: () => {} }))).toMatch(/^<button[^>]*>Try again<\/button>$/);
+    const doc = pages[2][1];
+    // The root layout's own classes, read from it, and a title React lifts into the head.
+    const layout = readFileSync(path.resolve(__dirname, "../app/layout.tsx"), "utf8");
+    const [htmlClass, bodyClass] = [/<html lang="en" className="([^"]+)"/, /<body className="([^"]+)"/].map((r) => layout.match(r)![1]);
+    expect(doc).toMatch(new RegExp(`^<html lang="en" class="${htmlClass}"><head><title>Something went wrong · Retrospect</title></head><body class="${bodyClass}">`));
+    // No Try again: the same root layout would fail the same way.
+    expect(doc).not.toContain("<button");
   });
 });
 

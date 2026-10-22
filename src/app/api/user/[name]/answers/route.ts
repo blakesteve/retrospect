@@ -5,7 +5,7 @@ import { emptyHistoryResponse } from "@/lib/emptyHistory";
 import { readNasaLog } from "@/lib/space/compact";
 import { refreshNasaAfter } from "@/lib/space/refresh";
 import { getStore } from "@/lib/store/jsonStore";
-import { isValidUsername } from "@/lib/username";
+import { isValidUsername, decodeName } from "@/lib/username";
 import { requestZone } from "@/lib/zone";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export const maxDuration = 60;
  */
 async function handler(req: Request, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const username = decodeURIComponent(name).trim();
+  const username = decodeName(name).trim();
   if (!isValidUsername(username)) {
     return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
   }

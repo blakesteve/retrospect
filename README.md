@@ -113,7 +113,7 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 
 ```bash
 npm test             # analysis, answers, profile, zone, sky, sync, store, share-card and error-copy tests
-npm run lint
+npm run lint         # fails on a warning as well as an error
 npm run typecheck
 npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
 npm run sky          # regenerate the redesign's sky data, 2002 through 2035
@@ -145,10 +145,16 @@ the page's requests off the machine are refused, and `e2e/offline.mjs`,
 preloaded into the server, refuses and logs the server's; setup proves the
 block is in force, and the run fails if anything else lands in that log. They
 check Tonight's fold on a phone, that "Surprise me" never covers a "for you"
-row at seven widths, 44px targets (a planet included), and both of the view
-switcher's labels against what's behind them. On Every night, with the
-browser's clock held inside the sample's history, they check that the first
-screen asks for the year in view and no other (with the whole history's
+row at seven widths, 44px targets (a planet included), both of the view
+switcher's labels against what's behind them, and, with the sky of March 23,
+2025 in place of tonight's, that the ℞ beside Mercury and Venus is 12px or
+more at 375 on Tonight's wheel and a night's, shares no pixel with any
+glyph, and is spoken. They check the app's own not-found page and its 404
+for an address Next can't decode (`/u/abc%`), the API's 400 and code for
+one, and the error page when a page throws, where Try again draws it again
+(and, when its button can't load, is a full load instead). On Every night,
+with the browser's clock held inside the sample's history, they check that
+the first screen asks for the year in view and no other (with the whole history's
 counts, which no later year carries), one door per night at 44px or more with
 its date at 4.5:1 or more, the sticky top (the whole header at rest, at most
 168px stuck, the bar at most 112px, and no Tab onto its controls scrolling
@@ -218,6 +224,18 @@ renders the plain-English message for that code from `src/lib/visitorErrors.ts`,
 logging the raw text to the console. Adding a new failure means adding a code
 there, not passing a message through. A test checks every message for
 developer text, and checks the page source for the old hints.
+
+Past the pages' own states, `src/app/not-found.tsx`, `error.tsx` and
+`global-error.tsx` say what happened in the same plain words, with a way back
+to the start, and a test renders all three and checks them for developer
+text and for any stats or sky word. Every page carries them (the not-found
+page in its payload, the two error pages' code in its first load), so
+they're kept light: plain markup, and the error page loads Roster's Button
+for Try again only when it draws. An address whose percent-encoding can't be
+read (`/u/abc%`) fails in Next's own routing before any of the app runs, so
+`src/proxy.ts`, which runs only for paths with a "%" in them, sends a page
+there to the not-found page (404) and an API call a 400 with the
+`invalid-username` code.
 
 ## Deploy (free tier, on purpose)
 
@@ -489,7 +507,7 @@ about 0.3 seconds locally, before JPL's monthly files are read.
 | `/api/user/{name}/highlights` | The reveal: how long, the count-ups (the storms and X flares NASA logged in your history among them), the wildest nights as cards (plays against a usual night, the night's photo, the Moon's phase at 9 p.m.), one card per event (a storm's run of nights is one, as question 7 counts it), the wildest night's date ("Friday, May 10, 2024") and line, and the song with the strangest sky. Plus the "Surprise me" pool: song skies with a chip, wild nights, and dated facts. |
 | `/api/user/{name}/profile` | Your habits, with the sentence for the ones still waiting built on the server, so no page imports the sky's windows. Noise is always left out. |
 | `/api/user/{name}/genres` | Up to 12 genres with 50 plays or more: share, top artists, "rising" and biggest night. "building" while the tags are fetched. |
-| `/api/og?u=&card=&tz=&size=tall` | A share card (spec 8.7.5): `card` is `song:{id}`, `night:{YYYY-MM-DD}` or `q:{id}`, read from the listener's stored record and stored answers in that zone, never computed; 1200 by 630, or 1080 by 1920 with `size=tall`. Anything missing, removed or not stored is the generic card, the name and tonight's Moon. Its glyphs come from a 5,000-byte font at Private Use code points (`src/app/api/og/cardFonts.ts` says why). |
+| `/api/og?u=&card=&tz=&size=tall` | A share card (spec 8.7.5): `card` is `song:{id}`, `night:{YYYY-MM-DD}` or `q:{id}`, read from the listener's stored record and stored answers in that zone, never computed; 1200 by 630, or 1080 by 1920 with `size=tall`. Anything missing, removed or not stored is the generic card, the name and tonight's Moon; a long name is set smaller and broken wherever its line runs out, so all 50 characters a name can have fit with the Moon in frame, and the other cards' headers end one in an ellipsis. Its glyphs come from a 5,000-byte font at Private Use code points (`src/app/api/og/cardFonts.ts` says why). |
 | `/api/sky/at?t=` | The sky at an instant, 2002 through 2035, cached for good. |
 | `/api/sky/now` | The sky now, what holds tonight so far, and up to 6 things coming up in the next 45 days, each with the body it's about. Plus Tonight's words: the heading by local time, the time (with the weekday from midnight to 4 a.m.), the Moon's line with and without her sign ("Waning gibbous, 93% lit · 2 days after full, in Taurus, where she's exalted"), each held question's sky line ("Mercury is retrograde until Oct 13", "A solar storm tonight, Kp 7"), the sky facts that fill the "for you" rows ("Jupiter turns retrograde Saturday"), every planet's dignity, any mutual reception, the latest EPIC Earth within 3 days, and the row for a night with no question's sky overhead, with the next start. |
 | `/api/sky/path?to=` | The wheel's path to a coming-up moment at most 45 days out: every body's longitude from now (down to the hour) to `to` (to the hour), the Moon hourly and the rest daily, both ends included, to 0.01°. Cached until the hour turns. |

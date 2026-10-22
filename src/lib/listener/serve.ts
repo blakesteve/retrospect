@@ -6,7 +6,7 @@ import { readNasaLog, type NasaLog } from "@/lib/space/compact";
 import { refreshNasaAfter } from "@/lib/space/refresh";
 import { runTagChunk } from "@/lib/tagsync";
 import { getStore } from "@/lib/store/jsonStore";
-import { isValidUsername } from "@/lib/username";
+import { isValidUsername, decodeName } from "@/lib/username";
 import { requestZone } from "@/lib/zone";
 import { computeListenerOnce, isCurrentListener, readListener, type ListenerRecord } from "./record";
 
@@ -45,7 +45,7 @@ export function tagsStamp(stored: Scrobble[], tags: TagStore): number {
 }
 
 export async function loadListener(req: Request, name: string): Promise<Loaded> {
-  const username = decodeURIComponent(name).trim();
+  const username = decodeName(name).trim();
   if (!isValidUsername(username)) {
     return { kind: "response", response: NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 }) };
   }

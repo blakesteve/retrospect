@@ -30,6 +30,13 @@ const at = (lon: number, r: number): [number, number] => {
 };
 const f = (n: number) => n.toFixed(2);
 
+/** The ℞ beside a retrograde planet, as a share of its glyph: 12px or more on
+    the smallest wheel a phone reads it on, a night's sheet at 260px (12.1px;
+    13.0 on Tonight's 280px), as Sky's is (12.6px). It was 0.42, 8.7px on
+    Tonight. The tiles' and the reveal's small wheels, 140 and 120px, show
+    their planets but aren't read up close. */
+const RX_SIZE = 0.63;
+
 export interface SkyWheelProps {
   bodies: Planet[];
   /** Rendered width in CSS pixels; the hit areas stay 44px at any size. A
@@ -283,7 +290,7 @@ export function SkyWheel({
                     {planetGlyph(p.body)}
                   </text>
                   {planet.retrograde && (
-                    <text x={f(rx - gx)} y={f(ry - gy)} dy=".35em" fontSize={(r * 0.42).toFixed(1)} textAnchor="middle" fill="var(--text-secondary)" className="wheel-glyph" aria-hidden>
+                    <text x={f(rx - gx)} y={f(ry - gy)} dy=".35em" fontSize={(r * RX_SIZE).toFixed(1)} textAnchor="middle" fill="var(--text-secondary)" className="wheel-glyph" aria-hidden>
                       {"℞"}
                     </text>
                   )}

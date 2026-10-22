@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { decodeName } from "@/lib/username";
 import { ListenerShell } from "@/components/listener/Shell";
 
 /* The listener shell (spec 8.2) lives here, so the three views share it:
@@ -13,7 +14,7 @@ export default async function ListenerLayout({
   children: React.ReactNode;
 }) {
   const { username } = await params;
-  const name = decodeURIComponent(username);
+  const name = decodeName(username);
   return (
     // The shell reads the URL's search parameters (sheets, tz).
     <Suspense fallback={null}>

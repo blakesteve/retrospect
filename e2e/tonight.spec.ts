@@ -219,6 +219,124 @@ test("a focused planet shows its own two-tone ring, not a square box around it (
   expect(r).toMatchObject({ outline: "none", shadow: "none", rings: ["1", "1"], other: "0" });
 });
 
+/* The ℞ on the listener's wheel (ClickUp 86e3rwyfe): 12px or more at 375, as
+   Sky's is, still spoken, and clear of every glyph. Sunday, March 23, 2025, at
+   9 p.m. in Chicago, Mercury and Venus both retrograde (Sky's check uses the
+   same night): the server's own sky for that instant (`/api/sky/at`) stands in
+   for tonight's in `/api/sky/now`, so the date is a literal, not today. The
+   night's sheet draws the same wheel smaller, at 260px, the smallest a phone
+   reads it at. Each glyph and ℞ is drawn again alone, in the font the page
+   drew it in, and no ℞ may share a pixel of ink with any other glyph or ℞
+   (Sky's pixel-sharing check, e2e/sky.spec.ts). */
+
+/** 9 p.m. CDT on Sunday, March 23, 2025. */
+const MAR_23_2025_9PM = Date.UTC(2025, 2, 24, 2) / 1000;
+
+/** The wheel's width, and each planet's glyph and ℞ drawn alone at twice the
+    CSS size: its size on screen, its font and ink, and the pixels each ℞
+    shares with every other glyph or ℞. */
+const wheelInks = (page: Page, selector: string) =>
+  page.evaluate((sel) => {
+    const svg = document.querySelector<SVGSVGElement>(sel)!;
+    const box = svg.getBoundingClientRect();
+    const k = 2;
+    const W = Math.ceil(box.width * k);
+    const H = Math.ceil(box.height * k);
+    const masks: { body: string; mark: boolean; px: number; font: string; ink: number; on: Uint8Array }[] = [];
+    for (const g of svg.querySelectorAll<SVGGElement>("[data-body]")) {
+      for (const t of g.querySelectorAll<SVGTextElement>("text")) {
+        const ctx = Object.assign(document.createElement("canvas"), { width: W, height: H }).getContext("2d", { willReadFrequently: true })!;
+        const ctm = t.getScreenCTM()!;
+        const fs = Number(t.getAttribute("font-size"));
+        ctx.font = `${fs * ctm.a * k}px ${getComputedStyle(t).fontFamily}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        // Anchored at its middle, its baseline .35em below its y.
+        const at = new DOMPoint(Number(t.getAttribute("x") ?? 0), Number(t.getAttribute("y") ?? 0) + 0.35 * fs).matrixTransform(ctm);
+        ctx.fillText(t.textContent ?? "", (at.x - box.left) * k, (at.y - box.top) * k);
+        const alpha = ctx.getImageData(0, 0, W, H).data;
+        const on = new Uint8Array(W * H);
+        for (let i = 0; i < on.length; i++) on[i] = alpha[i * 4 + 3] > 128 ? 1 : 0;
+        masks.push({ body: g.dataset.body!, mark: t.textContent === "\u211E", px: fs * ctm.a, font: ctx.font, ink: on.reduce((n, v) => n + v, 0), on });
+      }
+    }
+    const shared: { a: string; b: string; pixels: number }[] = [];
+    const name = (m: (typeof masks)[number]) => `${m.body}${m.mark ? " ℞" : ""}`;
+    for (const m of masks.filter((x) => x.mark))
+      for (const o of masks.filter((x) => x !== m)) {
+        let pixels = 0;
+        for (let p = 0; p < W * H; p++) if (m.on[p] && o.on[p]) pixels++;
+        shared.push({ a: name(m), b: name(o), pixels });
+      }
+    const labels = Object.fromEntries([...svg.querySelectorAll<SVGGElement>("[data-body]")].map((g) => [g.dataset.body!, g.getAttribute("aria-label")]));
+    return { width: box.width, masks: masks.map((m) => ({ body: m.body, mark: m.mark, px: m.px, font: m.font, ink: m.ink })), shared, labels };
+  }, selector);
+
+/** Every planet drawn and nothing still moving: arrivals and pulses ended,
+    the wheels' font in, and two frames since. */
+async function wheelStill(page: Page, selector: string, retrograde: string[]) {
+  for (const body of retrograde) await expect(page.locator(`${selector} [data-body="${body}"] text`).filter({ hasText: "℞" })).toBeVisible({ timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check(`21px "Retrospect Sky Glyphs"`, "\u263F\u211E"))).toBe(true);
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity).map((a) => a.finished.catch(() => undefined))),
+  );
+  await settle(page);
+}
+
+/** Each ℞ wanted, at 12px or more, in the wheels' own font, with ink, sharing none of it. */
+function marksRead(ink: Awaited<ReturnType<typeof wheelInks>>, retrograde: readonly string[], where: string) {
+  expect(ink.masks.filter((m) => m.mark).map((m) => m.body).sort(), where).toEqual([...retrograde].sort());
+  expect(ink.masks.filter((m) => !m.mark)).toHaveLength(7);
+  for (const m of ink.masks) {
+    expect(m.font, `${where}: ${m.body}'s font`).toContain('"Retrospect Sky Glyphs"');
+    expect(m.ink, `${where}: ${m.body}'s ink`).toBeGreaterThan(20);
+    if (m.mark) expect(m.px, `${where}: ${m.body}'s ℞`).toBeGreaterThanOrEqual(12);
+  }
+  // A ℞ clear of its own planet's glyph, and of every other glyph and ℞.
+  for (const { a, b, pixels } of ink.shared) expect(pixels, `${where}: ${a} and ${b}`).toBe(0);
+  expect(ink.shared.length).toBe(retrograde.length * (7 + retrograde.length - 1));
+}
+
+test.describe("the ℞ on the listener's wheel, on a phone (ClickUp 86e3rwyfe)", () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+
+  test("on Sunday, March 23, 2025, Mercury's and Venus's ℞ read at 12px or more, clear of every glyph, and each planet says retrograde", async ({ page }) => {
+    const at = await (await page.request.get(`/api/sky/at?t=${MAR_23_2025_9PM}`)).json();
+    expect(at.at).toBe("2025-03-24T02:00:00.000Z");
+    expect(at.bodies.filter((b: { retrograde: boolean }) => b.retrograde).map((b: { body: string }) => b.body).sort()).toEqual(["Mercury", "Venus"]);
+    delete at.questionsHeld;
+    // NASA's picture of that day isn't in the sample, and the server would ask NASA for it.
+    await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
+    await page.route("**/api/sky/now?*", async (route) => {
+      const res = await route.fetch();
+      route.fulfill({ response: res, json: { ...(await res.json()), sky: at } });
+    });
+
+    // Tonight's wheel, 280px wide under 400.
+    const TONIGHT_WHEEL = "svg[aria-label='Sky wheel']";
+    await openTonight(page);
+    await wheelStill(page, TONIGHT_WHEEL, ["Mercury", "Venus"]);
+    const tonight = await wheelInks(page, TONIGHT_WHEEL);
+    expect(tonight.width).toBe(280);
+    marksRead(tonight, ["Mercury", "Venus"], "Tonight");
+    for (const body of ["Mercury", "Venus"]) expect(tonight.labels[body], body).toMatch(/, retrograde$/);
+    for (const body of ["Sun", "Moon", "Mars", "Jupiter", "Saturn"]) expect(tonight.labels[body], body).not.toMatch(/retrograde/);
+
+    // The same night's sheet, its wheel at 260px.
+    const SHEET_WHEEL = "[role=dialog] svg:has([data-body])";
+    await page.goto(`${TONIGHT}?night=2025-03-23`);
+    await expect(page.getByRole("dialog")).toContainText("At 9 p.m. that night.", { timeout: 30_000 });
+    await wheelStill(page, SHEET_WHEEL, ["Mercury", "Venus"]);
+    const sheet = await wheelInks(page, SHEET_WHEEL);
+    expect(sheet.width).toBe(260);
+    marksRead(sheet, ["Mercury", "Venus"], "the night's sheet");
+
+    const px = (ink: typeof tonight) => ink.masks.filter((m) => m.mark).map((m) => `${m.body} ${m.px.toFixed(2)}px`).join(", ");
+    test.info().annotations.push({ type: "measured", description: `the ℞ at 375: Tonight ${px(tonight)}; the night's sheet ${px(sheet)}; in ${tonight.masks[0].font}` });
+  });
+});
+
 test.describe("the selected tab's contrast on the rendered page (11; ClickUp 86e3h9mca)", () => {
   test("Tonight's label reads at 4.5:1 or more on its pill, and the other on the track, on the real switcher", async ({ page }) => {
     await openTonight(page);
