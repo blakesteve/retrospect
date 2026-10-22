@@ -228,8 +228,25 @@ const PKG = "@blakesteve/roster";
  * On the wire, the 207,923 bytes are 31,241 gzipped at level 9 (Roster's
  * `style.css` alone 21,100), and the stylesheet blocks rendering on every
  * route.
+ *
+ * Raised 21 October 2026, JS 1,436,000 to 1,523,000, measured on clean
+ * builds of f778fdf and of bb/quality over it: 1,389,108 to 1,453,012
+ * (+63,904). What grew is the app's first error pages, `error.tsx` and
+ * `global-error.tsx`, 63,361 of it: the same branch built without those two
+ * files, and before `src/proxy.ts`, was 1,389,108 again. Next loads both
+ * boundaries on every page, so every first load grew 7,059 bytes, their two
+ * chunks (the landing's 673,873 to 680,932). Built first with Roster's
+ * EmptyState and Button in both, every first load grew 64,807: a second
+ * copy of the Button and Headless UI, which the landing's forms already
+ * load in chunks of their own. So the error page's Try again, the Button,
+ * loads only when that page draws, a 28,285-byte chunk no route loads
+ * first. The rest is Next's own runtime, its bootstrap and error boundary,
+ * split again around the new boundaries. The other 543 are the proxy's
+ * matchers, which Next copies into the client's
+ * `_clientMiddlewareManifest.js` (96 to 639 bytes). 1,523,000 restores 4.8%
+ * slack.
  */
-const CLIENT_JS_CEILING = 1_436_000;
+const CLIENT_JS_CEILING = 1_523_000;
 const ROSTER_CSS_BYTES = 166_491;
 const APP_CSS_CEILING = 43_000;
 

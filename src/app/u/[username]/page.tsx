@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { decodeName } from "@/lib/username";
 import { Tonight } from "@/components/listener/Tonight";
 import { cardFromPage, cardImage } from "@/lib/share/card";
 
@@ -9,7 +10,7 @@ interface Props {
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { username } = await params;
-  const name = decodeURIComponent(username);
+  const name = decodeName(username);
   const query = await searchParams;
   // A shared link (`?song=`, `?night=` or `?q=`, with the sharer's `tz`)
   // unfurls as that card, in that zone (8.7.5, 7.1); the page alone, as the

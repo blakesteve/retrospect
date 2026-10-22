@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { loadListener } from "@/lib/listener/serve";
 import { getStore } from "@/lib/store/jsonStore";
 import { runTagChunk } from "@/lib/tagsync";
-import { isValidUsername } from "@/lib/username";
+import { isValidUsername, decodeName } from "@/lib/username";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -22,7 +22,7 @@ export const maxDuration = 60;
 export async function GET(req: Request, { params }: { params: Promise<{ name: string }> }) {
   try {
     const { name } = await params;
-    const username = decodeURIComponent(name).trim();
+    const username = decodeName(name).trim();
     if (!isValidUsername(username)) {
       return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
     }

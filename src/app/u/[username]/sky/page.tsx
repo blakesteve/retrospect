@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { decodeName } from "@/lib/username";
 import { SkyView } from "@/components/listener/SkyView";
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
-  const name = decodeURIComponent(username);
+  const name = decodeName(username);
   return {
     title: `Sky · ${name} · Retrospect`,
     description: `${name}'s Last.fm history on the real sky: the planets on every night, and their songs as stars.`,

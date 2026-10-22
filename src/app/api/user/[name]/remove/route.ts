@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requestRemoval } from "@/lib/removal";
-import { isValidUsername } from "@/lib/username";
+import { isValidUsername, decodeName } from "@/lib/username";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  */
 async function handler(req: Request, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const username = decodeURIComponent(name).trim();
+  const username = decodeName(name).trim();
   if (!isValidUsername(username)) {
     return NextResponse.json({ outcome: "invalid", error: "Invalid username" }, { status: 400 });
   }

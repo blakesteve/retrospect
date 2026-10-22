@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { decodeName } from "@/lib/username";
 import { EveryNight } from "@/components/listener/EveryNight";
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
-  const name = decodeURIComponent(username);
+  const name = decodeName(username);
   return {
     title: `Every night · ${name} · Retrospect`,
     description: `Every night of ${name}'s Last.fm history under its sky: the Moon, the storms and the songs first heard.`,

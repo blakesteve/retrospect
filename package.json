@@ -7,7 +7,7 @@
     "build": "next build",
     "postbuild": "node scripts/check-bundle-shape.mjs && node scripts/check-sky-server-only.mjs",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

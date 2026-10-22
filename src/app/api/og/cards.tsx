@@ -68,13 +68,41 @@ function Frame({ size, username, children }: { size: CardSize; username: string 
           borderBottom: `2px solid ${LINE}`,
         }}
       >
-        <span style={{ color: GOLD, letterSpacing: tall ? 10 : 7 }}>RETROSPECT</span>
-        {username && <span style={{ color: INK_2 }}>{username}</span>}
+        <span style={{ color: GOLD, letterSpacing: tall ? 10 : 7, flexShrink: 0 }}>RETROSPECT</span>
+        {/* A name too long for the line ends in an ellipsis rather than run off the card. */}
+        {username && (
+          <span style={{ color: INK_2, minWidth: 0, marginLeft: tall ? 32 : 24, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{username}</span>
+        )}
       </div>
       <div style={{ display: "flex", flex: 1, flexDirection: tall ? "column" : "row", alignItems: "center", justifyContent: "center", gap: tall ? 72 : 56 }}>
         {children}
       </div>
       <div style={{ display: "flex", fontSize: tall ? 26 : 20, color: INK_2 }}>The sky of your Last.fm history · retrospect</div>
+    </div>
+  );
+}
+
+/** The generic card's name. A Last.fm name runs to 50 characters, often with
+    no space to wrap at, so a long one is drawn smaller, then broken wherever
+    the line runs out; the Moon beside it stays in frame. At 72px (96 tall)
+    about 16 letters fit a line, and 10 of the widest. */
+function Name({ name, size }: { name: string; size: CardSize }) {
+  const tall = size === "tall";
+  const n = name.length;
+  const px = tall ? (n <= 16 ? 96 : n <= 28 ? 72 : 56) : n <= 12 ? 72 : n <= 24 ? 56 : 44;
+  return (
+    <div
+      style={{
+        display: "flex",
+        fontSize: px,
+        lineHeight: 1.1,
+        maxWidth: tall ? 920 : 640,
+        wordBreak: "break-all",
+        justifyContent: tall ? "center" : "flex-start",
+        textAlign: tall ? "center" : "left",
+      }}
+    >
+      {name}
     </div>
   );
 }
@@ -154,7 +182,7 @@ export function Card({ data, size }: { data: CardData; size: CardSize }) {
       return (
         <Frame size={size} username={null}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: tall ? "center" : "flex-start", gap: tall ? 28 : 16 }}>
-            <div style={{ display: "flex", fontSize: tall ? 96 : 72, lineHeight: 1.1 }}>{data.username ?? "Retrospect"}</div>
+            <Name name={data.username ?? "Retrospect"} size={size} />
             <div style={{ display: "flex", fontSize: tall ? 40 : 28, color: INK_2, maxWidth: tall ? 900 : 640, textAlign: tall ? "center" : "left" }}>
               {data.username
                 ? "Their Last.fm history under the real sky, and an honest answer to whether any of it moved them."

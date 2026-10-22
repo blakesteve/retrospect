@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Compare } from "@/components/compare/Compare";
 import { Wordmark } from "@/components/Wordmark";
+import { decodeName } from "@/lib/username";
 
 interface Props {
   params: Promise<{ a: string; b: string }>;
@@ -9,8 +10,8 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { a, b } = await params;
-  const ua = decodeURIComponent(a);
-  const ub = decodeURIComponent(b);
+  const ua = decodeName(a);
+  const ub = decodeName(b);
   return {
     title: `${ua} and ${ub} · Retrospect`,
     description: `Same sky, different people: ${ua} and ${ub} on the same 12 questions about the sky and their listening.`,
@@ -29,7 +30,7 @@ export default async function ComparePage({ params }: Props) {
       </nav>
       {/* The compare sheet is a URL (`?q=`), read with useSearchParams. */}
       <Suspense fallback={null}>
-        <Compare a={decodeURIComponent(a)} b={decodeURIComponent(b)} />
+        <Compare a={decodeName(a)} b={decodeName(b)} />
       </Suspense>
     </main>
   );

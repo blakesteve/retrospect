@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -17,10 +17,55 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** loading shifts that follow the data · a long name runs
-  off the generic share card · framework error pages a visitor can still reach
+- **Next, quality:** loading shifts that follow the data · the nights API's
+  bad-range 400s carry no code
 
 ## Done
+
+### Tonight's ℞, long names on the share card, and error pages (21 October 2026)
+
+- **Tonight's ℞ is 13.0px at 375px** (ClickUp 86e3rwyfe; it was 8.7px), and
+  12.1px on a night's sheet, the smallest wheel a phone reads it on. It is
+  0.63 of its planet's glyph (`RX_SIZE` in `sky.tsx`), was 0.42. A browser
+  check puts the server's own sky for 9 p.m. on Sunday, March 23, 2025, when
+  Mercury and Venus were both retrograde, in place of tonight's, draws each
+  glyph and ℞ again alone in the wheels' own font, and finds no pixel any
+  ℞ shares with a glyph or another ℞, on Tonight's 280px wheel and the
+  night's 260px one; both planets still say "retrograde".
+- **A long name fits the generic share card** at every length a name can
+  have (50 characters). It is set smaller as it grows (wide card 72, 56 and
+  44px; tall 96, 72 and 56px) and broken wherever the line runs out, since
+  a Last.fm name usually has no space to wrap at; the Moon stays in frame.
+  The song, night and question cards' headers end a long name in an
+  ellipsis. A test renders the route with the bundled Satori at 1, 25 and
+  50 characters, wide and tall, and counts the ink inside the frame's
+  padding: none. On `main` the 25- and 50-character cards drew 2,372 to
+  3,959 pixels there, and a question card's header 411 (wide) and 693
+  (tall).
+- **Error pages in the app's own words.** `not-found.tsx` (plain markup: no
+  script, and two utilities, 225 bytes of CSS), `error.tsx` (the words for a
+  failure on our side, Try again, and a way back to the start) and
+  `global-error.tsx`. A page that throws used to show Next's "This page
+  couldn't load".
+- **A hand-typed address whose encoding can't be read** (`/u/abc%`,
+  `/vs/a%/b`) answered a bare "Internal Server Error" (500): Next's own
+  routing decodes each segment before any of the app runs. `src/proxy.ts`
+  sends those to the not-found page with a 404, and an API call gets a 400
+  with the `invalid-username` code; it runs only for paths with a "%" in
+  them. Checked on `next start`: on Vercel, its own router matches these
+  paths, so a preview is still to check. A name that decodes to a "%"
+  (`/u/abc%25`) threw in the app's own second decode, so the page said
+  "Something went wrong on our side"; it now says the name isn't a Last.fm
+  username. The profile and avatar routes check the name as the others do.
+- **Every page's first load grew 7,059 bytes** for the two error
+  boundaries, which Next loads everywhere. With Roster's EmptyState and
+  Button in them it was 64,807, a second copy of what the landing's forms
+  already load, so Try again's Button loads only when the error page draws.
+  The bundle guard's JS ceiling goes to 1,523,000 (client JS 1,389,108 to
+  1,453,012 against `f778fdf`). The app's own CSS is 42,481
+  of 43,000 (+225, two utilities for the not-found page).
+- **`npm run lint` fails on a warning** (`--max-warnings=0`), so zero stays
+  zero.
 
 ### The Sky wheel's glyphs, and Roster 5.12.0 (17 October 2026)
 
@@ -1051,19 +1096,19 @@ the `threshold` refactor.
       above, and a title can run to two either way; and the chart sheet keeps
       the short sheet skeleton. Each needs either space held in the content or
       a skeleton that knows more than the layout.
-- [ ] **A long name runs off the generic share card.** A `?u=` of about 25
-      characters with no space overflows `/api/og`'s generic card: the name
-      and the line under it run past the left edge, and the Moon off the
-      right. Production does the same today. The app accepts names up to 50
-      characters (`isValidUsername`), so a hand-made link gets there.
-- [ ] **Framework error pages a visitor can still reach.** There is no
-      `src/app/error.tsx`, `global-error.tsx` or `not-found.tsx`, so a render
-      exception would show Next's own "Application error" text. Nothing
-      found triggers one today. A hand-typed URL with broken percent-encoding
-      (`/u/abc%`) gets Next's bare "Internal Server Error", and a hand-edited
-      era that runs backwards gets "something went wrong on our side", because
-      the report route's 400s carry no `code`. None is reachable from the
-      app's own links or forms.
+- [ ] **The nights API's bad-range 400s carry no code.** `from` after `to`,
+      or months the wrong shape, answers 400 with only developer text, which
+      a page would read as "Something went wrong on our side". No page puts
+      the months in its URL, so only a direct API call gets there today; the
+      report route this row used to name, with its hand-edited era, went with
+      the redesign.
+- [x] ~~A long name runs off the generic share card.~~ Set smaller and broken
+      wherever the line runs out; fits at 1 to 50 characters, wide and tall,
+      with no ink inside the frame's padding (21 Oct 2026, above).
+- [x] ~~Framework error pages a visitor can still reach.~~ `not-found.tsx`,
+      `error.tsx` and `global-error.tsx` in the app's own words, and
+      `src/proxy.ts` for an address Next can't decode: 404 for a page, 400
+      with a code for the API (21 Oct 2026, above).
 - [x] ~~Two `react-hooks/set-state-in-effect` errors and an unused import.~~
       Lint is at zero. `Report`'s was a real fix: `threshold` started at a
       hardcoded 365 and was corrected a frame later by an effect, and is now

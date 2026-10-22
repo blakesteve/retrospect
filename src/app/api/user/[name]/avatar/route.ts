@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { decodeName, isValidUsername } from "@/lib/username";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
-  const username = decodeURIComponent(name).trim();
+  const username = decodeName(name).trim();
+  if (!isValidUsername(username)) {
+    return NextResponse.json({ error: "Invalid username", code: "invalid-username" }, { status: 400 });
+  }
   const apiKey = process.env.LASTFM_API_KEY;
-  if (!apiKey || !username) return NextResponse.json({ imageUrl: null });
+  if (!apiKey) return NextResponse.json({ imageUrl: null });
 
   const key = username.toLowerCase();
   if (cache.has(key)) return NextResponse.json({ imageUrl: cache.get(key) });
