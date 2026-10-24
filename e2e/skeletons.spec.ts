@@ -107,6 +107,36 @@ const CASES: {
     sizes: [PHONE, NARROW_MOUSE, LAPTOP],
   },
   {
+    // Every event one line: each card holds two lines' room anyway, so the
+    // row lands at its skeleton's height (the sample's own all take two).
+    name: "coming up, every event one line",
+    url: `/u/sample?${ZONE}`,
+    held: ["**/api/sky/now?*"],
+    fed: ["#tonight-wheel", FOR_YOU, `${FOR_YOU} + div + div`, "section[aria-labelledby=coming-h]"],
+    parts: {},
+    heightOnly: { comingUp: "section[aria-labelledby=coming-h]" },
+    sizes: [PHONE, NARROW_MOUSE, LAPTOP],
+    fake: (page) =>
+      page.route("**/api/sky/now?*", async (route) => {
+        const res = await route.fetch();
+        const body = await res.json();
+        expect(body.comingUp.length).toBeGreaterThan(0);
+        await route.fulfill({ response: res, json: { ...body, comingUp: body.comingUp.map((c: object) => ({ ...c, text: "Full moon" })) } });
+      }),
+    landed: async (page) => {
+      // What it measured: every event on one line.
+      const lines = await page.locator("section[aria-labelledby=coming-h] p.font-display").evaluateAll((ps) =>
+        ps.map((p) => {
+          const range = document.createRange();
+          range.selectNodeContents(p);
+          return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+        }),
+      );
+      expect(lines.length).toBeGreaterThan(0);
+      expect(new Set(lines)).toEqual(new Set([1]));
+    },
+  },
+  {
     // The 12 tiles at once, each word's pill a skeleton until the words come.
     name: "the 12 questions",
     url: `/u/sample?${ZONE}`,
@@ -114,6 +144,11 @@ const CASES: {
     fed: ["#questions-grid", FOR_YOU],
     parts: {},
     heightOnly: { questions: "#questions-grid" },
+    landed: async (page) => {
+      // The subtitle line once the words are in, as the UX lead wrote it
+      // (24 Oct): a tile can read "Not checked" or "Too early", so not "checked".
+      await expect(page.locator("#questions-h + p")).toHaveText("Each answer comes from your own listening.");
+    },
   },
   {
     name: "the sky of your songs",
