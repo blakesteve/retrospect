@@ -6,10 +6,24 @@ on:
   push:
     branches: [main]
 
+# Every job runs on Ubuntu 24.04, not ubuntu-latest: since 22 Oct 2026
+# ubuntu-latest is 26.04, where Playwright 1.58.2 can't install its browsers,
+# so the browser checks failed before any test (ClickUp 86e3v3jtd). The other
+# jobs are pinned with it, so every job runs on the system all of them ran on
+# until then.
+#
+# Every job has a ceiling, so a stall fails inside a stated bound instead of
+# at GitHub's six hours (Roster's CI sat 52 minutes on a slow apt mirror on
+# 23 Oct). Each is about two and a half times the job's slowest healthy run,
+# and never under 10 minutes, room for an install with a cold npm cache.
+# Healthy runs are the 11 green CI runs from 11 to 22 Oct 2026.
+
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # Healthy: 0.8 to 1.4 minutes.
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +41,9 @@ jobs:
 
   lint:
     name: Lint & Type Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # Healthy: 0.6 to 0.9 minutes.
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -48,8 +64,9 @@ jobs:
 
   browser:
     name: Browser checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    # Healthy: 2.5 to 4.2 minutes, the system libraries from apt included.
+    timeout-minutes: 12
 
     steps:
       - uses: actions/checkout@v4
