@@ -245,10 +245,19 @@ const PKG = "@blakesteve/roster";
  * matchers, which Next copies into the client's
  * `_clientMiddlewareManifest.js` (96 to 639 bytes). 1,523,000 restores 4.8%
  * slack.
+ *
+ * Raised 24 October 2026, APP_CSS_CEILING 43,000 to 44,000, measured on a
+ * clean build of bb/wheels-focus over 9d0fb11 (main after #41): the app's
+ * own CSS 42,978 to 43,001 (+23). What grew is the wheels' focus ring, put
+ * on Roster's key-focus variant (`@custom-variant focus-visible` in
+ * globals.css) so Safari draws it after a click: its rule went from 77 to
+ * 99 bytes. With 22 bytes to spare, the 24 October ruling was to raise it
+ * with the next CSS. 44,000 leaves 999, about one fix's room, as 43,000 was
+ * set with.
  */
 const CLIENT_JS_CEILING = 1_523_000;
 const ROSTER_CSS_BYTES = 166_491;
-const APP_CSS_CEILING = 43_000;
+const APP_CSS_CEILING = 44_000;
 
 const problems = [];
 
