@@ -17,7 +17,7 @@ import type { AnswersPayload, Highlights, SkyNow, Songs, SyncStatus } from "@/co
 import { isNightDate, songIndex, tonightDate } from "@/components/listener/format";
 import { outsideTheSky, planetSheetValue } from "@/lib/client/planetSheet";
 import { OUTSIDE_THE_SKY } from "@/components/invalidLink";
-import { SheetSkeleton } from "@/components/listener/pieces";
+import { FULL_SHEET, SheetSkeleton } from "@/components/listener/pieces";
 import { dropSample, LANDING_HEADING, SAMPLE_LABEL, SAMPLE_SHEETS, SAMPLE_USER, SAMPLE_ZONE, sampleFile, sampleFrom, type SampleSheet } from "./sampleUrls";
 import { loadSkyNow } from "./skyNow";
 
@@ -37,10 +37,11 @@ type Open = SheetRef | { kind: "sample"; value: string };
 type BodyKind = Exclude<SheetRef["kind"], "share" | "chart"> | SampleSheet;
 
 /** Each body's skeleton while its sample or its code loads: as tall as the
-    sheet for the bodies that fill it (`SheetSkeleton`). */
-const FILLS = new Set<BodyKind>(["song", "night", "q", "planet", "tonight"]);
+    sheet for the bodies that fill it (`SheetSkeleton`). Every body's sheet
+    stands at its full height (`FULL_SHEET`), the answers' too, which never
+    fills it: it opened short and grew 197px when it landed. */
+const FILLS = new Set<BodyKind>(["song", "night", "q", "planet", "tonight", "answers"]);
 const Fill = () => <SheetSkeleton fill />;
-const Skeleton = () => <SheetSkeleton />;
 
 const BODIES: Record<BodyKind, ComponentType<SheetBodyProps>> = {
   song: dynamic(() => import("@/components/listener/sheets/SongSheet"), { loading: Fill }),
@@ -48,7 +49,7 @@ const BODIES: Record<BodyKind, ComponentType<SheetBodyProps>> = {
   q: dynamic(() => import("@/components/listener/sheets/QuestionSheet"), { loading: Fill }),
   planet: dynamic(() => import("@/components/listener/sheets/PlanetSheet"), { loading: Fill }),
   tonight: dynamic(() => import("./TonightSample"), { loading: Fill }),
-  answers: dynamic(() => import("./AnswersSample"), { loading: Skeleton }),
+  answers: dynamic(() => import("./AnswersSample"), { loading: Fill }),
 };
 
 const PROVISIONAL: Record<BodyKind, string> = {
@@ -281,6 +282,7 @@ export default function SampleHost({ onInvalid, onValid }: SampleHostProps) {
         busy={shownStatus !== "ready" || bodyBusy}
         contentKey={key ?? undefined}
         returnFocus={deepLinked && typeof document !== "undefined" ? document.getElementById(LANDING_HEADING) : (opener ?? undefined)}
+        className={FULL_SHEET}
       >
         {shown && (
           <>

@@ -1,10 +1,11 @@
 import { MakeTime, SearchMoonPhase } from "astronomy-engine";
 import { conditionFor } from "@/lib/answers/conditions";
 import { QUESTIONS, type Question, type QuestionId } from "@/lib/answers/questions";
-import { dateIn, nightDate, timeIn } from "@/lib/listener/words";
+import { tonightHeading } from "@/lib/client/heading";
+import { dateIn, timeIn } from "@/lib/listener/words";
 import { happenedWhen, startsWhen } from "@/lib/listener/when";
 import { kpLabel } from "@/lib/space/kp";
-import { nightName, nightWeekday, zoneClock } from "@/lib/zone";
+import { zoneClock } from "@/lib/zone";
 import {
   DIGNITY_TABLE,
   dignityPhrase,
@@ -36,22 +37,8 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** "Mars", "the Sun", "the Moon", for the middle of a sentence. */
 const bodyName = (body: SkyBody) => (body === "Sun" || body === "Moon" ? `the ${body}` : body);
 
-/* ---- The heading (8.4) ----------------------------------------------------- */
-
-/**
- * By local time: 0:00 to 3:59, the night before ("Monday night, Sept 28" at
- * 1 a.m. Tuesday); 4:00 to 15:59, "Tuesday, Sept 29"; 16:00 to 23:59,
- * "Tuesday night, Sept 29". A night runs 4 a.m. to 4 a.m. (7.1), so the date
- * is always the night's.
- */
-export function tonightHeading(zone: string, now: number): string {
-  const clock = zoneClock(zone, now);
-  const hour = new Date(clock.localSeconds(now) * 1000).getUTCHours();
-  const night = clock.nightOf(now);
-  const date = nightDate(nightName(night)).replace(/, \d{4}$/, "");
-  const weekday = WEEKDAYS[nightWeekday(night)];
-  return hour >= 4 && hour < 16 ? `${weekday}, ${date}` : `${weekday} night, ${date}`;
-}
+/* The heading (8.4) lives in `@/lib/client/heading`, which reaches no sky
+   data, so the page draws it before the sky arrives. */
 
 /* ---- The Moon (8.4) -------------------------------------------------------- */
 

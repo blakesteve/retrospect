@@ -289,6 +289,38 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   font-variant-emoji: text;
 }
 
+/* "Not checked" and "Checking" (`AnswerPill`): their outline drawn inside
+   the pill, so every word's pill is one size; a border made these 2px
+   taller than an answer's, and a row of tiles moved when its words came.
+   An outline, not a box-shadow, so forced colors keep it. */
+.quiet-pill {
+  outline: 1px solid var(--word-quiet);
+  outline-offset: -1px;
+}
+
+/* A question card's answer word in the share sheet (`WordRoom`): one cell
+   holding the word and, unseen, the two widest a card can end on, so the
+   question breaks where it will whatever the word. Generated text, so it's
+   in no one's copy of the words and, hidden, not read out. */
+.word-room {
+  display: inline-grid;
+}
+.word-room::before,
+.word-room::after,
+.word-room > * {
+  grid-area: 1 / 1;
+}
+.word-room::before,
+.word-room::after {
+  visibility: hidden;
+}
+.word-room::before {
+  content: "Not checked.";
+}
+.word-room::after {
+  content: "Not clearly.";
+}
+
 /* Motion (spec 8.11): transform and opacity only; nothing under reduced
    motion; held still while the tab is hidden (`data-hidden`, set by the
    listener views). The final state is each element's own style, so the

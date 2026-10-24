@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -17,10 +17,61 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** loading shifts that follow the data · the nights API's
-  bad-range 400s carry no code
+- **Next, quality:** loading shifts that need a design change · the nights
+  API's bad-range 400s carry no code
 
 ## Done
+
+### Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 October 2026)
+
+- **What lands takes its skeleton's place, wherever its size can be known
+  before its data.** Each part's data held back on the made-up sample, then
+  let through, measured once fonts are in and nothing is moving
+  (`e2e/skeletons.spec.ts`), at 375 and 1280px wide, the sheets on a
+  1,300px-tall screen too and the share sheet from 476 to 639px. Shifts on
+  `a6133b4`, now zero:
+  - Tonight's heading is drawn at once from the zone and the clock, which is
+    all it needs (`src/lib/client/heading.ts`). It took one line or two
+    when the sky came.
+  - The 12 questions draw their tiles at once, each word's pill a skeleton
+    until the words come (+409.6px at 375, +433.6 at 1280: a progress line,
+    then the tiles). The progress line is now the row's subtitle line, which
+    says "Each answer is checked against your own history." once they're in,
+    so it keeps its height. "Not checked" and "Checking" draw their outline
+    inside the pill, which made them 2px taller than an answer's.
+  - A row's heading holds its arrows' box (96px) on a screen with a mouse, so
+    a long title takes a second line in the skeleton too ("Coming up in your
+    sky", "The sky of your songs" at 375); a row too short to page keeps it.
+    The songs row's skeleton holds "See all"'s own box.
+  - Cards hold each line's room, whatever it says: a song's title two lines
+    (+11 at 375), a genre's name one, its artists two, "Rising" its line and
+    the night link two (+11), a coming-up event two and its question link two
+    (+18.5 at 375).
+  - Every sheet but the share sheet stands at its full height, Roster's
+    92dvh: a question's, a planet's and the landing's Tonight no longer
+    shrink on a tall screen (-22.7, -245 and -223.9px at 1280 by 1,300), the
+    landing's answers no longer grows 196.8px, and the birth chart's sheet
+    holds its height while its code loads.
+  - The share sheet's skeleton draws the link and a question card's question
+    as themselves, a card's answer word has the room of the widest it could
+    be, and its words hold two lines (-19.5 to -49.7px from 476 to 639, and
+    +30.3 for a longer question ending "Not clearly." at 476).
+  - The Sky view holds the wheel key's line while tonight's sky loads (+27.5).
+  - Compare shows each side's progress under its own name, in a line kept
+    when it's done; the shared line left (-45).
+- **Bundle, against `a6133b4`'s build:** client JS 1,453,012 to 1,458,533
+  bytes, and each route's first load up by 187 (`/`) to 5,198 (Tonight);
+  the app's own CSS 42,481 to 42,978 of its 43,000, 22 bytes to spare.
+- **CI pinned to Ubuntu 24.04** (ClickUp 86e3v3jtd): `ubuntu-latest` became
+  26.04 on 22 Oct, where Playwright 1.58.2 can't install its browsers. Every
+  job has a ceiling about two and a half times its slowest healthy run, at
+  least 10 minutes (test and lint 10, browser checks 12, null test 12, from 20);
+  `src/lib/ciWorkflow.test.ts` holds both for every job.
+- **Next.js 16.4.0 to 16.4.2**, and `eslint-config-next` with it: it clears
+  Next's critical advisory. `npm audit --omit=dev` still lists three, all in
+  build tooling (nanoid and source-map-js through Tailwind's PostCSS, and
+  baseline-browser-mapping through browserslist), none in what the app
+  serves; a full `npm audit` lists ten, the rest dev tooling.
 
 ### Tonight's ℞, long names on the share card, and error pages (21 October 2026)
 
@@ -1072,7 +1123,24 @@ the `threshold` refactor.
 
 ### Quality
 
-- [ ] **Loading shifts that follow the data.** Measured 15 and 16 Oct on the
+- [ ] **Loading shifts that need a design change.** What still moves when its
+      data lands, measured 24 Oct on the made-up sample (data held, then let
+      through), since everything whose size could be known first was fixed
+      (24 Oct, above). Each is the data's own shape, so holding its room means
+      holding the most the data can take, or a different design:
+      "Tonight, for you" (+179.9px at 375, +117.9 at 1280 when the sky comes:
+      its rows are tonight's sky, how many and how long; then +159.3 and
+      +45.5 when the answers come after it and "Checking…" becomes each
+      answer's line), "Your habits"
+      (-58.5 at 375, +55.5 at 1280: how many archetypes, and how their lines
+      wrap) and compare's rows (+89.4 at 375, +35.8 at 1280 over 12 rows: the
+      swing lines). With a made-up photo of Earth, the rest of tonight's sky
+      grows 122px when the sky comes on a day NASA's camera has one; the
+      skeleton holds no room for it. Under 429px wide, the wheels' key takes
+      a second line on a night with all four halos (23.5px; 7 of the 365
+      nights from 25 Oct 2026). The row below is what was measured before.
+- [x] ~~**Loading shifts that follow the data.**~~ Closed 24 Oct, but for the
+      row above. Measured 15 and 16 Oct on the
       made-up sample: these still move when their content lands, because their
       size depends on tonight's sky, the hour or the listener's text, not the
       layout. Tonight's heading (one line or two at 375px, by weekday and

@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@blakesteve/roster";
 import { QUESTIONS } from "@/lib/answers/questions";
-import { cardImage, cardRef, nightSays, questionSays, shareLink, songSays } from "@/lib/share/card";
+import { cardImage, cardRef, firstPerson, nightSays, questionSays, shareLink, songSays } from "@/lib/share/card";
 import { useListener } from "../Shell";
 import type { SheetBodyProps } from "../SheetHost";
 import { nightDateText, songIndex } from "../format";
 import { Icon, SheetFailed } from "../pieces";
-import { ShareSheetSkeleton } from "../skeletons";
+import { ShareSheetSkeleton, WordRoom } from "../skeletons";
 import { useNight } from "./nightParts";
 
 /* The share sheet (spec 8.7.5): a preview of the card (9:16), what it says
@@ -66,7 +66,9 @@ export default function ShareSheet({ value, setTitle, setBusy, invalid, retry }:
   }, [missing]);
   useEffect(() => setBusy(loading), [loading, setBusy]);
   if (failed) return <SheetFailed retry={retry} />;
-  if (loading || missing || !ref) return <ShareSheetSkeleton />;
+  if (loading || missing || !ref) {
+    return <ShareSheetSkeleton link={ref ? shareLink(window.location.origin, L.username, ref, L.zone) : undefined} question={question ? firstPerson(question.question) : undefined} />;
+  }
 
   const link = shareLink(window.location.origin, L.username, ref, L.zone);
   const tall = cardImage(L.username, ref, L.zone, "tall");
@@ -117,7 +119,17 @@ export default function ShareSheet({ value, setTitle, setBusy, invalid, retry }:
         <img src={tall} alt="" width={180} height={320} className="h-80 w-[180px] shrink-0 rounded-xl border border-[var(--line)] bg-surface-2" data-card-preview />
         <div className="min-w-0">
           <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-gold">The card says</p>
-          <p className="mt-2 font-display text-[22px] leading-snug text-ink">{says}</p>
+          {/* Two lines' room, as its skeleton holds, so a one-line card at
+              these widths doesn't pull the buttons up when it lands. */}
+          <p className="mt-2 min-h-[2.75em] font-display text-[22px] leading-snug text-ink">
+            {question && word ? (
+              <>
+                {firstPerson(question.question)} <WordRoom word={word} />
+              </>
+            ) : (
+              says
+            )}
+          </p>
           <p className="mt-3 break-all text-[13px] text-ink-2">{link}</p>
         </div>
       </div>

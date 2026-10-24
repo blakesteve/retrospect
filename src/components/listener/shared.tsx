@@ -3,10 +3,11 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@blakesteve/roster";
+import { QUESTIONS } from "@/lib/answers/questions";
 import { isValidUsername } from "@/lib/username";
 import { useListener } from "./Shell";
 import { SheetLink } from "./sheetLink";
-import { AnswerPill, Row, RowFailed } from "./pieces";
+import { AnswerPill, Row, RowFailed, SkySkeleton } from "./pieces";
 
 /* The rows both views end with (8.4 items 5 and 6, 8.5 item 6): "Does the
    sky move you?" and "Compare with a friend". Their own module, so Every
@@ -16,38 +17,60 @@ export function QuestionsGrid({ level = 2 }: { level?: 2 | 3 }) {
   const L = useListener();
   const a = L.answers.state === "ready" ? L.answers.data : null;
   const answers = a && a.status !== "computing" ? a : null;
+  // The 12 are known before their answers are, so the tiles are drawn at
+  // once with each word's pill as a skeleton, and nothing moves when the
+  // words land. The progress line is the row's subtitle line, which says
+  // what the tiles are once they're answered, so it keeps its height (8.4:
+  // it was a line in the tiles' place, 410px shorter than the tiles).
+  const words = new Map(answers?.questions.map((q) => [q.id, q.word]));
+  const failed = L.answers.state === "failed";
+  const line = failed ? undefined : (
+    <>
+      {/* The one announced progress line on Tonight (8.4, 11). */}
+      <span role="status">{answers ? "" : <>Checking 12 questions against your sky&hellip; {a?.done ?? 0} of 12</>}</span>
+      {answers && "Each answer is checked against your own history."}
+    </>
+  );
   return (
     <section id="questions-grid">
-      <Row id="questions" title="Does the sky move you?" level={level}>
-        {L.answers.state === "failed" ? (
+      <Row id="questions" title="Does the sky move you?" level={level} sub={line}>
+        {failed ? (
           <RowFailed name="The 12 questions" />
-        ) : !answers ? (
-          // The one announced progress line on Tonight (8.4, 11).
-          <p className="text-ink-2" role="status">
-            Checking 12 questions against your sky&hellip; {a?.done ?? 0} of 12
-          </p>
         ) : (
-          // No fluke meter on the tiles: unlabeled, it read backwards (8.9).
-          <ul className="grid grid-cols-3 gap-2.5">
-            {answers.questions.map((q) => (
-              <li key={q.id}>
-                <SheetLink to={{ kind: "q", value: q.id }} className="group block h-full rounded-[18px]">
-                  <Card
-                    padding="none"
-                    className="sky-card flex h-full flex-col gap-1.5 p-2.5 transition-transform group-hover:-translate-y-0.5 motion-reduce:transition-none"
-                  >
-                    <span className="text-[11px] text-ink-2">
-                      <span className="sr-only">Question </span>
-                      {q.number}
-                      <span className="sr-only">:</span>
-                    </span>
-                    <span className="min-h-[2.5em] text-[12.5px] leading-tight text-ink">{q.shortName}</span>
-                    <AnswerPill word={q.word} className="self-start !px-2 !text-[12px]" />
-                  </Card>
-                </SheetLink>
-              </li>
-            ))}
-          </ul>
+          <>
+            {/* No fluke meter on the tiles: unlabeled, it read backwards (8.9). */}
+            <ul className="grid grid-cols-3 gap-2.5" aria-busy={answers ? undefined : true}>
+              {QUESTIONS.map((q) => {
+                const word = words.get(q.id);
+                return (
+                  <li key={q.id}>
+                    <SheetLink to={{ kind: "q", value: q.id }} className="group block h-full rounded-[18px]">
+                      <Card
+                        padding="none"
+                        className="sky-card flex h-full flex-col gap-1.5 p-2.5 transition-transform group-hover:-translate-y-0.5 motion-reduce:transition-none"
+                      >
+                        <span className="text-[11px] text-ink-2">
+                          <span className="sr-only">Question </span>
+                          {q.number}
+                          <span className="sr-only">:</span>
+                        </span>
+                        <span className="min-h-[2.5em] text-[12.5px] leading-tight text-ink">{q.shortName}</span>
+                        {word ? (
+                          <AnswerPill word={word} className="self-start !px-2 !text-[12px]" />
+                        ) : (
+                          // A pill's own box, unseen, under its skeleton.
+                          <span aria-hidden className="relative flex self-start">
+                            <AnswerPill word="Checking" className="invisible !px-2 !text-[12px]" />
+                            <SkySkeleton shape="block" height="100%" radius="full" className="absolute inset-0" />
+                          </span>
+                        )}
+                      </Card>
+                    </SheetLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
       </Row>
     </section>

@@ -31,6 +31,14 @@ export interface RailProps {
   gutter?: number;
 }
 
+/** The arrows' place in a row's heading line, where any pointer can hover
+    and so a row that overflows shows them (`Rail`'s arrows): their box, two
+    44px buttons 8px apart, so a long title wraps (or doesn't) as it will
+    beside them; it held their height alone, and "Coming up in your sky" and
+    "The sky of your songs" took a second line when the row came, at 375px.
+    A row too short to page keeps it too, as its skeleton does. */
+const ArrowsSpace = () => <span aria-hidden className="hidden h-11 w-24 [@media(any-hover:hover)]:block" />;
+
 /** A row of cards with its arrows in the heading line (10, 11). */
 export const Rail = forwardRef<CarouselHandle, RailProps>(function Rail({ label, noun, perView = CARDS_PER_VIEW, head, children, className = "", gallery = false, gutter = GUTTER }, ref) {
   return (
@@ -58,7 +66,9 @@ export const Rail = forwardRef<CarouselHandle, RailProps>(function Rail({ label,
                       {prev}
                       {next}
                     </>
-                  ) : null,
+                  ) : (
+                    <ArrowsSpace />
+                  ),
                 )}
               </div>
             )
@@ -69,10 +79,6 @@ export const Rail = forwardRef<CarouselHandle, RailProps>(function Rail({ label,
     </Carousel>
   );
 });
-
-/** The arrows' place in a row's heading line, where any pointer can hover
-    and so a row that overflows shows them (`Rail`'s arrows): their 44px height. */
-const ArrowsSpace = () => <span aria-hidden className="hidden h-11 w-px [@media(any-hover:hover)]:block" />;
 
 /** A titled row whose body is a `Rail`, or a line in its place (a state). */
 export function RailRow({
@@ -93,9 +99,10 @@ export function RailRow({
   action?: ReactNode;
   /** The row's cards. Absent while the row shows a state instead (`children`). */
   rail?: Omit<RailProps, "head">;
-  /** Still loading: the heading, holding its arrows' place and any action's
-      (`hold`), over skeleton cards on the row's own carousel. */
-  loading?: { skeleton: ReactNode; hold?: boolean };
+  /** Still loading: the heading, holding its arrows' place, or the box of
+      the action it will have (`hold`), over skeleton cards on the row's own
+      carousel. */
+  loading?: { skeleton: ReactNode; hold?: ReactNode };
   children?: ReactNode;
 }) {
   const head = (arrows: ReactNode) => (
@@ -121,7 +128,18 @@ export function RailRow({
       ) : loading ? (
         <>
           {/* As `Rail` lays its heading out: the arrows' line, then the cards. */}
-          <div className="mb-2">{head(loading.hold ? <span aria-hidden className="block h-11 w-px" /> : <ArrowsSpace />)}</div>
+          <div className="mb-2">
+            {head(
+              loading.hold ? (
+                <>
+                  <span aria-hidden>{loading.hold}</span>
+                  <ArrowsSpace />
+                </>
+              ) : (
+                <ArrowsSpace />
+              ),
+            )}
+          </div>
           {loading.skeleton}
         </>
       ) : (

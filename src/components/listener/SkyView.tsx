@@ -642,7 +642,19 @@ export function SkyView() {
           still={opening.p >= 1 && !state?.moving && !playing}
         />
       </div>
-      {bodies.length > 0 && <WheelKey bodies={bodies} className="mt-2" />}
+      {bodies.length > 0 ? (
+        <WheelKey bodies={bodies} className="mt-2" />
+      ) : (
+        L.skyNow.state === "loading" && (
+          // The key's line while tonight's sky is on its way, as Tonight's
+          // wheel holds it: "Your nights" moved down 27.5px when it came.
+          <div aria-hidden className="mt-2 flex flex-col items-center">
+            <p className="text-[13px]">
+              <SkySkeleton shape="line" size="inherit" width="13rem" />
+            </p>
+          </div>
+        )
+      )}
       {L.songs.state === "failed" && (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <p className="text-[14px] text-ink-2">Your songs didn&rsquo;t load.</p>

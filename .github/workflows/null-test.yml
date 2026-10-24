@@ -32,9 +32,12 @@ on:
 jobs:
   null-test:
     name: Null test
-    runs-on: ubuntu-latest
-    # About a minute locally on 11 threads; a runner has 3 to spare.
-    timeout-minutes: 20
+    # Ubuntu 24.04, as ci.yml's jobs are (it says why: ClickUp 86e3v3jtd).
+    runs-on: ubuntu-24.04
+    # About a minute locally on 11 threads; a runner has 3 to spare. Healthy
+    # in CI: 3.5 to 4.8 minutes over 7 green runs, 11 to 19 Oct 2026. About
+    # two and a half times the slowest, as ci.yml's ceilings are.
+    timeout-minutes: 12
 
     steps:
       - uses: actions/checkout@v4

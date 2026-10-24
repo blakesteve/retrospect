@@ -124,7 +124,11 @@ npm run space        # fill or refresh NASA's data in the local store (--all for
 All three of the first ones run in CI on every pull request, which is new — the
 lint errors they now catch had been sitting in the tree because nothing ran
 them on the way in. The null test runs in CI too (`null-test.yml`): on a pull
-request that touches anything it reads, and every Monday.
+request that touches anything it reads, and every Monday. Every job runs on
+Ubuntu 24.04, not `ubuntu-latest` (26.04, where Playwright 1.58.2 can't
+install its browsers), with a ceiling about two and a half times its slowest
+healthy run and never under 10 minutes; `src/lib/ciWorkflow.test.ts` keeps
+both true of every job in every workflow.
 
 ### Browser checks
 
@@ -152,7 +156,14 @@ more at 375 on Tonight's wheel and a night's, shares no pixel with any
 glyph, and is spoken. They check the app's own not-found page and its 404
 for an address Next can't decode (`/u/abc%`), the API's 400 and code for
 one, and the error page when a page throws, where Try again draws it again
-(and, when its button can't load, is a full load instead). On Every night,
+(and, when its button can't load, is a full load instead). With each part's
+data held back, they check that what lands takes its skeleton's place, the
+same height in the same spot, at 375 and 1280px wide (the sheets on a
+1,300px-tall screen too, the share sheet from 476 to 639px): Tonight's
+heading and wheel, the 12 questions, the songs, wild nights and genres rows
+(two genres, too few to page, as well), Every night's first month, the Sky
+view's wheel and key, compare's columns, and the question, planet, birth
+chart, share and compare sheets and the landing's two. On Every night,
 with the browser's clock held inside the sample's history, they check that
 the first screen asks for the year in view and no other (with the whole history's
 counts, which no later year carries), one door per night at 44px or more with

@@ -18,7 +18,7 @@ export function AnswerPill({ word, className = "" }: { word: AnswerWord; classNa
   return (
     <Pill
       size="md"
-      className={`font-semibold ${quiet ? "border border-[var(--word-quiet)] bg-transparent text-ink-2" : "text-[var(--sky)]"} ${className}`}
+      className={`font-semibold ${quiet ? "quiet-pill bg-transparent text-ink-2" : "text-[var(--sky)]"} ${className}`}
       style={quiet ? undefined : { backgroundColor: WORD_COLOR[word] }}
     >
       {word}
@@ -307,13 +307,18 @@ export function SkyRegion({ loading, skeleton, children, className }: { loading:
   );
 }
 
+/** A sheet that stands at its full height whatever its body, Roster's own
+    cap (its max height holds it under an open keyboard): a short one on a
+    tall screen (a planet's at 1280 by 1,300px) or one still loading lands
+    at the height it opened at. Every sheet but the share sheet, whose
+    skeleton draws its own boxes. */
+export const FULL_SHEET = "h-[92dvh]";
+
 /** A sheet still loading (8.7): a skeleton under the header. With `fill`, for
-    the bodies that fill the sheet on a phone and a laptop (a question, a
-    planet, a night, a song and the landing's Tonight, on the sample at 375
-    and 1280px wide, 900px tall), it's as tall as the sheet can be, so the
-    sheet opens at the height it lands at. The chart and the landing's
-    answers keep the short one; the share sheet has its own
-    (`ShareSheetSkeleton`). */
+    the bodies that fill the sheet (a question, a planet, a night, a song and
+    the landing's Tonight and answers), it's as tall as the sheet can be. The sheet
+    stands at its full height either way (`FULL_SHEET`); the share sheet has
+    its own skeleton (`ShareSheetSkeleton`). */
 export const SheetSkeleton = ({ fill = false }: { fill?: boolean }) => (
   <div className="space-y-3 py-2" aria-hidden>
     <SkySkeleton shape="block" height="10rem" />
