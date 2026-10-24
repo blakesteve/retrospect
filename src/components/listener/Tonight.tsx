@@ -15,6 +15,7 @@ import { RailRow, WILD_PER_VIEW } from "./rail";
 import { ComingUpCardSkeleton, GenreCardSkeleton, RailSkeleton, RestOfTonightSkeleton, SongCardSkeleton, WheelSkeleton, WildCardSkeleton } from "./skeletons";
 import { CompareCard, QuestionsGrid } from "./shared";
 import { DIGNITY_COLOR, MoonDrawing, SkyWheel, WheelKey, planetGlyph, type SkyWheelProps } from "./sky";
+import { KeyFocus } from "./keyFocus";
 import { sheetFrom } from "./sheetUrl";
 import { useWheelTravel, type WheelMoment, type WheelTravel } from "./wheelTravel";
 import { REDUCED_MOTION, prefersReducedMotion, useMedia, useOnScreen, usePauseWhenHidden } from "./media";
@@ -225,6 +226,7 @@ function SkyRightNow({
       <div id="tonight-wheel" ref={wheelRef} className="mt-1 flex flex-col items-center">
         {sky && wheel ? (
           <>
+            <KeyFocus />
             <SkyWheel
               bodies={wheel.bodies}
               size={280}

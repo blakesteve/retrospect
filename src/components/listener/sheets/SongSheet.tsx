@@ -9,6 +9,7 @@ import { nightShort, songIndex, weekdayShortAt } from "../format";
 import { SheetLink } from "../cards";
 import { Icon, SheetFailed, SheetSkeleton, SkySkeleton } from "../pieces";
 import { SkyWheel, WheelKey } from "../sky";
+import { KeyFocus } from "../keyFocus";
 import { Gallery, NightFacts, useNight, useSkyAt } from "./nightParts";
 
 /* The sky of a song (spec 8.7.1). */
@@ -57,6 +58,7 @@ export default function SongSheet({ value, setTitle, setBusy, invalid, retry }: 
       <div className="mt-6 flex flex-col items-center">
         {sky && sky !== "failed" ? (
           <>
+            <KeyFocus />
             <SkyWheel bodies={sky.bodies} size={300} onPlanet={setTapped} aspects={sky.aspects} />
             {/* "Tap any planet." and the halo key, then the tapped planet's line (8.7.1, 8.9). */}
             <WheelKey bodies={sky.bodies} className="mt-2" />

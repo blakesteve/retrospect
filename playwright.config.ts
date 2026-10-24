@@ -4,7 +4,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Retrospect's browser checks (`npm run test:browser`): what jsdom can't see,
- * measured in Chromium on the built app, served from a fresh folder holding
+ * measured in Chromium (the wheels' focus rings in WebKit too) on the built
+ * app, served from a fresh folder holding
  * only made-up listeners: the landing's sample, and compare's newcomer
  * (`e2e/global-setup.ts`). Run `npm run build` first.
  *
@@ -49,8 +50,14 @@ export default defineConfig({
     screenshot: "only-on-failure",
     colorScheme: "dark",
     timezoneId: "America/Chicago",
-    ...devices["Desktop Chrome"],
   },
+  projects: [
+    // Every check, in Chromium.
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // The wheels' focus rings in WebKit too, whose :focus-visible differs
+    // after a click (`e2e/focus.spec.ts`).
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, testMatch: /focus\.spec\.ts$/ },
+  ],
   webServer: {
     command: `npx next start -p ${PORT}`,
     url: `${BASE_URL}/`,

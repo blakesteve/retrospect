@@ -180,7 +180,7 @@ const PKG = "@blakesteve/roster";
  * ROSTER_CSS_BYTES is every Roster stylesheet the app's CSS imports (today
  * `style.css` and `tokens.css`), each found through the installed package's
  * `exports` and read off disk, pinned at exactly the installed release's
- * size (5.12.0's since 17 October). It is a dependency's fixed cost:
+ * size (5.14.0's since 24 October). It is a dependency's fixed cost:
  * precompiled sheets the app takes whole. About a
  * third of 5.11.0's `style.css`, 50,722 bytes (31%), styles `rst:` classes
  * written nowhere in this app's client JS, so the app is unlikely ever to
@@ -193,8 +193,8 @@ const PKG = "@blakesteve/roster";
  * delta (5.8.0 to 5.11.0: 157,738 to 165,941, +8,203, all of it
  * `style.css`; 5.11.0 to 5.12.0: 166,491, +550, all `style.css`, 450 of it
  * `[data-key-focus]` added to 25 focus rings so Safari draws them for the
- * keyboard). A sheet that shrank and wasn't restated would leave slack
- * nobody chose.
+ * keyboard; 5.12.0 to 5.14.0: 167,283, +792, all `style.css`). A sheet that
+ * shrank and wasn't restated would leave slack nobody chose.
  *
  * APP_CSS_CEILING is the emitted CSS less those sheets: Tailwind's base and
  * theme, the utilities the markup uses (28,068 bytes) and the app's own
@@ -245,10 +245,19 @@ const PKG = "@blakesteve/roster";
  * matchers, which Next copies into the client's
  * `_clientMiddlewareManifest.js` (96 to 639 bytes). 1,523,000 restores 4.8%
  * slack.
+ *
+ * Raised 24 October 2026, APP_CSS_CEILING 43,000 to 44,000, measured on a
+ * clean build of bb/wheels-focus over 9d0fb11 (main after #41): the app's
+ * own CSS 42,978 to 43,001 (+23). What grew is the wheels' focus ring, put
+ * on Roster's key-focus variant (`@custom-variant focus-visible` in
+ * globals.css) so Safari draws it after a click: its rule went from 77 to
+ * 99 bytes. With 22 bytes to spare, the 24 October ruling was to raise it
+ * with the next CSS. 44,000 leaves 999, about one fix's room, as 43,000 was
+ * set with.
  */
 const CLIENT_JS_CEILING = 1_523_000;
-const ROSTER_CSS_BYTES = 166_491;
-const APP_CSS_CEILING = 43_000;
+const ROSTER_CSS_BYTES = 167_283;
+const APP_CSS_CEILING = 44_000;
 
 const problems = [];
 

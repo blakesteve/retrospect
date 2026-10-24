@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -17,10 +17,55 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** loading shifts that need a design change · the nights
+- **Next, quality:** three dev tools' advisories wait on npm · Every night's
+  doors in Safari · loading shifts that need a design change · the nights
   API's bad-range 400s carry no code
 
 ## Done
+
+### The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 October 2026)
+
+- **A wheel's planet keeps its ring in Safari after a click** (ClickUp
+  86e3rwyff). Both wheels move focus by script when an arrow key is pressed,
+  and WebKit doesn't match `:focus-visible` on an element a script focuses
+  in answer to a key once the page has been clicked: a planet clicked, its
+  sheet closed with Escape, and the arrows from there drew no ring (on Sky,
+  the legend's Clear, clicked, then an arrow). Roster's keyboard-focus
+  tracker (`useKeyFocus`, 5.13.0) runs beside every wheel whose planets open
+  something (`KeyFocus`, mounted by Tonight, the landing's Tonight sample,
+  the song sheet and the Sky view's wheel), and the rings answer Roster's
+  variant, `:is(:focus-visible, [data-key-focus])` (the `@custom-variant` in
+  globals.css). `e2e/focus.spec.ts` drives both wheels with the real mouse
+  and keys in Chromium and WebKit, counting the rings that show; on `main`,
+  WebKit failed both and Chromium passed both, as it still does.
+  `src/lib/wheelFocus.test.ts` checks every tappable wheel has the tracker.
+- **Roster 5.12.0 to 5.14.0.** Its stylesheet grew 792 bytes, restated in
+  the bundle guard's pin (166,491 to 167,283). The app's own CSS ceiling
+  goes from 43,000 to 44,000 (it was 22 bytes from full): the wheels' ring
+  rule grew 22 bytes on the variant.
+- **Bundle, against `9d0fb11`'s build:** client JS 1,458,533 to 1,465,121,
+  6,172 of it Roster 5.14.0 (a build of the bump alone). First loads: the
+  landing unchanged, Tonight +6,271, Every night +6,166, Sky +6,273, compare
+  unchanged. The tracker is mounted beside each wheel whose planets open
+  something, not by the wheel, so the landing's picture wheels don't load it
+  (1,040 bytes when they did).
+- **The in-range audit fixes**, by `npm update` of the flagged packages (the
+  newest each range allows, as `npm audit fix` would take): nanoid,
+  source-map-js and baseline-browser-mapping in the production tree, and
+  brace-expansion, browserslist, js-yaml and zod among the dev tools;
+  caniuse-lite, electron-to-chromium, node-releases and update-browserslist-db
+  moved too, carried by browserslist 4.29.4's own ranges. `npm audit
+  --omit=dev` finds nothing. The build before and after is the same to the
+  byte, every client and server chunk. `npm audit fix` itself crashes in npm
+  11.4.2 and 10.8.2 (its resolver, on vitest's optional peers), and so does
+  updating the three it leaves (Quality, below).
+- **The 12 questions' subtitle**, once the answers are in, reads "Each
+  answer comes from your own listening." (the UX lead, 24 Oct). It said
+  "Each answer is checked against your own history.", which a tile reading
+  "Not checked" or "Too early" contradicted, on Tonight and Every night.
+- **A coming-up row whose events each take one line** still lands at its
+  skeleton's height (`e2e/skeletons.spec.ts`); the card's room for two lines
+  was unpinned, the sample's events all taking two.
 
 ### Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 October 2026)
 
@@ -36,7 +81,8 @@
   - The 12 questions draw their tiles at once, each word's pill a skeleton
     until the words come (+409.6px at 375, +433.6 at 1280: a progress line,
     then the tiles). The progress line is now the row's subtitle line, which
-    says "Each answer is checked against your own history." once they're in,
+    says "Each answer is checked against your own history." once they're in
+    (since 24 Oct, "Each answer comes from your own listening.", above),
     so it keeps its height. "Not checked" and "Checking" draw their outline
     inside the pill, which made them 2px taller than an answer's.
   - A row's heading holds its arrows' box (96px) on a screen with a mouse, so
@@ -1123,6 +1169,21 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **Three dev tools' advisories wait on npm.** `npm audit` lists vite
+      (high, 5 advisories), vitest and @vitest/mocker (moderate), all fixed
+      in range (vite 8.1.6 to 8.3.5, vitest 4.1.12), but npm 11.4.2 and
+      10.8.2 both crash resolving them ("Cannot read properties of null
+      (reading 'edgesOut')", on vitest's optional peers), by `audit fix`,
+      `update` or `install` alike. `--legacy-peer-deps` gets past it but drops
+      Roster's runtime peers (react-hot-toast, goober) from the lock, so not
+      that. Dev only: `vitest run` opens no server. Retry with the next npm.
+- [ ] **Every night's doors lose their focus ring in Safari after a click.**
+      The arrow keys move focus between the doors by script, as the wheels'
+      did (24 Oct, above), and the doors' rings are plain CSS
+      (`.nights-cal .door:focus-visible`, globals.css), which Roster's
+      `[data-key-focus]` mark doesn't reach, as the page's own square ring
+      (`:focus-visible:not([tabindex="-1"])`) doesn't. Read from the code,
+      not measured.
 - [ ] **Loading shifts that need a design change.** What still moves when its
       data lands, measured 24 Oct on the made-up sample (data held, then let
       through), since everything whose size could be known first was fixed

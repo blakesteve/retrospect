@@ -28,7 +28,7 @@ export function QuestionsGrid({ level = 2 }: { level?: 2 | 3 }) {
     <>
       {/* The one announced progress line on Tonight (8.4, 11). */}
       <span role="status">{answers ? "" : <>Checking 12 questions against your sky&hellip; {a?.done ?? 0} of 12</>}</span>
-      {answers && "Each answer is checked against your own history."}
+      {answers && "Each answer comes from your own listening."}
     </>
   );
   return (
