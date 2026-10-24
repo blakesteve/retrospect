@@ -180,7 +180,7 @@ const PKG = "@blakesteve/roster";
  * ROSTER_CSS_BYTES is every Roster stylesheet the app's CSS imports (today
  * `style.css` and `tokens.css`), each found through the installed package's
  * `exports` and read off disk, pinned at exactly the installed release's
- * size (5.12.0's since 17 October). It is a dependency's fixed cost:
+ * size (5.14.0's since 24 October). It is a dependency's fixed cost:
  * precompiled sheets the app takes whole. About a
  * third of 5.11.0's `style.css`, 50,722 bytes (31%), styles `rst:` classes
  * written nowhere in this app's client JS, so the app is unlikely ever to
@@ -193,8 +193,8 @@ const PKG = "@blakesteve/roster";
  * delta (5.8.0 to 5.11.0: 157,738 to 165,941, +8,203, all of it
  * `style.css`; 5.11.0 to 5.12.0: 166,491, +550, all `style.css`, 450 of it
  * `[data-key-focus]` added to 25 focus rings so Safari draws them for the
- * keyboard). A sheet that shrank and wasn't restated would leave slack
- * nobody chose.
+ * keyboard; 5.12.0 to 5.14.0: 167,283, +792, all `style.css`). A sheet that
+ * shrank and wasn't restated would leave slack nobody chose.
  *
  * APP_CSS_CEILING is the emitted CSS less those sheets: Tailwind's base and
  * theme, the utilities the markup uses (28,068 bytes) and the app's own
@@ -256,7 +256,7 @@ const PKG = "@blakesteve/roster";
  * set with.
  */
 const CLIENT_JS_CEILING = 1_523_000;
-const ROSTER_CSS_BYTES = 166_491;
+const ROSTER_CSS_BYTES = 167_283;
 const APP_CSS_CEILING = 44_000;
 
 const problems = [];
