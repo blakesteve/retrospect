@@ -64,7 +64,8 @@ export function SongCard({ song, chip }: { song: SongEntry; chip?: string }) {
           )}
         </div>
         <div className="px-3.5 pb-3.5 pt-3">
-          <p className="clamp-2 font-display text-[19px] leading-tight text-ink">{song.track}</p>
+          {/* Two lines' room whatever the title, so a row lands at its skeleton's height. */}
+          <p className="clamp-2 min-h-[2.5em] font-display text-[19px] leading-tight text-ink">{song.track}</p>
           <p className="mt-1 truncate text-[13px] text-ink-2">{song.artist}</p>
           <p className="mt-1 text-[12px] text-ink-2">
             {song.early ? "On record since your first weeks" : `${song.firstPlayTime}, ${song.firstPlayDate}`}

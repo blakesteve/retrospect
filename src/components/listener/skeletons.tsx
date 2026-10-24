@@ -30,17 +30,14 @@ export function RailSkeleton({ perView = CARDS_PER_VIEW, card, count = 3 }: { pe
   );
 }
 
-/** A song card (`SongCard`): its art, the title on two lines, the artist and the date. */
+/** A song card (`SongCard`): its art, the title's two lines (the card keeps
+    their room for a title of one), the artist and the date. */
 export const SongCardSkeleton = (
   <div className="border border-transparent">
     <SkySkeleton shape="block" height="auto" className="aspect-[1/0.8]" />
     <div className="px-3.5 pt-3 pb-3.5">
-      {/* The title on two lines on a phone's narrower card, one from 640px. */}
       <p className="font-display text-[19px] leading-tight">
-        <SkySkeleton shape="line" size="inherit" />
-        <span className="block sm:hidden">
-          <SkySkeleton shape="line" size="inherit" width="60%" />
-        </span>
+        <SkySkeleton shape="line" size="inherit" lines={2} />
       </p>
       <p className="mt-1 text-[13px]">
         <SkySkeleton shape="line" size="inherit" width="60%" />
@@ -55,7 +52,8 @@ export const SongCardSkeleton = (
 /** A wild-night card (`WildCard`): a fixed 360px. */
 export const WildCardSkeleton = <SkySkeleton shape="block" height={360} />;
 
-/** A coming-up card: its date, two lines of event, the time, the button and the question link. */
+/** A coming-up card: its date, two lines of event, the time, the button and
+    the question link's two lines, the room each holds in the card. */
 export const ComingUpCardSkeleton = (
   <div className="flex h-full flex-col border border-transparent p-4">
     <p className="text-[11px] font-semibold tracking-[0.14em] uppercase">
@@ -70,13 +68,14 @@ export const ComingUpCardSkeleton = (
     <div className="mt-3">
       <SkySkeleton shape="block" height={44} width="11rem" radius="full" />
     </div>
-    <div className="mt-auto flex min-h-11 items-center pt-3 text-[13px]">
+    <div className="mt-auto flex min-h-[51px] items-center pt-3 text-[13px]">
       <SkySkeleton shape="line" size="inherit" width="70%" />
     </div>
   </div>
 );
 
-/** A genre card: the genre, its share, two lines of artists and the night link. */
+/** A genre card: the genre, its share, two lines of artists, "Rising"'s
+    line and the night link's two, the room each holds in the card. */
 export const GenreCardSkeleton = (
   <div className="flex h-full flex-col border border-transparent p-4">
     <p className="font-display text-[20px]">
@@ -88,7 +87,8 @@ export const GenreCardSkeleton = (
     <p className="mt-2 text-[13px]">
       <SkySkeleton shape="line" size="inherit" lines={2} />
     </p>
-    <div className="mt-auto flex min-h-11 items-center pt-2 text-[13px]">
+    <p className="mt-2 min-h-[1.5em] text-[13px]" />
+    <div className="mt-auto flex min-h-[47px] items-center pt-2 text-[13px]">
       <SkySkeleton shape="line" size="inherit" width="80%" />
     </div>
   </div>
@@ -158,8 +158,12 @@ const useCanShare = () => useSyncExternalStore(noChange, () => typeof navigator.
     lines of words, and the link, which breaks onto two), and the buttons
     under them: "Save image", "Copy link" and, where the browser can share,
     "Share…", at the buttons' widths (measured 15 Oct), so they wrap where
-    the buttons do. */
-export function ShareSheetSkeleton() {
+    the buttons do. What's known before the card's data is drawn as itself,
+    so its lines break where the sheet's will: the `link`, and a question
+    card's `question`, with only its answer to come (`WordRoom`). From 476
+    to 639px wide, where the words have the sheet's width, two lines each
+    drew 20 to 50px more than they took. */
+export function ShareSheetSkeleton({ link, question }: { link?: string; question?: string }) {
   const canShare = useCanShare();
   return (
     <div aria-hidden className="pb-4">
@@ -169,12 +173,16 @@ export function ShareSheetSkeleton() {
           <p className="text-[13px]">
             <SkySkeleton shape="line" size="inherit" width="8rem" />
           </p>
-          <p className="mt-2 font-display text-[22px] leading-snug">
-            <SkySkeleton shape="line" size="inherit" lines={2} />
+          <p className="mt-2 min-h-[2.75em] font-display text-[22px] leading-snug text-ink">
+            {question ? (
+              <>
+                {question} <WordRoom />
+              </>
+            ) : (
+              <SkySkeleton shape="line" size="inherit" lines={2} />
+            )}
           </p>
-          <p className="mt-3 text-[13px]">
-            <SkySkeleton shape="line" size="inherit" lines={2} />
-          </p>
+          <p className="mt-3 break-all text-[13px] text-ink-2">{link ?? <SkySkeleton shape="line" size="inherit" lines={2} />}</p>
         </div>
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -186,4 +194,13 @@ export function ShareSheetSkeleton() {
       </div>
     </div>
   );
+}
+
+/** A question card's answer, in a box as wide as the widest word it could
+    be (`.word-room` in globals.css), so the question's lines break in the
+    same places whatever the word, in the share sheet and its skeleton alike
+    ("Not clearly." took a line more than "No." did, 30px, at 476px wide).
+    Without a word, the skeleton. */
+export function WordRoom({ word }: { word?: string }) {
+  return <span className="word-room">{word ? <span>{word}.</span> : <SkySkeleton shape="block" height="100%" />}</span>;
 }

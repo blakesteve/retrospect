@@ -14,8 +14,9 @@ import { Sheet } from "@blakesteve/roster";
 import { useListener, VIEW_HEADING } from "./Shell";
 import { dropSheet, sheetDepth, sheetFrom, type SheetKind, type SheetRef } from "./sheetUrl";
 import { QUESTIONS } from "@/lib/answers/questions";
+import { cardRef, firstPerson, shareLink } from "@/lib/share/card";
 import { isNightDate, songIndex, tonightDate } from "./format";
-import { SheetSkeleton } from "./pieces";
+import { FULL_SHEET, SheetSkeleton } from "./pieces";
 import { ShareSheetSkeleton } from "./skeletons";
 import { outsideTheSky, planetSheetValue } from "@/lib/client/planetSheet";
 import { OUTSIDE_THE_SKY } from "@/components/invalidLink";
@@ -76,11 +77,22 @@ const BODIES: Record<SheetKind, React.ComponentType<SheetBodyProps>> = {
   night: dynamic(() => import("./sheets/NightSheet"), { loading: Fill }),
   q: dynamic(() => import("./sheets/QuestionSheet"), { loading: Fill }),
   planet: dynamic(() => import("./sheets/PlanetSheet"), { loading: Fill }),
-  share: dynamic(() => import("./sheets/ShareSheet"), { loading: () => <ShareSheetSkeleton /> }),
+  share: dynamic(() => import("./sheets/ShareSheet"), { loading: () => <ShareLoading /> }),
   // The birth chart and its math (natal.ts, with SiderealTime and
   // SunPosition) load only when this opens (8.6 item 5, 13).
   chart: dynamic(() => import("./sheets/ChartSheet"), { loading: Skeleton }),
 };
+
+/** The share sheet's skeleton while its code loads, with what the sheet
+    will say that's known already (`ShareSheetSkeleton`). */
+function ShareLoading() {
+  const params = useSearchParams();
+  const L = useListener();
+  const ref = cardRef(params.get("share"));
+  const question = ref?.kind === "q" ? QUESTIONS.find((q) => q.id === ref.id) : undefined;
+  const link = ref && typeof window !== "undefined" ? shareLink(window.location.origin, L.username, ref, L.zone) : undefined;
+  return <ShareSheetSkeleton link={link} question={question ? firstPerson(question.question) : undefined} />;
+}
 
 const PROVISIONAL: Record<SheetKind, string> = {
   song: "The sky of a song",
@@ -138,6 +150,7 @@ export function SheetHost({ onInvalid, lead }: { onInvalid: (message?: string) =
       busy={busy}
       contentKey={key ?? undefined}
       returnFocus={deepLinked && typeof document !== "undefined" ? document.getElementById(VIEW_HEADING) : undefined}
+      className={shown && shown.kind !== "share" ? FULL_SHEET : undefined}
     >
       {shown && Body && L.sampleLabel && <p className="mb-3 text-[12px] text-ink-2">{L.sampleLabel}</p>}
       {shown && Body && (

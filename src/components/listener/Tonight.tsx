@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Button, Card, Disclosure, Eyebrow } from "@blakesteve/roster";
 import { QUESTIONS } from "@/lib/answers/questions";
 import { namesMoonSign, type ForYouRow } from "@/lib/client/forYou";
+import { tonightHeading } from "@/lib/client/heading";
 import { ListeningProfile } from "@/components/ListeningProfile";
 import { HAS_SWITCHER, useListener, VIEW_HEADING } from "./Shell";
 import { getJson, type ComingUpItem, type Genres, type SkyNow } from "./api";
@@ -170,6 +171,18 @@ function SkyRightNow({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, by the heads-up's question
   }, [onScreen, headsUpId, reduced, L.revealOpen]);
 
+  // The heading needs only the zone and the clock, so it's drawn at once and
+  // never moves when the sky arrives with the server's own (one line or two
+  // at 375px). A zone the browser can't read waits for the server's.
+  const [localHeading] = useState(() => {
+    try {
+      return tonightHeading(L.zone, Math.floor(Date.now() / 1000));
+    } catch {
+      return null;
+    }
+  });
+  const heading = sky?.heading ?? localHeading;
+
   const pulse: SkyWheelProps["pulse"] = wheel?.arrived?.moment.body
     ? { bodies: [wheel.arrived.moment.body], times: 1, key: `m${wheel.arrived.n}` }
     : huPulse && !headsUpOff && !wheel?.moment
@@ -184,9 +197,9 @@ function SkyRightNow({
           Tonight
         </Eyebrow>
       )}
-      {sky?.heading ? (
+      {heading ? (
         <h1 id={VIEW_HEADING} tabIndex={-1} className="mt-1 font-display text-[34px] leading-tight text-ink outline-none [text-wrap:balance]">
-          {sky.heading}
+          {heading}
         </h1>
       ) : (
         <h1 id={VIEW_HEADING} tabIndex={-1} className="mt-1 font-display text-[34px] leading-tight text-ink outline-none">
@@ -334,13 +347,16 @@ function ComingUpRow({ onShow }: { onShow: (c: ComingUpItem, button: HTMLElement
             // A card, not a link: the button and the question link are its own (11).
             <Card key={`${c.time}-${c.text}`} padding="none" className="sky-card flex h-full flex-col p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">{date}</p>
-              <p className="mt-2 font-display text-[18px] leading-snug text-ink">{c.text}</p>
+              {/* Two lines' room, the most an event takes at a card's width,
+                  and the question link's two below: every card is its
+                  skeleton's height, whatever it says. */}
+              <p className="mt-2 min-h-[2.75em] font-display text-[18px] leading-snug text-ink">{c.text}</p>
               <p className="mt-1 text-[12px] text-ink-2">{c.at}</p>
               <Button size="lg" variant="outline" className="mt-3 self-start !px-4" aria-label={`Show on the wheel: ${date}, ${c.text}`} onClick={(e) => onShow(c, e.currentTarget)}>
                 Show on the wheel
               </Button>
-              {q && meta && (
-                <SheetLink to={{ kind: "q", value: q.id }} className="group mt-auto flex min-h-11 items-center gap-2 pt-3">
+              {q && meta ? (
+                <SheetLink to={{ kind: "q", value: q.id }} className="group mt-auto flex min-h-[51px] items-center gap-2 pt-3">
                   <span className="text-[13px] text-ink underline underline-offset-4">Does it move you?</span>
                   <AnswerPill word={q.word} className="!px-2 !py-0 !text-[12px]" />
                   <span className="sr-only">
@@ -348,6 +364,8 @@ function ComingUpRow({ onShow }: { onShow: (c: ComingUpItem, button: HTMLElement
                   </span>
                   <Chevron className="ml-auto" />
                 </SheetLink>
+              ) : (
+                <div aria-hidden className="mt-auto min-h-[51px]" />
               )}
             </Card>
           );
@@ -413,8 +431,20 @@ function SongsRow() {
         title="The sky of your songs"
         action={seeAll}
         rail={!state && !all ? { label: "Songs", noun: "songs", children: row.map((s) => <SongCard key={s.songId} song={s} />) } : undefined}
-        // Its heading holds "See all"'s place, which a history with songs has.
-        loading={L.songs.state === "loading" ? { skeleton: <RailSkeleton card={SongCardSkeleton} />, hold: true } : undefined}
+        // Its heading holds "See all"'s own box, which a history with songs
+        // has: its width too, or the title wrapped to two lines when it came.
+        loading={
+          L.songs.state === "loading"
+            ? {
+                skeleton: <RailSkeleton card={SongCardSkeleton} />,
+                hold: (
+                  <Button size="lg" variant="outline" tabIndex={-1} className="invisible">
+                    See all
+                  </Button>
+                ),
+              }
+            : undefined
+        }
       >
         {state ?? (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -487,14 +517,17 @@ function GenresRow() {
               label: "Genres",
               noun: "genres",
               children: ready.map((x) => (
+                // Each line holds its room whatever it says (the name one line,
+                // the artists two, "Rising" its line, the night link two), so
+                // every card is its skeleton's height.
                 <Card key={x.genre} padding="none" className="sky-card flex h-full flex-col p-4">
-                  <p className="font-display text-[20px] text-ink">{x.genre}</p>
+                  <p className="truncate font-display text-[20px] text-ink">{x.genre}</p>
                   <p className="mt-1 text-[14px] text-ink-2">{Math.round(x.share * 100)}% of your plays</p>
-                  <p className="mt-2 text-[13px] text-ink-2">{x.topArtists.join(", ")}</p>
-                  {x.rising && <p className="mt-2 text-[13px] text-gold">Rising in your rotation</p>}
+                  <p className="clamp-2 mt-2 min-h-[3em] text-[13px] text-ink-2">{x.topArtists.join(", ")}</p>
+                  <p className="mt-2 min-h-[1.5em] text-[13px] text-gold">{x.rising ? "Rising in your rotation" : null}</p>
                   <SheetLink
                     to={{ kind: "night", value: x.peakNight.date }}
-                    className="mt-auto inline-flex min-h-11 items-center pt-2 text-[13px] text-ink underline underline-offset-4"
+                    className="mt-auto inline-flex min-h-[47px] items-center pt-2 text-[13px] text-ink underline underline-offset-4"
                   >
                     Your biggest {x.genre} night: {nightDateText(x.peakNight.date)}
                   </SheetLink>

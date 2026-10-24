@@ -167,13 +167,8 @@ export function Compare({ a, b }: { a: string; b: string }) {
         </p>
       </header>
 
-      {progress && (
-        <div className="mt-6 flex items-center justify-center gap-3 text-[14px] text-ink-2" data-progress>
-          <Spinner size="sm" variant="primary" />
-          <span aria-hidden>{progress}</span>
-        </div>
-      )}
-      {/* The same words for a screen reader, at most every 3 seconds (11). */}
+      {/* Each side's progress is under its own name (ColumnHead); the same
+          words for a screen reader, at most every 3 seconds (11). */}
       <p role="status" aria-live="polite" className="sr-only">
         {progress ? spoken : ""}
       </p>
@@ -239,8 +234,30 @@ export function Compare({ a, b }: { a: string; b: string }) {
   );
 }
 
+/** A side's name, and under it how far its history and answers have got, in
+    a line kept once they're done, so nothing below moves when a side lands.
+    It used to sit across both columns, and left when they were done: 45px. */
 function ColumnHead({ name, side }: { name: string; side: Side }) {
-  if (side.state !== "error") return <p className="truncate font-display text-[20px] text-ink">{name}</p>;
+  // "12,000 of 40,000": a half column at 375px cut "scrobbles" off; the
+  // name heads the column, and the full words are the status line's.
+  const progress = side.state === "syncing" ? side.progress.replace(/ scrobbles$/, "") : "";
+  const line = side.state === "syncing" ? progress.charAt(0).toUpperCase() + progress.slice(1) : side.state === "checking" ? `Checking: ${side.done} of 12` : null;
+  if (side.state !== "error") {
+    return (
+      <div>
+        <p className="truncate font-display text-[20px] text-ink">{name}</p>
+        {/* A div: Roster's Spinner is one, and inside a p the server's HTML broke. */}
+        <div aria-hidden className="mt-0.5 flex h-5 items-center gap-1.5 text-[13px] text-ink-2" data-progress={line ? "" : undefined}>
+          {line && (
+            <>
+              <Spinner size="sm" variant="primary" />
+              <span className="truncate">{line}</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
   // Today's visitor-error copy, in this side's column only (8.8).
   const message = visitorError(side.code, name);
   return (

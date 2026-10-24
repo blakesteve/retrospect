@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { tonightHeading } from "@/lib/sky/tonight";
+import { tonightHeading } from "@/lib/client/heading";
 import { happenedWhen, startsWhen } from "./when";
 
 const at = (iso: string) => Date.parse(iso) / 1000;

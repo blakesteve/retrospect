@@ -246,7 +246,7 @@ test.describe("compare's sheet and states", () => {
   test("a side still being checked says how far, in words, and the other side stands", async ({ page }) => {
     await page.route("**/api/user/newcomer/answers?*", (r) => r.fulfill({ json: { status: "computing", done: 4, total: 12, questions: [] } }));
     await page.goto("/vs/sample/newcomer");
-    await expect(page.locator("[data-progress]")).toContainText("Checking newcomer: 4 of 12");
+    await expect(page.locator("[data-columns] > *").nth(1).locator("[data-progress]")).toHaveText("Checking: 4 of 12");
     // Said to a screen reader too, at most every 3 seconds (11).
     await expect(page.getByRole("status").filter({ hasText: "Checking newcomer: 4 of 12" })).toHaveCount(1, { timeout: 10_000 });
     await expect.poll(async () => (await rows(page)).filter((r) => r.words.length === 1).length, { timeout: 60_000 }).toBe(12);
