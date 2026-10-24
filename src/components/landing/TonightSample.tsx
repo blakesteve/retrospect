@@ -6,6 +6,7 @@ import type { SheetBodyProps } from "@/components/listener/SheetHost";
 import { ForYou, useForYouRows } from "@/components/listener/forYou";
 import { namesMoonSign } from "@/lib/client/forYou";
 import { MoonDrawing, SkyWheel, WheelKey } from "@/components/listener/sky";
+import { KeyFocus } from "@/components/listener/keyFocus";
 
 /* The Tonight tile's sample (spec 8.1): the real sky right now, with the
    sample listener's lines, in Tonight's order (8.4). The host opens it once
@@ -24,6 +25,7 @@ export default function TonightSample({ setBusy }: SheetBodyProps) {
       {sky.heading && <p className="font-display text-[26px] leading-tight text-ink [text-wrap:balance]">{sky.heading}</p>}
       {sky.timeLine && <p className="mt-1 text-[13px] text-ink-2">{sky.timeLine}</p>}
       <div className="mt-4 flex flex-col items-center">
+        <KeyFocus />
         <SkyWheel
           bodies={sky.sky.bodies}
           size={280}

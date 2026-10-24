@@ -16,6 +16,13 @@
 @import "@blakesteve/roster/style.css";
 @import "@blakesteve/roster/tokens.css";
 
+/* Keyboard focus, as Roster draws it (its README's Focus): the engine's own
+   :focus-visible, or an element Roster's tracker (`useKeyFocus`) marked
+   because a key moved focus to it. WebKit doesn't match :focus-visible on an
+   element a script focuses in answer to a key once the page has been
+   clicked, so the wheels' arrows drew no ring in Safari after a click. */
+@custom-variant focus-visible (&:is(:focus-visible, [data-key-focus]));
+
 /* Roster, dressed for the observatory: gold primary, navy-slate grays.
    Overrides come after tokens.css so they win. */
 :root {

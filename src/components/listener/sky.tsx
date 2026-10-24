@@ -42,7 +42,9 @@ export interface SkyWheelProps {
   /** Rendered width in CSS pixels; the hit areas stay 44px at any size. A
       `className` size may override it (Tonight's 280px under 400px wide). */
   size: number;
-  /** Tappable planets (Tonight, a song's sky); small wheels on cards are not. */
+  /** Tappable planets (Tonight, a song's sky); small wheels on cards are not.
+      Mount `<KeyFocus />` beside a wheel that has it, so its rings show in
+      Safari after a click (src/lib/wheelFocus.test.ts checks every caller). */
   onPlanet?: (body: string) => void;
   aspects?: { a: string; b: string; name: string }[];
   className?: string;
@@ -242,9 +244,12 @@ export function SkyWheel({
             data-body={p.body}
             // Focus shows as the planet's own two-tone circle (11), never the
             // page's square ring around the group's box, which an unlayered
-            // :focus-visible rule drew over Tailwind's outline-none.
+            // :focus-visible rule drew over Tailwind's outline-none. On
+            // Roster's key-focus variant (globals.css), so it shows in Safari
+            // after a click too, with the tracker mounted beside the wheel
+            // (`KeyFocus`).
             style={{ opacity: dim ? 0.4 : 1, ...(focusable ? { outline: "none", boxShadow: "none" } : {}) }}
-            className={`motion-safe:transition-opacity motion-safe:duration-200 ${focusable ? "outline-none [&:focus-visible_.pl-sel]:opacity-100" : ""}`}
+            className={`motion-safe:transition-opacity motion-safe:duration-200 ${focusable ? "outline-none focus-visible:[&_.pl-sel]:opacity-100" : ""}`}
             {...(focusable
               ? {
                   role: "button",

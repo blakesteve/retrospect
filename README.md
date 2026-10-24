@@ -127,15 +127,18 @@ them on the way in. The null test runs in CI too (`null-test.yml`): on a pull
 request that touches anything it reads, and every Monday. Every job runs on
 Ubuntu 24.04, not `ubuntu-latest` (26.04, where Playwright 1.58.2 can't
 install its browsers), with a ceiling about two and a half times its slowest
-healthy run and never under 10 minutes; `src/lib/ciWorkflow.test.ts` keeps
-both true of every job in every workflow.
+healthy run and never under 10 minutes (the browser checks' 15 until their
+runs with WebKit are measured); `src/lib/ciWorkflow.test.ts` keeps both true
+of every job in every workflow.
 
 ### Browser checks
 
 What Vitest can't see, because it needs layout and color, runs in Chromium
-on the built app (`e2e/`, Playwright):
+on the built app (`e2e/`, Playwright), and the wheels' focus rings in WebKit
+too (`e2e/focus.spec.ts`):
 
 ```bash
+npx playwright install chromium webkit   # once, the browsers
 npm run build           # also runs both bundle guards
 npm run test:browser    # seeds e2e/.data, serves on port 4317, runs the checks
 ```
@@ -160,10 +163,15 @@ one, and the error page when a page throws, where Try again draws it again
 data held back, they check that what lands takes its skeleton's place, the
 same height in the same spot, at 375 and 1280px wide (the sheets on a
 1,300px-tall screen too, the share sheet from 476 to 639px): Tonight's
-heading and wheel, the 12 questions, the songs, wild nights and genres rows
-(two genres, too few to page, as well), Every night's first month, the Sky
-view's wheel and key, compare's columns, and the question, planet, birth
-chart, share and compare sheets and the landing's two. On Every night,
+heading and wheel, the coming-up row (every event on one line, as well),
+the 12 questions, the songs, wild nights and genres rows (two genres, too few
+to page, as well), Every night's first month, the Sky view's wheel and key,
+compare's columns, and the question, planet, birth chart, share and compare
+sheets and the landing's two. In Chromium and WebKit, with the real mouse
+and keys, they check the wheels' rings after a click: on Tonight, a planet
+clicked and its sheet closed with Escape is ringed, and so is the planet an
+arrow moves to; on Sky, a planet the legend's Clear refocuses has no ring
+for the click, and what an arrow moves to has; and no other ring shows. On Every night,
 with the browser's clock held inside the sample's history, they check that
 the first screen asks for the year in view and no other (with the whole history's
 counts, which no later year carries), one door per night at 44px or more with

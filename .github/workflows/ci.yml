@@ -65,8 +65,11 @@ jobs:
   browser:
     name: Browser checks
     runs-on: ubuntu-24.04
-    # Healthy: 2.5 to 4.2 minutes, the system libraries from apt included.
-    timeout-minutes: 12
+    # Healthy: 2.5 to 4.2 minutes in Chromium alone, the system libraries
+    # from apt included. WebKit (e2e/focus.spec.ts) adds its libraries from
+    # apt to every run and its browser to a cold one: 15 until its own runs
+    # are measured.
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -79,25 +82,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Chromium's headless shell, cached by Playwright's version.
+      # Chromium's headless shell and WebKit, cached by Playwright's version
+      # and the browsers in it.
       - name: Playwright version
         id: playwright
         run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Chromium
+      - name: Cache the browsers
         id: browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
 
-      - name: Install Chromium
+      - name: Install Chromium and WebKit
         if: steps.browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps --only-shell chromium
+        run: npx playwright install --with-deps --only-shell chromium webkit
 
-      - name: Install Chromium's system libraries
+      - name: Install their system libraries
         if: steps.browsers.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps chromium webkit
 
       # The build runs both bundle guards (postbuild).
       - name: Build

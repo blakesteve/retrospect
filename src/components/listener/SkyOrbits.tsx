@@ -4,6 +4,7 @@ import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEven
 import { preload } from "react-dom";
 import type { Dignity, Planet } from "./api";
 import { DIGNITY_COLOR, SIGNS, SKY_GLYPH_FONT, planetGlyph, signGlyph } from "./sky";
+import { KeyFocus } from "./keyFocus";
 import { moonLit } from "@/lib/client/moon";
 import { pt } from "@/lib/client/spiral";
 import { ORBITS, RR, arcEdge, movedOff, orbitGlyph, orbitGlyphSize, placeCovered, retroMark, truePlace, turn, type OrbitGlyph } from "@/lib/client/orbitGlyphs";
@@ -268,6 +269,7 @@ export function SkyOrbits({
       data-opening={opening.state ?? undefined}
       data-playing={playing || undefined}
     >
+      <KeyFocus />
       <defs>
         <radialGradient id={`${uid}c`}>
           <stop offset="0" stopColor="#20275a" />
@@ -396,7 +398,7 @@ export function SkyOrbits({
                 )
               }
               onFocus={() => setFocusId(key)}
-              className="[&:focus-visible_.pl-sel]:opacity-100"
+              className="focus-visible:[&_.pl-sel]:opacity-100"
               style={NO_BOX}
             >
               <g className={flight !== null ? "sky-star-in" : undefined} style={vars}>
@@ -501,7 +503,7 @@ export function SkyOrbits({
                 )
               }
               onFocus={() => setFocusId(key)}
-              className="[&:focus-visible_.pl-sel]:opacity-100"
+              className="focus-visible:[&_.pl-sel]:opacity-100"
               style={NO_BOX}
             >
               {o === "Sun" && <circle r={26} fill={`url(#${uid}sun)`} />}
