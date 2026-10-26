@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, returnVisit, selectedTabContrast, settle, smallTargets, test } from "./fixtures";
+import { escapeSheet, expect, returnVisit, selectedTabContrast, settle, smallTargets, test } from "./fixtures";
 
 /* Sky (spec 8.6) in Chromium, on the seeded sample listener. The dial runs
    from the sample's first night, Thursday, Sept 28, 2023, to the server's
@@ -132,14 +132,15 @@ for (const width of [375, 1280]) {
         await expect(title).toBeVisible();
         await expect(page.locator(`[data-body='${body}']`)).toHaveAttribute("data-selected", "true");
         await expect(page.locator("[data-legend]")).toContainText(`${body === "Sun" || body === "Moon" ? "The " : ""}${body}'s standing in each sign`);
-        await page.keyboard.press("Escape");
+        await escapeSheet(page);
         // The sheet gone, so the next tap meets the wheel, not the sheet leaving.
         await expect(title).toBeHidden();
         await expect(page).not.toHaveURL(/[?&]planet=/);
         // Clear takes the tints and the legend, and gives focus back to the planet.
         await page.locator("[data-legend]").getByRole("button", { name: "Clear" }).click();
         await expect(page.locator("[data-legend]")).toHaveCount(0);
-        expect(await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.body ?? null)).toBe(body);
+        // Polled: WebKit puts it there a moment after the click, Chromium at once.
+        await expect.poll(() => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.body ?? null)).toBe(body);
       }
       // A tap more than 22px from every center picks nothing.
       const p = items.find((i) => i.key.startsWith("planet:") && freeSpot(items, i.key))!;
@@ -174,7 +175,7 @@ for (const width of [375, 1280]) {
           await expect(page).toHaveURL(new RegExp(`[?&]planet=${pair.a.key.slice("planet:".length).toLowerCase()}(&|$)`));
           const sheet = page.getByRole("heading", { name: /^(The )?\w+ tonight$/ });
           await expect(sheet).toBeVisible();
-          await page.keyboard.press("Escape");
+          await escapeSheet(page);
           // Gone, so the next tap meets the wheel.
           await expect(sheet).toBeHidden();
           await expect(page).not.toHaveURL(/[?&]planet=/);
@@ -185,7 +186,7 @@ for (const width of [375, 1280]) {
       const spot = freeSpot(items, star.key)!;
       await page.mouse.click(spot.x, spot.y);
       await expect(page).toHaveURL(new RegExp(`[?&]song=${star.key.slice("star:".length)}(&|$)`));
-      await page.keyboard.press("Escape");
+      await escapeSheet(page);
       // The sheet gone before the page is measured.
       await expect(page.locator("[role=dialog]")).toHaveCount(0);
       // Every other target on the page, the dial and its buttons included, at least 44px.
@@ -845,7 +846,7 @@ test.describe("a planet's sheet from Sky (8.7.4)", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name: "Venus tonight" })).toBeVisible();
     await expect(page).toHaveURL(/[?&]planet=venus(&|$)/);
-    await page.keyboard.press("Escape");
+    await escapeSheet(page);
     await expect(page.getByRole("heading", { name: "Venus tonight" })).toBeHidden();
     // The first night, Thursday, Sept 28, 2023: Venus in Leo, which she left Oct 8.
     await slider(page).focus();

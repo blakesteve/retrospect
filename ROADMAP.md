@@ -17,9 +17,10 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** three dev tools' advisories wait on npm · Every night's
-  doors in Safari · loading shifts that need a design change · the nights
-  API's bad-range 400s carry no code
+- **Next, quality:** a sheet closed as it opens can freeze over the page in
+  WebKit · three dev tools' advisories wait on npm · Every night's doors in
+  Safari · loading shifts that need a design change · the nights API's
+  bad-range 400s carry no code
 
 ## Done
 
@@ -76,6 +77,18 @@
   15. `src/lib/ciWorkflow.test.ts` holds the ceilings, the steps' included,
   and that the image's tag is the lockfile's Playwright: the workflow as it
   was fails it, and so does an image a version behind.
+- **A sheet's Escape in the browser checks waits for it to finish coming in
+  and hold focus** (`escapeSheet`, `e2e/fixtures.ts`), wherever
+  `focus.spec.ts` and `sky.spec.ts` close a sheet they just opened. Pressed
+  sooner, it left the sheet open: on CI in WebKit (the Tonight focus check),
+  and at 20 repeats locally, 6 of 40 of `sky.spec.ts`'s 44px-target check in
+  Chromium and 2 of 40 in WebKit (a scratch config: CI runs `sky.spec.ts`
+  in Chromium only). Focus alone wasn't enough: in WebKit an
+  Escape during the entrance froze the sheet in 1 to 3 of about 236, out of
+  sight but still over the page, taking every click (the Quality row
+  below). With the wait, 80 of 80 in WebKit, twice, and 40 of 40 in
+  Chromium. The planet's focus after Clear is polled now too, as
+  `focus.spec.ts` reads it: WebKit puts it there a moment late.
 
 ### The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 October 2026)
 
@@ -1223,6 +1236,18 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **A sheet closed as it opens can freeze over the page in WebKit.**
+      Escape during a sheet's entrance (about 300ms), in WebKit under load,
+      sometimes leaves Roster's Sheet half-closed: the URL cleared and the
+      panel out of sight, but the dialog still mounted, with its full-screen
+      container over the page, so every click lands on it until a reload.
+      Measured 25 Oct in Playwright's WebKit, 4 workers: 1 to 3 of about 236
+      Escapes, the panel left holding `data-enter`, `data-transition` and
+      `data-closed` with nothing running: Headless UI never finishes the
+      close. The Sheet runs the Headless UI Roster bundles, 2.2.9 in 5.15.0
+      (2.2.10 is out; untested here). Measured in Playwright's WebKit only,
+      not confirmed in Safari itself. Roster's Sheet's to fix; the browser
+      checks wait out the entrance meanwhile.
 - [ ] **Three dev tools' advisories wait on npm.** `npm audit` lists vite
       (high, 5 advisories), vitest and @vitest/mocker (moderate), all fixed
       in range (vite 8.1.6 to 8.3.5, vitest 4.1.12), but npm 11.4.2 and

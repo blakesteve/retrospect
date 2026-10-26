@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, returnVisit, settle, test } from "./fixtures";
+import { escapeSheet, expect, returnVisit, settle, test } from "./fixtures";
 
 /* The wheels' focus rings after a click (ClickUp 86e3rwyff), in Chromium and
    WebKit, with the real mouse and keys. Both wheels draw their own ring and
@@ -65,7 +65,7 @@ test.describe("a wheel's ring after a click, then the keys (11)", () => {
     // The planet's place: the group its halo and rings are drawn around.
     await clickAt(page, `${WHEEL} [data-body="${body}"] > g`);
     await expect(page.locator(SHEET)).toBeVisible();
-    await page.keyboard.press("Escape");
+    await escapeSheet(page);
     await expect(page.locator(SHEET)).toHaveCount(0);
     // Focus is back on the planet the click opened, by a key: its ring shows, and no other.
     await expect.poll(() => focused(page, WHEEL)).toEqual({ item: body, ring: "1", shown: 2 });
@@ -84,7 +84,7 @@ test.describe("a wheel's ring after a click, then the keys (11)", () => {
     await still(page);
     await clickAt(page, `${WHEEL} [data-item="planet:Mars"]`);
     await expect(page.locator(SHEET)).toBeVisible();
-    await page.keyboard.press("Escape");
+    await escapeSheet(page);
     await expect(page.locator(SHEET)).toHaveCount(0);
     // "Clear", clicked, puts focus back on Mars by script: no ring for a pointer.
     await page.locator("[data-legend]").getByRole("button", { name: "Clear" }).click();
