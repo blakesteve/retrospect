@@ -1,9 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import NextLink from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Button, EmptyState, LiquidNav, type LiquidNavLinkProps } from "@blakesteve/roster";
+import { Button, EmptyState, LiquidNav } from "@blakesteve/roster";
 import { SyncScreen } from "@/components/SyncScreen";
 import { NoScrobbles } from "@/components/NoScrobbles";
 import { RemoveDataLink } from "@/components/RemoveDataLink";
@@ -11,6 +10,7 @@ import { Wordmark } from "@/components/Wordmark";
 import { clearInvalidLink, sayInvalidLink } from "@/components/invalidLink";
 import { toVisitorErrorCode, visitorError, visitorErrorCodeOf, apiError, type VisitorErrorCode } from "@/lib/visitorErrors";
 import { getJson, userUrl, type AnswersPayload, type ComputingPayload, type Highlights, type SkyNow, type Songs, type SyncStatus } from "./api";
+import { NextNavLink } from "./nextNavLink";
 import { SheetHost } from "./SheetHost";
 /* Loaded with the shell: Tonight and Every night both end with these rows,
    and a module two routes share but their parent doesn't load is copied
@@ -118,16 +118,6 @@ async function settle<T extends { status?: string }>(url: string, signal: AbortS
     if (data.status !== "computing" || i > 60) return data;
     await new Promise((r) => setTimeout(r, 2000));
   }
-}
-
-/** `next/link` for LiquidNav, without the `to` it would pass through to the `<a>`. */
-function NextNavLink(props: LiquidNavLinkProps) {
-  const { href, className, children, onClick } = props;
-  return (
-    <NextLink href={href} className={className} onClick={onClick} aria-current={props["aria-current"]} data-tab-id={props["data-tab-id"]}>
-      {children}
-    </NextLink>
-  );
 }
 
 export function ListenerShell({ username, children }: { username: string; children: ReactNode }) {

@@ -109,7 +109,11 @@ npm run dev
 
 Open http://localhost:3000 and type a Last.fm username. The first sync of a
 big library takes a few minutes (Last.fm rate limits); everything is cached in
-`.data/` after that.
+`.data/` after that. While it runs, the sync screen counts the plays read so
+far on Roster's `ProgressField`, and a screen reader hears "Listening history:
+12,000 of 40,000 plays" at most every 15 seconds: a status call reads the
+history for up to 8 seconds, so said at every call the figure would talk over
+the page.
 
 ```bash
 npm test             # analysis, answers, profile, zone, sky, sync, store, share-card and error-copy tests
@@ -127,9 +131,10 @@ them on the way in. The null test runs in CI too (`null-test.yml`): on a pull
 request that touches anything it reads, and every Monday. Every job runs on
 Ubuntu 24.04, not `ubuntu-latest` (26.04, where Playwright 1.58.2 can't
 install its browsers), with a ceiling about two and a half times its slowest
-healthy run and never under 10 minutes (the browser checks' 15 until their
-runs with WebKit are measured); `src/lib/ciWorkflow.test.ts` keeps both true
-of every job in every workflow.
+healthy run and never under 10 minutes, but always under 15, so the browser
+checks' is 12, about twice theirs, with each step's ceiling inside it;
+`src/lib/ciWorkflow.test.ts` keeps these true of every job in every
+workflow.
 
 ### Browser checks
 
@@ -198,14 +203,25 @@ its year, that a dated planet link opens on any view for any date in the sky
 data (the sky alone outside the history) and says so for a date outside the
 sky data, the dial's
 failed state, and a
-birth chart that draws its planets and sends nothing. CI runs them in the
-"Browser checks" job, after a build that also runs the bundle guards.
+birth chart that draws its planets and sends nothing. On the sync screen,
+with the status route answered by the check, they check what a screen reader
+hears of the bar (the label and the figure in plain words, from the page's
+one status, the visible pair kept from it), that it says the figure at most
+every 15 seconds and the newest one then, and that the bar keeps the old
+one's gold and surface-2, whole at 375 and 1280px. CI runs them in the
+"Browser checks" job, after a build that also runs the bundle guards, inside
+Playwright's own image for the locked version
+(`mcr.microsoft.com/playwright:v<version>-noble`), which holds both browsers
+and every library they load, so nothing is installed from Ubuntu's mirrors.
+Bumping `playwright` means bumping that tag too: `src/lib/ciWorkflow.test.ts`
+fails until they match.
 
 ### A note on form controls
 
 Controls come from Roster, not hand-rolled markup: sheets are Roster's
 `Sheet`, rows its `Carousel`, the view switcher its `LiquidNav` (shown once
-there are two views), a page-level fatal state its `EmptyState`, loading
+there are two views), a page-level fatal state its `EmptyState`, the first sync's
+progress its `ProgressField`, loading
 states its `Skeleton` (in the app's warm fill and pulse, each drawn in the
 boxes of what it stands in for), and fields, buttons, pills, switches and
 disclosures its own. What Roster has nothing for

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, returnVisit, settle, test } from "./fixtures";
+import { escapeSheet, expect, returnVisit, settle, test } from "./fixtures";
 
 /* The wheels' focus rings after a click (ClickUp 86e3rwyff), in Chromium and
    WebKit, with the real mouse and keys. Both wheels draw their own ring and
@@ -48,6 +48,12 @@ async function still(page: Page) {
 
 test.describe("a wheel's ring after a click, then the keys (11)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
+  // In order, in one worker, so one WebKit page at a time. Playwright's Linux
+  // WebKit, several pages at once under load, stops drawing frames for a page
+  // until an input comes, so a sheet's entrance or exit never ends (26 Oct, in
+  // Playwright's image: 16 of 20 failed at 4 workers, 20 of 20 passed at 1).
+  // A mouse move restarts it, which would end the keyboard mode they test.
+  test.describe.configure({ mode: "default" });
 
   test.beforeEach(async ({ page }) => {
     await returnVisit(page);
@@ -65,7 +71,7 @@ test.describe("a wheel's ring after a click, then the keys (11)", () => {
     // The planet's place: the group its halo and rings are drawn around.
     await clickAt(page, `${WHEEL} [data-body="${body}"] > g`);
     await expect(page.locator(SHEET)).toBeVisible();
-    await page.keyboard.press("Escape");
+    await escapeSheet(page);
     await expect(page.locator(SHEET)).toHaveCount(0);
     // Focus is back on the planet the click opened, by a key: its ring shows, and no other.
     await expect.poll(() => focused(page, WHEEL)).toEqual({ item: body, ring: "1", shown: 2 });
@@ -84,7 +90,7 @@ test.describe("a wheel's ring after a click, then the keys (11)", () => {
     await still(page);
     await clickAt(page, `${WHEEL} [data-item="planet:Mars"]`);
     await expect(page.locator(SHEET)).toBeVisible();
-    await page.keyboard.press("Escape");
+    await escapeSheet(page);
     await expect(page.locator(SHEET)).toHaveCount(0);
     // "Clear", clicked, puts focus back on Mars by script: no ring for a pointer.
     await page.locator("[data-legend]").getByRole("button", { name: "Clear" }).click();

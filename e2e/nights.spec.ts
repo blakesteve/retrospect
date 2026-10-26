@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, returnVisit, selectedTabContrast, settle, smallTargets, test } from "./fixtures";
+import { escapeSheet, expect, returnVisit, selectedTabContrast, settle, smallTargets, test } from "./fixtures";
 
 /* Every night (spec 8.5) in Chromium, on the seeded sample listener. The
    browser's clock is held at 8 p.m. on Wednesday, May 15, 2024, Central, so
@@ -406,7 +406,7 @@ test.describe("the calendar by keyboard, by date (11)", () => {
     await expect(page).toHaveURL(/[?&]night=2023-09-28(&|$)/);
     // Roster's dialog element has no box of its own (its panel is fixed inside it): its heading is what shows.
     await expect(page.getByRole("dialog", { name: "Thursday, Sept 28, 2023" }).getByRole("heading", { name: "Thursday, Sept 28, 2023" })).toBeVisible();
-    await page.keyboard.press("Escape");
+    await escapeSheet(page);
     await expect.poll(() => focused(page)).toBe("2023-09-28");
     // A month later sits above, out of view under the sticky top: focus scrolls it clear of the header and bar.
     await page.evaluate(() => {

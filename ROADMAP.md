@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -17,11 +17,99 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** three dev tools' advisories wait on npm · Every night's
-  doors in Safari · loading shifts that need a design change · the nights
-  API's bad-range 400s carry no code
+- **Next, quality:** a sheet closed as it opens can freeze over the page in
+  WebKit · three dev tools' advisories wait on npm · Every night's doors in
+  Safari · loading shifts that need a design change · the nights API's
+  bad-range 400s carry no code
 
 ## Done
+
+### The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 October 2026)
+
+- **The first sync's bar is heard.** It was two divs with no role, no value
+  and no status, so a screen reader waiting through a first sync heard
+  nothing. It's Roster's `ProgressField` now, labeled "Listening history":
+  a screen reader hears the label and the figure together from one polite
+  status, "Listening history: 12,000 of 40,000 plays" (plays, not
+  scrobbles, in en-US figures as compare's are); before Last.fm gives the
+  total, the status reads "Loading" to anyone reading the page. At most
+  every 15 seconds: a status call reads the history for up to 8 seconds, so a
+  big sync moves on about every 9 seconds for minutes, and said at each the
+  figure would talk over the page (Roster's default is 1.5).
+  The first figure is said at once, and each after it is the newest. The
+  visible pair is kept from the screen reader, so nothing is read twice.
+- **Drawn as before, where it can be:** the old bar's gold on surface-2, 6px,
+  filled to the figure (`.sync-bar` in globals.css; under `.dark` Roster
+  fills with `primary-400`, a step lighter than the gold, on its skeleton
+  gray). What changed to see: the label and the figure stand over the bar,
+  the line under it says where the history reaches back to (or, until the
+  first plays are in, "Locating {name} in the heavens…"), and before a
+  total the bar crosses its track where it drew a 2% stub. The block grows
+  from 34 to 54px.
+- `e2e/sync.spec.ts` answers the status route itself: at 375 and 1280px,
+  what's heard and seen, nothing cut, and the old bar's colors, measured on
+  `a46e3ef`'s build; and over a sync that reads a page about every 0.6
+  seconds, the first figure at once and the next 15 seconds on, the newest. On
+  `a46e3ef`'s build all three fail; at Roster's default rate the second
+  figure came 1.5 seconds on; without `.sync-bar`, Roster's own colors.
+- **Roster 5.14.0 to 5.15.0.** Its stylesheet grew 1,764 bytes, restated in
+  the bundle guard's pin (167,283 to 169,047), 1,084 of it eleven new rules
+  for the Tabs' underline and its colors. A build of the bump alone has
+  `a46e3ef`'s client JS to the byte.
+- **The view switcher's links forward `aria-label`** (`NextNavLink`, now
+  its own module): LiquidNav names a link with a count by it (5.13.0). No
+  view has a count yet; `src/lib/nextNavLink.test.ts` draws the switcher
+  with one, and fails without the forward.
+- **Bundle, against `a46e3ef`'s build:** client JS 1,465,121 to 1,469,386
+  (+4,265, all of it the field). First loads: the landing and compare
+  unchanged, Tonight, Every night and Sky +4,265 each. The app's own CSS
+  43,001 to 42,745 (the old bar's utilities gone); Roster's 169,047.
+- **The browser checks run in Playwright's image**
+  (`mcr.microsoft.com/playwright:v1.58.2-noble`), which holds Chromium,
+  WebKit and every system library they load, so nothing is installed from
+  Ubuntu's mirrors. This branch's first CI run sat on the libraries' apt
+  step until the job's 15 minutes ran out, before a test ran: a slow Azure
+  mirror, 63 packages in 11 minutes, then 3.5 on one of 13.6 MB.
+  Chromium's libraries alone had taken 13 to 26 seconds. The job's ceiling
+  goes from 15 to 12 minutes (healthy, 2.5 to 5.3, plus the image's pull),
+  with 2, 2 and 7 on npm ci, the build and the checks, inside it so a step
+  times out first and keeps its failures; every job's ceiling is now under
+  15. `src/lib/ciWorkflow.test.ts` holds the ceilings, the steps' included,
+  and that the image's tag is the lockfile's Playwright: the workflow as it
+  was fails it, and so does an image a version behind.
+- **A sheet's Escape in the browser checks waits for it to finish coming in
+  and hold focus** (`escapeSheet`, `e2e/fixtures.ts`), wherever
+  `focus.spec.ts` and `sky.spec.ts` close a sheet they just opened. Pressed
+  sooner, it left the sheet open: on CI in WebKit (the Tonight focus check,
+  more likely the image's frame stall, next), and at 20 repeats locally, 6 of
+  40 of `sky.spec.ts`'s 44px-target check in Chromium and 2 of 40 in WebKit (a
+  scratch config: CI runs `sky.spec.ts` in Chromium only). Focus alone wasn't
+  enough: in WebKit an Escape during the entrance froze the sheet in 1 to 3 of
+  about 236, out of sight but still over the page, taking every click (the
+  Quality row below). With the wait, 80 of 80 in WebKit, twice, and 40 of 40
+  in Chromium. The planet's focus after Clear is polled now too, as
+  `focus.spec.ts` reads it: WebKit puts it there a moment late. Every night's
+  sheet (`nights.spec.ts`, a door's night) waits the same way.
+- **The wheels' focus checks run one WebKit page at a time**
+  (`focus.spec.ts`, in order in one worker). In Playwright's image, Linux
+  WebKit with several pages at once under load stopped drawing frames for a
+  page until an input came: a sheet's entrance sat at its first frame, no
+  animation frame fired in a second, and a mouse move set it going (which
+  would end the keyboard mode these checks are about). Measured 26 Oct in
+  the image: `focus.spec.ts` in WebKit failed 16 of 20 at 4 workers and
+  passed 20 of 20 at 1; four runs of the whole suite, as CI runs it, 8 of 8
+  in order against 7 of 8 in parallel. CI's first failure here was likely
+  this, more than the Escape.
+- **"The planets never wait for the stars" checks the requirement, not a
+  margin.** It failed once on CI at 343.6ms against a 300ms bound, with the
+  stars held 6 seconds. It now checks that the opening began before the stars
+  were let through (the page's clock at their release) and within 2 seconds of
+  the planets. Measured in Playwright's image, the gap was 34 to 255ms over 20
+  runs of `sky.spec.ts` at 4 workers, 55 to 299 over 3 of the whole suite and
+  152 to 460 at 8 workers on 4 CPUs, and the stars were let through 5.7
+  seconds after the opening began, or more. An opening that waits for the
+  stars fails both: a 6,077 to 6,158ms gap, started 66 to 100ms after their
+  release.
 
 ### The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 October 2026)
 
@@ -1169,6 +1257,21 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **A sheet closed as it opens can freeze over the page in WebKit.**
+      Escape during a sheet's entrance (about 300ms), in WebKit under load,
+      sometimes leaves Roster's Sheet half-closed: the URL cleared and the
+      panel out of sight, but the dialog still mounted, with its full-screen
+      container over the page, so every click lands on it until a reload.
+      Measured 25 Oct in Playwright's WebKit, 4 workers: 1 to 3 of about 236
+      Escapes, the panel left holding `data-enter`, `data-transition` and
+      `data-closed` with nothing running: Headless UI never finishes the
+      close. On macOS, 26 Oct: 5 of 143 Escapes during the entrance and 0 of
+      47 after it, with frames still drawn and a mouse move not freeing it, so
+      it isn't the image's frame stall (the 25 October Done entry). The Sheet
+      runs the Headless UI Roster bundles, 2.2.9 in 5.15.0 (2.2.10 is out;
+      untested here). Measured in Playwright's WebKit only, not confirmed in
+      Safari itself. Roster's Sheet's to fix; the browser checks wait out the
+      entrance meanwhile.
 - [ ] **Three dev tools' advisories wait on npm.** `npm audit` lists vite
       (high, 5 advisories), vitest and @vitest/mocker (moderate), all fixed
       in range (vite 8.1.6 to 8.3.5, vitest 4.1.12), but npm 11.4.2 and
