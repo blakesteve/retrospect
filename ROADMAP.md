@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The sync bar people can hear, and Roster 5.15.0 (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -23,7 +23,7 @@
 
 ## Done
 
-### The sync bar people can hear, and Roster 5.15.0 (25 October 2026)
+### The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 October 2026)
 
 - **The first sync's bar is heard.** It was two divs with no role, no value
   and no status, so a screen reader waiting through a first sync heard
@@ -63,6 +63,19 @@
   (+4,265, all of it the field). First loads: the landing and compare
   unchanged, Tonight, Every night and Sky +4,265 each. The app's own CSS
   43,001 to 42,745 (the old bar's utilities gone); Roster's 169,047.
+- **The browser checks run in Playwright's image**
+  (`mcr.microsoft.com/playwright:v1.58.2-noble`), which holds Chromium,
+  WebKit and every system library they load, so nothing is installed from
+  Ubuntu's mirrors. This branch's first CI run sat on the libraries' apt
+  step until the job's 15 minutes ran out, before a test ran: a slow Azure
+  mirror, 63 packages in 11 minutes, then 3.5 on one of 13.6 MB.
+  Chromium's libraries alone had taken 13 to 26 seconds. The job's ceiling
+  goes from 15 to 12 minutes (healthy, 2.5 to 5.3, plus the image's pull),
+  with 2, 2 and 7 on npm ci, the build and the checks, inside it so a step
+  times out first and keeps its failures; every job's ceiling is now under
+  15. `src/lib/ciWorkflow.test.ts` holds the ceilings, the steps' included,
+  and that the image's tag is the lockfile's Playwright: the workflow as it
+  was fails it, and so does an image a version behind.
 
 ### The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 October 2026)
 

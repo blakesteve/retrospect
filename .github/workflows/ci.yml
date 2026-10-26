@@ -14,9 +14,11 @@ on:
 #
 # Every job has a ceiling, so a stall fails inside a stated bound instead of
 # at GitHub's six hours (Roster's CI sat 52 minutes on a slow apt mirror on
-# 23 Oct). Each is about two and a half times the job's slowest healthy run,
-# and never under 10 minutes, room for an install with a cold npm cache.
-# Healthy runs are the 11 green CI runs from 11 to 22 Oct 2026.
+# 23 Oct). Each is about two and a half times the job's slowest healthy run
+# and never under 10 minutes (room for an install with a cold npm cache),
+# but always under 15: no job here should take that long to fail, so the
+# browser checks' is about twice theirs. Healthy runs are the 11 green CI
+# runs from 11 to 22 Oct 2026.
 
 jobs:
   test:
@@ -65,11 +67,28 @@ jobs:
   browser:
     name: Browser checks
     runs-on: ubuntu-24.04
-    # Healthy: 2.5 to 4.2 minutes in Chromium alone, the system libraries
-    # from apt included. WebKit (e2e/focus.spec.ts) adds its libraries from
-    # apt to every run and its browser to a cold one: 15 until its own runs
-    # are measured.
-    timeout-minutes: 15
+    # Inside Playwright's own image for the locked version, which already
+    # holds Chromium, WebKit and every system library they load, so nothing
+    # is installed from Ubuntu's mirrors. On 25 Oct the libraries step sat on
+    # a slow Azure mirror until the job's 15 minutes ran out, before a test
+    # ran; Chromium's libraries alone had taken 13 to 26 seconds. The tag
+    # must match package-lock.json's playwright (src/lib/ciWorkflow.test.ts).
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      # Chromium in Docker needs the host's shared memory, or large pages crash.
+      options: --ipc=host
+    # UTC, as the runner was, for the build, the seeding and the server.
+    env:
+      TZ: UTC
+    # Healthy, the 12 green runs from 12 to 24 Oct: 2.5 to 5.3 minutes, of
+    # which npm ci 8 to 21 seconds, the build 11 to 20 and the checks 103 to
+    # 230, with apt's 13 to 48 now gone and the image's pull to come (25 to
+    # 43 seconds in Roster's CI). Each step's ceiling is about six times its
+    # slowest, the checks' about twice. Together they fit inside the job's,
+    # so a step times out first and its failures are kept: a job that times
+    # out is cancelled, and keeps nothing. The job's, 12, is about twice its
+    # slowest run with the pull.
+    timeout-minutes: 12
 
     steps:
       - uses: actions/checkout@v4
@@ -80,35 +99,17 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        timeout-minutes: 2
         run: npm ci
-
-      # Chromium's headless shell and WebKit, cached by Playwright's version
-      # and the browsers in it.
-      - name: Playwright version
-        id: playwright
-        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
-
-      - name: Cache the browsers
-        id: browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
-
-      - name: Install Chromium and WebKit
-        if: steps.browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps --only-shell chromium webkit
-
-      - name: Install their system libraries
-        if: steps.browsers.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium webkit
 
       # The build runs both bundle guards (postbuild).
       - name: Build
+        timeout-minutes: 2
         run: npm run build
 
       # Served from a fresh folder holding only the made-up sample listener.
       - name: Browser checks
+        timeout-minutes: 7
         run: npm run test:browser
 
       - name: Keep the failures
