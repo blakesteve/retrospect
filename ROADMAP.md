@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The sync bar people can hear, and Roster 5.15.0 (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -22,6 +22,47 @@
   API's bad-range 400s carry no code
 
 ## Done
+
+### The sync bar people can hear, and Roster 5.15.0 (25 October 2026)
+
+- **The first sync's bar is heard.** It was two divs with no role, no value
+  and no status, so a screen reader waiting through a first sync heard
+  nothing. It's Roster's `ProgressField` now, labeled "Listening history":
+  a screen reader hears the label and the figure together from one polite
+  status, "Listening history: 12,000 of 40,000 plays" (plays, not
+  scrobbles, in en-US figures as compare's are); before Last.fm gives the
+  total, the status reads "Loading" to anyone reading the page. At most
+  every 15 seconds: a status call reads the history for up to 8 seconds, so a
+  big sync moves on about every 9 seconds for minutes, and said at each the
+  figure would talk over the page (Roster's default is 1.5).
+  The first figure is said at once, and each after it is the newest. The
+  visible pair is kept from the screen reader, so nothing is read twice.
+- **Drawn as before, where it can be:** the old bar's gold on surface-2, 6px,
+  filled to the figure (`.sync-bar` in globals.css; under `.dark` Roster
+  fills with `primary-400`, a step lighter than the gold, on its skeleton
+  gray). What changed to see: the label and the figure stand over the bar,
+  the line under it says where the history reaches back to (or, until the
+  first plays are in, "Locating {name} in the heavens…"), and before a
+  total the bar crosses its track where it drew a 2% stub. The block grows
+  from 34 to 54px.
+- `e2e/sync.spec.ts` answers the status route itself: at 375 and 1280px,
+  what's heard and seen, nothing cut, and the old bar's colors, measured on
+  `a46e3ef`'s build; and over a sync that reads a page about every 0.6
+  seconds, the first figure at once and the next 15 seconds on, the newest. On
+  `a46e3ef`'s build all three fail; at Roster's default rate the second
+  figure came 1.5 seconds on; without `.sync-bar`, Roster's own colors.
+- **Roster 5.14.0 to 5.15.0.** Its stylesheet grew 1,764 bytes, restated in
+  the bundle guard's pin (167,283 to 169,047), 1,084 of it eleven new rules
+  for the Tabs' underline and its colors. A build of the bump alone has
+  `a46e3ef`'s client JS to the byte.
+- **The view switcher's links forward `aria-label`** (`NextNavLink`, now
+  its own module): LiquidNav names a link with a count by it (5.13.0). No
+  view has a count yet; `src/lib/nextNavLink.test.ts` draws the switcher
+  with one, and fails without the forward.
+- **Bundle, against `a46e3ef`'s build:** client JS 1,465,121 to 1,469,386
+  (+4,265, all of it the field). First loads: the landing and compare
+  unchanged, Tonight, Every night and Sky +4,265 each. The app's own CSS
+  43,001 to 42,745 (the old bar's utilities gone); Roster's 169,047.
 
 ### The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 October 2026)
 

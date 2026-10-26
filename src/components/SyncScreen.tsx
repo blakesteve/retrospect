@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ProgressField } from "@blakesteve/roster";
 
 interface SyncStatus {
   status: "syncing" | "ready" | "error";
@@ -28,13 +29,21 @@ const QUIPS = [
 ];
 
 /**
+ * The least time between two readings of the sync's progress to a screen
+ * reader. Each status call reads the history for up to 8 seconds, so a big
+ * first sync moves on about every 9 seconds for minutes; said each time, the
+ * figure would talk over whatever the visitor is reading. Every 15 seconds
+ * still says it's moving. Roster's own default is 1.5 seconds.
+ */
+const SAY_EVERY_MS = 15_000;
+
+/**
  * The "consulting the ephemeris" experience. Each year of history pulled adds
  * a planet to the system on its own elliptical orbit. Planets that collide
  * explode (as requested) and the survivor grows. The wait is the show.
  */
 export function SyncScreen({ username, sync, checking = false }: { username: string; sync: SyncStatus | null; checking?: boolean }) {
-  const progress =
-    sync && sync.totalPages > 0 ? Math.min(1, sync.pagesDone / sync.totalPages) : 0;
+  const counted = sync !== null && sync.totalPages > 0;
   const fetched = sync ? Math.min(sync.pagesDone * 200, sync.totalScrobbles) : 0;
 
   // How many years of history have we reached back through?
@@ -72,24 +81,20 @@ export function SyncScreen({ username, sync, checking = false }: { username: str
         {QUIPS[quip]}
       </p>
 
-      <div className="w-full max-w-sm">
-        <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gold transition-all duration-500"
-            style={{ width: `${Math.max(2, progress * 100)}%` }}
-          />
-        </div>
-        <p className="text-ink-3 text-xs mt-3 tabular">
-          {sync && sync.totalPages > 0 ? (
-            <>
-              {fetched.toLocaleString()} of {sync.totalScrobbles.toLocaleString()} scrobbles
-              {oldestYear ? <> &middot; reaching back to {oldestYear}&hellip;</> : null}
-            </>
-          ) : (
-            <>locating {username} in the heavens&hellip;</>
-          )}
-        </p>
-      </div>
+      {/* A screen reader hears the label and the figure together, politely,
+          at most every SAY_EVERY_MS, in en-US figures as compare's are.
+          Before the total is known the bar crosses its track with no figure,
+          and its status reads "Loading". */}
+      <ProgressField
+        className="sync-bar max-w-sm text-left"
+        size="sm"
+        label="Listening history"
+        value={counted ? fetched : null}
+        max={counted ? sync.totalScrobbles : undefined}
+        valueText={counted ? `${fetched.toLocaleString("en-US")} of ${sync.totalScrobbles.toLocaleString("en-US")} plays` : undefined}
+        detail={oldestYear ? <>Reaching back to {oldestYear}&hellip;</> : <>Locating {username} in the heavens&hellip;</>}
+        announceEvery={SAY_EVERY_MS}
+      />
         </>
       )}
     </div>

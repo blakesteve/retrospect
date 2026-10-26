@@ -328,6 +328,14 @@ html:has([data-listener-head] :focus, [data-nights-bar] :focus) {
   content: "Not clearly.";
 }
 
+/* The sync's bar (`SyncScreen`, Roster's ProgressField) in the colors it had
+   before: this app's gold on surface-2. Under `.dark` Roster fills with
+   primary-400, a step lighter than the gold, on its skeleton gray. */
+.sync-bar {
+  --roster-primary-400: var(--gold);
+  --roster-skeleton: var(--surface-2);
+}
+
 /* Motion (spec 8.11): transform and opacity only; nothing under reduced
    motion; held still while the tab is hidden (`data-hidden`, set by the
    listener views). The final state is each element's own style, so the
