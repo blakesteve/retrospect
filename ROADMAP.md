@@ -80,15 +80,36 @@
 - **A sheet's Escape in the browser checks waits for it to finish coming in
   and hold focus** (`escapeSheet`, `e2e/fixtures.ts`), wherever
   `focus.spec.ts` and `sky.spec.ts` close a sheet they just opened. Pressed
-  sooner, it left the sheet open: on CI in WebKit (the Tonight focus check),
-  and at 20 repeats locally, 6 of 40 of `sky.spec.ts`'s 44px-target check in
-  Chromium and 2 of 40 in WebKit (a scratch config: CI runs `sky.spec.ts`
-  in Chromium only). Focus alone wasn't enough: in WebKit an
-  Escape during the entrance froze the sheet in 1 to 3 of about 236, out of
-  sight but still over the page, taking every click (the Quality row
-  below). With the wait, 80 of 80 in WebKit, twice, and 40 of 40 in
-  Chromium. The planet's focus after Clear is polled now too, as
-  `focus.spec.ts` reads it: WebKit puts it there a moment late.
+  sooner, it left the sheet open: on CI in WebKit (the Tonight focus check,
+  more likely the image's frame stall, next), and at 20 repeats locally, 6 of
+  40 of `sky.spec.ts`'s 44px-target check in Chromium and 2 of 40 in WebKit (a
+  scratch config: CI runs `sky.spec.ts` in Chromium only). Focus alone wasn't
+  enough: in WebKit an Escape during the entrance froze the sheet in 1 to 3 of
+  about 236, out of sight but still over the page, taking every click (the
+  Quality row below). With the wait, 80 of 80 in WebKit, twice, and 40 of 40
+  in Chromium. The planet's focus after Clear is polled now too, as
+  `focus.spec.ts` reads it: WebKit puts it there a moment late. Every night's
+  sheet (`nights.spec.ts`, a door's night) waits the same way.
+- **The wheels' focus checks run one WebKit page at a time**
+  (`focus.spec.ts`, in order in one worker). In Playwright's image, Linux
+  WebKit with several pages at once under load stopped drawing frames for a
+  page until an input came: a sheet's entrance sat at its first frame, no
+  animation frame fired in a second, and a mouse move set it going (which
+  would end the keyboard mode these checks are about). Measured 26 Oct in
+  the image: `focus.spec.ts` in WebKit failed 16 of 20 at 4 workers and
+  passed 20 of 20 at 1; four runs of the whole suite, as CI runs it, 8 of 8
+  in order against 7 of 8 in parallel. CI's first failure here was likely
+  this, more than the Escape.
+- **"The planets never wait for the stars" checks the requirement, not a
+  margin.** It failed once on CI at 343.6ms against a 300ms bound, with the
+  stars held 6 seconds. It now checks that the opening began before the stars
+  were let through (the page's clock at their release) and within 2 seconds of
+  the planets. Measured in Playwright's image, the gap was 34 to 255ms over 20
+  runs of `sky.spec.ts` at 4 workers, 55 to 299 over 3 of the whole suite and
+  152 to 460 at 8 workers on 4 CPUs, and the stars were let through 5.7
+  seconds after the opening began, or more. An opening that waits for the
+  stars fails both: a 6,077 to 6,158ms gap, started 66 to 100ms after their
+  release.
 
 ### The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 October 2026)
 
@@ -1244,10 +1265,13 @@ the `threshold` refactor.
       Measured 25 Oct in Playwright's WebKit, 4 workers: 1 to 3 of about 236
       Escapes, the panel left holding `data-enter`, `data-transition` and
       `data-closed` with nothing running: Headless UI never finishes the
-      close. The Sheet runs the Headless UI Roster bundles, 2.2.9 in 5.15.0
-      (2.2.10 is out; untested here). Measured in Playwright's WebKit only,
-      not confirmed in Safari itself. Roster's Sheet's to fix; the browser
-      checks wait out the entrance meanwhile.
+      close. On macOS, 26 Oct: 5 of 143 Escapes during the entrance and 0 of
+      47 after it, with frames still drawn and a mouse move not freeing it, so
+      it isn't the image's frame stall (the 25 October Done entry). The Sheet
+      runs the Headless UI Roster bundles, 2.2.9 in 5.15.0 (2.2.10 is out;
+      untested here). Measured in Playwright's WebKit only, not confirmed in
+      Safari itself. Roster's Sheet's to fix; the browser checks wait out the
+      entrance meanwhile.
 - [ ] **Three dev tools' advisories wait on npm.** `npm audit` lists vite
       (high, 5 advisories), vitest and @vitest/mocker (moderate), all fixed
       in range (vite 8.1.6 to 8.3.5, vitest 4.1.12), but npm 11.4.2 and

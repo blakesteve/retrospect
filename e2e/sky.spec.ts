@@ -641,9 +641,12 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     await recordOpening(page);
     await returnVisit(page);
     await page.route("**/api/apod?*", (r) => r.fulfill({ status: 404, json: { error: "not in the sample" } }));
-    // The songs, and so the stars, come 6 seconds late.
+    // The songs, and so the stars, come 6 seconds late; `released` is the
+    // page's clock when they're let through.
+    let released = -1;
     await page.route("**/api/user/sample/songs*", async (r) => {
       await new Promise((done) => setTimeout(done, 6000));
+      released = await page.evaluate(() => performance.now()).catch(() => -1);
       await r.continue();
     });
     await page.goto(SKY);
@@ -665,13 +668,24 @@ test.describe("moving the sky (8.6, 8.11)", () => {
     expect(shown).toEqual([1, 1]);
     await expect(wheel).toHaveAttribute("data-opening", "run");
     expect(await page.locator("[data-star]").count()).toBe(0);
-    // It began as the planets came, not after waiting for anything.
+    // It began as the planets came, not after waiting for anything: within
+    // 2 seconds of them. How soon is the page's scheduling, not the app's:
+    // measured 26 Oct in Playwright's image, 34 to 255ms over 20 runs of
+    // sky.spec at 4 workers, 55 to 299 over 3 of the whole suite, 152 to 460
+    // at 8 workers on 4 CPUs; CI once took 344, past the 300 this was. An
+    // opening that waited for the stars would start 6 seconds on, so 2
+    // seconds still fails it by 4.
     const began = await opening(page);
-    expect(began.startedAt - began.planetsAt).toBeLessThan(300);
+    expect(began.startedAt).toBeGreaterThan(0);
+    expect(began.startedAt - began.planetsAt).toBeLessThan(2000);
     // The stars join late, near the opening's end or after it, and their
     // flight, if any, fits what's left: by 4.9 seconds nothing moves.
     await expect(page.locator("[data-star]").first()).toBeAttached({ timeout: 15_000 });
     const o = await opening(page);
+    // And before the stars were let through at all, the requirement itself
+    // (5.7 seconds before, or more, in every run measured).
+    expect(released).toBeGreaterThan(0);
+    expect(o.startedAt).toBeLessThan(released);
     expect(o.starsAt - o.startedAt).toBeGreaterThan(2500);
     await page.waitForFunction((t) => performance.now() >= t, o.startedAt + 4900);
     expect(await wheelAnimations(page)).toBe(0);

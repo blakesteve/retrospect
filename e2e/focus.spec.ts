@@ -48,6 +48,12 @@ async function still(page: Page) {
 
 test.describe("a wheel's ring after a click, then the keys (11)", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
+  // In order, in one worker, so one WebKit page at a time. Playwright's Linux
+  // WebKit, several pages at once under load, stops drawing frames for a page
+  // until an input comes, so a sheet's entrance or exit never ends (26 Oct, in
+  // Playwright's image: 16 of 20 failed at 4 workers, 20 of 20 passed at 1).
+  // A mouse move restarts it, which would end the keyboard mode they test.
+  test.describe.configure({ mode: "default" });
 
   test.beforeEach(async ({ page }) => {
     await returnVisit(page);
