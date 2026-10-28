@@ -171,13 +171,14 @@ export function ListenerShell({ username, children }: { username: string; childr
     return () => ac.abort();
   }, [zone]);
 
-  // Sync: each status call reads one budgeted chunk of the history.
+  // Sync: each status call reads one budgeted chunk of the history. Asked
+  // with the zone, the ready one says whether its answers are stored (8.2).
   useEffect(() => {
     let stopped = false;
     (async () => {
       try {
         while (!stopped) {
-          const res = await fetch(`/api/user/${encodeURIComponent(username)}/status`);
+          const res = await fetch(`/api/user/${encodeURIComponent(username)}/status?tz=${encodeURIComponent(zone)}`);
           if (!res.ok) throw await apiError(res);
           const s = (await res.json()) as SyncStatus;
           if (stopped) return;
@@ -206,7 +207,7 @@ export function ListenerShell({ username, children }: { username: string; childr
     return () => {
       stopped = true;
     };
-  }, [username, attempt]);
+  }, [username, attempt, zone]);
 
   const ready = sync?.status === "ready" && sync.newestUts !== null && !fatal;
 
@@ -293,6 +294,11 @@ export function ListenerShell({ username, children }: { username: string; childr
   // The reveal waits for everything its cards show (8.3), so they never
   // reshuffle under the reader.
   const revealShown = Boolean(ready && revealing && answers.state === "ready" && songs.state !== "loading" && highlights.state !== "loading");
+  // A reveal not yet shown is called off, and not marked seen, when a sheet
+  // opens over the view first (the view is live while stored answers load),
+  // as a shared link skips it (8.2); or when stored answers fail to load,
+  // which the view says itself (the failure page is the checking step's).
+  if (revealing && !revealShown && (sheetFrom(params) !== null || (answers.state === "failed" && sync?.answersStored !== false))) setRevealing(false);
 
   const view = VIEWS.find((v) => v.route && pathname?.endsWith(v.route))?.id ?? VIEWS[0].id;
   // Every night keeps its top in view (Blake, 3 Oct 2026): the switcher
@@ -348,10 +354,13 @@ export function ListenerShell({ username, children }: { username: string; childr
     body = <Fatal code={fatal} username={username} onRetry={restart} />;
   } else if (!ready) {
     body = <SyncScreen username={username} sync={sync} />;
-  } else if (revealing && (answers.state === "loading" || songs.state === "loading" || highlights.state === "loading")) {
-    // A first visit: the reveal needs the answers. The checking step (8.2).
+  } else if (revealing && sync?.answersStored === false && (answers.state === "loading" || songs.state === "loading" || highlights.state === "loading")) {
+    // A first visit with no answers stored for this zone: they're being
+    // computed. The checking step (8.2), until what the reveal shows is in,
+    // so the view doesn't show between them. Stored answers skip it, even
+    // while they load or refresh: the view shows, and the reveal waits.
     body = <SyncScreen username={username} sync={sync} checking />;
-  } else if (revealing && answers.state === "failed") {
+  } else if (revealing && sync?.answersStored === false && answers.state === "failed") {
     // A failure while checking: server's copy, and a way to check again (8.2).
     body = <Fatal code="server" username={username} onRetry={restart} />;
   } else {

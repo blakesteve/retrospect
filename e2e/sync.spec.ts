@@ -21,7 +21,7 @@ const syncing = (pagesDone: number, total: number) => ({
 /** Answers the status route, the nth call with `next(n)`. */
 async function serveStatus(page: Page, next: (call: number) => object) {
   const served = { calls: 0 };
-  await page.route("**/api/user/*/status", (route) => route.fulfill({ json: next(++served.calls) }));
+  await page.route("**/api/user/*/status?*", (route) => route.fulfill({ json: next(++served.calls) }));
   return served;
 }
 
