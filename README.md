@@ -113,7 +113,18 @@ big library takes a few minutes (Last.fm rate limits); everything is cached in
 far on Roster's `ProgressField`, and a screen reader hears "Listening history:
 12,000 of 40,000 plays" at most every 15 seconds: a status call reads the
 history for up to 8 seconds, so said at every call the figure would talk over
-the page.
+the page. When it's done, it hears "Listening history read: 40,000 plays."
+from a status the page holds the whole time, since the sync screen goes as
+the sync ends. A first visit on a browser plays the reveal, which is
+remembered per browser (a sheet opened before it shows calls it off for
+that visit). "Checking 12 questions against your sky…" shows only for a
+listener whose answers are computed for the first time in that time zone,
+until what the reveal shows is in:
+the status call, asked with the page's zone, says once the history is ready
+whether that zone's answers are stored (`answersStored`). A listener with
+stored answers sees the view while they load, and the reveal over it once
+they're in; its "0 of 12 questions" is put in its status a moment after it
+shows, so a screen reader announces it.
 
 ```bash
 npm test             # analysis, answers, profile, zone, sky, sync, store, share-card and error-copy tests
@@ -208,7 +219,15 @@ with the status route answered by the check, they check what a screen reader
 hears of the bar (the label and the figure in plain words, from the page's
 one status, the visible pair kept from it), that it says the figure at most
 every 15 seconds and the newest one then, and that the bar keeps the old
-one's gold and surface-2, whole at 375 and 1280px. CI runs them in the
+one's gold and surface-2, whole at 375 and 1280px. In a fresh browser
+(`e2e/first-visit.spec.ts`), with its data held back, the sample listener,
+whose answers are stored, gets the view and then the reveal, never "Checking
+12 questions"; a listener with no record for the time zone gets the
+checking step, its status there empty before it says "0 of 12 questions"; a
+sheet opened while the data loads calls the reveal off; and stored answers
+that fail leave the view's own message, not a failure page. The sync's
+end is said from a status that was there, empty, while it ran, and compare
+says how far a side has read in plays. CI runs them in the
 "Browser checks" job, after a build that also runs the bundle guards, inside
 Playwright's own image for the locked version
 (`mcr.microsoft.com/playwright:v<version>-noble`), which holds both browsers

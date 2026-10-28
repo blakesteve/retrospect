@@ -61,7 +61,7 @@ function useSide(name: string, skip: boolean): Side {
           state: "syncing",
           progress:
             s.totalPages > 0
-              ? `${Math.min(s.pagesDone * 200, s.totalScrobbles).toLocaleString("en-US")} of ${s.totalScrobbles.toLocaleString("en-US")} scrobbles`
+              ? `${Math.min(s.pagesDone * 200, s.totalScrobbles).toLocaleString("en-US")} of ${s.totalScrobbles.toLocaleString("en-US")} ${s.totalScrobbles === 1 ? "play" : "plays"}`
               : "starting",
         });
         await sleep(800);
@@ -121,7 +121,7 @@ function useEvery(value: string, ms: number): string {
   return shown;
 }
 
-/** "{a}: 12,000 of 40,000 scrobbles", "Checking {a}: 4 of 12" (8.8). */
+/** "{a}: 12,000 of 40,000 plays", "Checking {a}: 4 of 12" (8.8). */
 function sideProgress(name: string, side: Side): string | null {
   if (side.state === "syncing") return `${name}: ${side.progress}`;
   if (side.state === "checking") return `Checking ${name}: ${side.done} of 12`;
@@ -238,9 +238,9 @@ export function Compare({ a, b }: { a: string; b: string }) {
     a line kept once they're done, so nothing below moves when a side lands.
     It used to sit across both columns, and left when they were done: 45px. */
 function ColumnHead({ name, side }: { name: string; side: Side }) {
-  // "12,000 of 40,000": a half column at 375px cut "scrobbles" off; the
+  // "12,000 of 40,000": a half column at 375px cut the last word off; the
   // name heads the column, and the full words are the status line's.
-  const progress = side.state === "syncing" ? side.progress.replace(/ scrobbles$/, "") : "";
+  const progress = side.state === "syncing" ? side.progress.replace(/ plays?$/, "") : "";
   const line = side.state === "syncing" ? progress.charAt(0).toUpperCase() + progress.slice(1) : side.state === "checking" ? `Checking: ${side.done} of 12` : null;
   if (side.state !== "error") {
     return (

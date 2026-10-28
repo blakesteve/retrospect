@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -17,12 +17,69 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** a sheet closed as it opens can freeze over the page in
-  WebKit · three dev tools' advisories wait on npm · Every night's doors in
-  Safari · loading shifts that need a design change · the nights API's
-  bad-range 400s carry no code
+- **Next, quality:** a NASA answers test fails just after UTC midnight · the
+  sync's end under a shared link's sheet · three "scrobble"s a visitor still
+  meets · a sheet closed as it opens can freeze over the page in WebKit ·
+  three dev tools' advisories wait on npm · Every night's doors in Safari ·
+  loading shifts that need a design change · the nights API's bad-range 400s
+  carry no code
 
 ## Done
+
+### A listener with a record in a fresh browser, and what a screen reader is told (27 October 2026)
+
+- **"Checking 12 questions" only while the answers are computed** (ClickUp
+  86e3wjwy4). In a fresh browser, a listener with stored answers saw
+  "Checking 12 questions against your sky" until their answers, songs and
+  highlights had all loaded (production, squareses, 26 and 27 Oct): the
+  screen showed whenever the reveal was due and any of the three was still
+  loading. Spec 8.2 keeps it for a listener with no stored answers for the
+  zone. The status call, asked with the page's zone, now says once the
+  history is ready whether that zone's answers are stored (`answersStored`),
+  and the checking step shows only when it says no, until what the reveal
+  shows is in. A listener with a record sees the view while the data loads,
+  then the reveal over it.
+- **Reproduced first**, in fresh profiles against the seeded store: with the
+  songs held 3 seconds, the sample (a record) showed the checking step for
+  3,067ms though its stored answers arrived in 149; with nothing held, a
+  123ms flash. In a zone with no record it showed for 534ms while they were
+  computed, as it should. The record's zone isn't what the code points to:
+  the captures that found it read CDT, so the browser sent America/Chicago,
+  the zone Blake's own browser sends; whether squareses' record is
+  Chicago's is for a production read.
+- **The reveal replaying in a fresh browser is by design** (8.3: once per
+  username per browser). Now that the view is live while stored answers
+  load, a sheet opened in that time calls the reveal off for the visit,
+  unseen, as a shared link skips it; and stored answers that fail to load
+  leave the view and its own "didn't load", the failure page being the
+  checking step's alone.
+- **The sync's end is said** (ClickUp 86e3vqt7y): "Listening history read:
+  40,000 plays.", from a status the shell holds, empty, from the start,
+  since the sync screen goes as the sync ends. **The checking status** is
+  given its words a moment after it appears, and they name what's counted:
+  "0 of 12 questions" (it mounted holding "0 of 12", which most screen
+  readers don't announce).
+- **Compare says plays** (ClickUp 86e3vqt83): "newcomer: 600 of 1,900
+  plays", and "1 of 1 play". So does the sync bar for a one-play history.
+- **Checks:** `e2e/first-visit.spec.ts` visits in a fresh browser with the
+  data held: the sample (a record) gets the view and then the reveal, never
+  the checking step; `firsttimer` (no record, a new zone each repeat, so it
+  evicts no one's) gets the checking step, its status empty before "0 of 12
+  questions"; a sheet opened meanwhile calls the reveal off unseen; and
+  stored answers failing leave the view's own message. `e2e/sync.spec.ts`
+  checks the sync's end, `e2e/compare.spec.ts` the word, plural and single,
+  as exact text, and `src/lib/statusRoute.test.ts` the route's answer (a
+  zone's other name included, and nothing known without a zone or an
+  unreadable record). Each fails on its twin, built in a copy: today's
+  rule, a fix that hides the step for everyone, the status mounted holding
+  its words, "0 of 12", the zone not sent, no history-read status,
+  "scrobbles", no singular, no call-off, today's failure page, and a route
+  that never says. Two older checks' status routes now match the query string the page
+  sends (`sync.spec.ts`, `nights.spec.ts`): unmatched, they'd have stopped
+  applying, and the nights one would have passed testing nothing.
+- **Bundle, against `7e0edc8`'s build:** client JS 1,469,386 to 1,470,009
+  (+623). First loads: the landing unchanged, Tonight, Every night and Sky
+  +597 each, compare +26. The app's own CSS 42,745 to 42,790 (+45).
 
 ### The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 October 2026)
 
@@ -1257,6 +1314,26 @@ the `threshold` refactor.
 
 ### Quality
 
+- [ ] **A NASA answers test fails from midnight to 2 a.m. UTC.** "Answers
+      questions 7 and 8 from NASA's log" (`src/lib/answers/route.test.ts`)
+      refreshes the log 2 hours ago, then 1 hour ago, and expects nothing
+      new. The log's stamp starts with the UTC date it covers to
+      (`compact.ts`), so across midnight it reads as new and the record as
+      behind. Seen 27 Oct at 8 p.m. CDT, on `a46e3ef`'s tree too; CI in
+      that window goes red. Pinning the test's clock to midday fixes it.
+- [ ] **The sync's end isn't said under a shared link's sheet.** A shared
+      link whose listener's history this visit reads (new, or out of date)
+      opens its sheet in the same render that says "Listening history
+      read", and the sheet hides the rest of the page from a screen reader,
+      so it isn't heard. The sheet the link was for takes focus and is
+      read. Found in review, 27 Oct, not measured.
+- [ ] **Three "scrobble"s a visitor still meets.** Compare and the sync bar
+      say plays (27 Oct), but the sync screen's quip "Counting scrobbles the
+      old way, on an astrolabe…" (printed), the first song's star on the Sky
+      wheel, named "…, your first scrobble …" (spoken), and the landing's
+      credits, "Reads public scrobble data via the Last.fm API." (printed),
+      don't. The empty account's "Last.fm calls this scrobbling" explains
+      the word on purpose. A wording call for the UX lead.
 - [ ] **A sheet closed as it opens can freeze over the page in WebKit.**
       Escape during a sheet's entrance (about 300ms), in WebKit under load,
       sometimes leaves Roster's Sheet half-closed: the URL cleared and the

@@ -92,7 +92,7 @@ export function SyncScreen({ username, sync, checking = false }: { username: str
         label="Listening history"
         value={counted ? fetched : null}
         max={counted ? sync.totalScrobbles : undefined}
-        valueText={counted ? `${fetched.toLocaleString("en-US")} of ${sync.totalScrobbles.toLocaleString("en-US")} plays` : undefined}
+        valueText={counted ? `${fetched.toLocaleString("en-US")} of ${sync.totalScrobbles.toLocaleString("en-US")} ${sync.totalScrobbles === 1 ? "play" : "plays"}` : undefined}
         detail={oldestYear ? <>Reaching back to {oldestYear}&hellip;</> : <>Locating {username} in the heavens&hellip;</>}
         announceEvery={SAY_EVERY_MS}
       />

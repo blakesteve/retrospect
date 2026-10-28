@@ -243,6 +243,22 @@ test.describe("compare's sheet and states", () => {
     await expect.poll(async () => (await rows(page)).filter((r) => r.words.length === 1).length, { timeout: 60_000 }).toBe(12);
   });
 
+  for (const [total, said] of [
+    [1_900, "newcomer: 600 of 1,900 plays"],
+    [1, "newcomer: 1 of 1 play"],
+  ] as const) {
+    test(`a side still being read says how far in plays, "${said}", and the other side stands`, async ({ page }) => {
+      await page.route("**/api/user/newcomer/status", (r) =>
+        r.fulfill({ json: { status: "syncing", pagesDone: 3, totalPages: 10, totalScrobbles: total, newestUts: null, oldestUts: null, error: null, code: null } }),
+      );
+      await page.goto("/vs/sample/newcomer");
+      // Said to a screen reader in the app's word, not Last.fm's.
+      await expect(page.getByRole("status").filter({ hasText: "newcomer:" })).toHaveText(said, { timeout: 10_000 });
+      await expect(page.locator("[data-columns] > *").nth(1).locator("[data-progress]")).toHaveText(said.replace(/^newcomer: /, "").replace(/ plays?$/, ""));
+      await expect.poll(async () => (await rows(page)).filter((r) => r.words.length === 1).length, { timeout: 60_000 }).toBe(12);
+    });
+  }
+
   test("a side still being checked says how far, in words, and the other side stands", async ({ page }) => {
     await page.route("**/api/user/newcomer/answers?*", (r) => r.fulfill({ json: { status: "computing", done: 4, total: 12, questions: [] } }));
     await page.goto("/vs/sample/newcomer");
