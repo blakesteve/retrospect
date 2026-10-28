@@ -9,7 +9,7 @@ import { BASE_URL, BLOCKED_LOG, DATA_DIR } from "../playwright.config";
  * Seeds the browser checks' store: a fresh folder (`e2e/.data`) holding only
  * the landing's made-up sample listener, its tags and NASA's data for it
  * (`writeSampleListener`), NASA's log stamped as read now so the server never
- * asks NASA for it, and compare's second made-up listener (`writeNewcomer`). Then asks the server for the listener's answers, songs
+ * asks NASA for it, compare's second made-up listener and the first-visit check's (`writeShortListener`). Then asks the server for the listener's answers, songs
  * and highlights until they're computed, so every check meets a ready page.
  * Last, it proves the server can't reach the network (`offline.mjs`): a
  * picture of the day the sample doesn't hold makes it try NASA, and that try
@@ -23,7 +23,8 @@ export default async function globalSetup() {
   try {
     if (getBlobStore() !== folder) throw new Error("The browser checks may only seed their own folder");
     await writeSampleListener(SAMPLE_USERNAME, new Date());
-    await writeNewcomer();
+    await writeShortListener(NEWCOMER);
+    await writeShortListener(FIRST_TIMER);
   } finally {
     // An empty memory store, never `null`, which would hand anything still
     // running the environment's store.
@@ -57,14 +58,18 @@ export default async function globalSetup() {
     most of its questions are Too early beside the sample's words. Made up,
     like the sample. */
 export const NEWCOMER = "newcomer";
-async function writeNewcomer() {
+/** A listener with no answers stored in any zone until a check asks:
+    `first-visit.spec.ts`'s alone, so the zones it adds (one a repeat) evict
+    no one else's record (each listener keeps 4). The newcomer's history. */
+export const FIRST_TIMER = "firsttimer";
+async function writeShortListener(name: string) {
   const all = sampleHistory();
   const history = all.filter((p) => p.uts < all[0].uts + 70 * 86_400);
-  await getStore().appendScrobbles(NEWCOMER, history);
+  await getStore().appendScrobbles(name, history);
   const artists = [...new Set(history.map((p) => p.artist))];
-  await writeTagStore(NEWCOMER, { artists: Object.fromEntries(artists.map((a) => [a.toLowerCase(), [ARTISTS[a].tag]])) });
+  await writeTagStore(name, { artists: Object.fromEntries(artists.map((a) => [a.toLowerCase(), [ARTISTS[a].tag]])) });
   await getStore().setSyncState({
-    username: NEWCOMER,
+    username: name,
     status: "ready",
     pagesDone: 1,
     totalPages: 1,

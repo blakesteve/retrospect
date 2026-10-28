@@ -566,7 +566,7 @@ test.describe("the states (8.5)", () => {
   test("a door before the sync's oldest scrobble still opens its night", async ({ page }) => {
     // A sync state whose oldestUts is later than the history's first play
     // (one saved before the field existed takes it from a later sync).
-    await page.route("**/api/user/sample/status", async (r) => {
+    await page.route("**/api/user/sample/status?*", async (r) => {
       const res = await r.fetch();
       r.fulfill({ response: res, json: { ...(await res.json()), oldestUts: Date.parse("2024-03-01T12:00:00Z") / 1000 } });
     });

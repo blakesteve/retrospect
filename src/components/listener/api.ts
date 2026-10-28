@@ -226,6 +226,8 @@ export interface SyncStatus {
   oldestUts: number | null;
   error: string | null;
   code: string | null;
+  /** Ready, asked with the page's zone: whether that zone has stored answers. `null` when not known. */
+  answersStored: boolean | null;
 }
 
 /** GET a JSON route, throwing the route's visitor-error code on failure. */
