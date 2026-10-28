@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, returnVisit, test } from "./fixtures";
 
 /* The sync screen's bar (`SyncScreen`, Roster's ProgressField): what a
    screen reader hears of it, how often, and that it's drawn as it was
@@ -32,9 +32,10 @@ for (const width of [375, 1280]) {
     await page.goto("/u/sample");
     const field = page.locator("[data-progress-field]");
 
-    // Heard: the label and the figure together, from the page's one status.
+    // Heard: the label and the figure together, from the page's one status
+    // with words (the shell's own, for the sync's end, is there and empty).
     await expect(field.getByRole("status")).toHaveText("Listening history: 120,000 of 499,871 plays");
-    await expect(page.getByRole("status")).toHaveCount(1);
+    await expect(page.getByRole("status").filter({ hasText: /\S/ })).toHaveCount(1);
     // Seen: the same pair, hidden from a screen reader so it isn't read twice, whole at 375px; then the line under it.
     await expect(field.locator("[aria-hidden=true] [data-progress-label]")).toHaveText("Listening history");
     await expect(field.locator("[aria-hidden=true] [data-progress-value]")).toHaveText("120,000 of 499,871 plays");
@@ -92,4 +93,22 @@ test("says the figure at most every 15 seconds, and the newest one then", async 
   expect(Number(second.shown.split(" ")[0].replace(/,/g, ""))).toBeGreaterThanOrEqual(20 * 200);
   expect(second.said).toBe(`Listening history: ${second.shown}`);
   expect(served.calls).toBeGreaterThanOrEqual(20);
+});
+
+test("says when the history is read, from a status that was there, empty, while it was read", async ({ page }) => {
+  await returnVisit(page);
+  // Read over five calls, about 3 seconds, then ready, with the sample's answers stored.
+  await serveStatus(page, (n) => (n < 6 ? syncing(n * 2, 1_900) : { ...syncing(10, 1_900), status: "ready", answersStored: true }));
+  await page.goto("/u/sample");
+  await expect(page.locator("[data-progress-field]")).toBeVisible();
+  // While it's read: one status outside the sync screen, saying nothing yet.
+  const quiet = await page.evaluate(() => {
+    const statuses = [...document.querySelectorAll("[role=status]")].filter((s) => !s.closest("main") && s.textContent === "");
+    for (const s of statuses) s.setAttribute("data-probe", "history-read");
+    return statuses.length;
+  });
+  expect(quiet).toBe(1);
+  // Then, as the sync screen goes, it says so, with the plays read.
+  await expect(page.locator("[data-progress-field]")).toHaveCount(0, { timeout: 10_000 });
+  await expect(page.locator("[data-probe=history-read]")).toHaveText("Listening history read: 1,900 plays.");
 });

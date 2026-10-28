@@ -37,6 +37,11 @@ const QUIPS = [
  */
 const SAY_EVERY_MS = 15_000;
 
+/** How long after the checking status mounts it's given its words: a live
+    region that mounts already holding them isn't announced by most screen
+    readers, which need to have seen it empty first. */
+const SAY_AFTER_MS = 150;
+
 /**
  * The "consulting the ephemeris" experience. Each year of history pulled adds
  * a planet to the system on its own elliptical orbit. Planets that collide
@@ -65,12 +70,8 @@ export function SyncScreen({ username, sync, checking = false }: { username: str
         {checking ? <>Checking 12 questions against your sky&hellip;</> : <>Reading your sky&hellip;</>}
       </h1>
       {/* The answers compute in one pass, so this can only say where it
-          starts until they land (8.2). Polite, and it changes once. */}
-      {checking && (
-        <p className="text-ink-2 mb-2 tabular" role="status" aria-live="polite">
-          0 of 12
-        </p>
-      )}
+          starts until they land (8.2). Polite, and filled once. */}
+      {checking && <CheckingCount />}
       {!checking && (
         <>
       <p className="text-ink-2 mb-2 max-w-md">
@@ -98,6 +99,21 @@ export function SyncScreen({ username, sync, checking = false }: { username: str
         </>
       )}
     </div>
+  );
+}
+
+/** "0 of 12 questions", put in its status SAY_AFTER_MS after it mounts, in a
+    line that holds its height meanwhile. */
+function CheckingCount() {
+  const [said, setSaid] = useState("");
+  useEffect(() => {
+    const id = setTimeout(() => setSaid("0 of 12 questions"), SAY_AFTER_MS);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <p className="text-ink-2 mb-2 min-h-6 tabular" role="status" aria-live="polite">
+      {said}
+    </p>
   );
 }
 

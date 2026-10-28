@@ -135,6 +135,8 @@ export function ListenerShell({ username, children }: { username: string; childr
   const [highlights, setHighlights] = useState<Listener["highlights"]>({ state: "loading" });
   const [skyNow, setSkyNow] = useState<Listener["skyNow"]>({ state: "loading" });
   const [revealing, setRevealing] = useState<boolean | null>(null);
+  // Whether this visit watched the history being read, so its end is said.
+  const [readHere, setReadHere] = useState(false);
   const [dataAttempt, setDataAttempt] = useState(0);
   const retryData = useCallback(() => {
     setAnswers({ state: "loading" });
@@ -183,6 +185,7 @@ export function ListenerShell({ username, children }: { username: string; childr
           const s = (await res.json()) as SyncStatus;
           if (stopped) return;
           setSync(s);
+          if (s.status === "syncing") setReadHere(true);
           if (s.status === "error") {
             setFatal(toVisitorErrorCode(s.code));
             return;
@@ -288,6 +291,7 @@ export function ListenerShell({ username, children }: { username: string; childr
     setSongs({ state: "loading" });
     setHighlights({ state: "loading" });
     setRevealing(null);
+    setReadHere(false);
     setAttempt((a) => a + 1);
   };
 
@@ -385,6 +389,11 @@ export function ListenerShell({ username, children }: { username: string; childr
           </div>
         </footer>
       </div>
+      {/* The sync's end, said here: the sync screen and its status go as it
+          ends. Present from the start, empty, so the words are announced. */}
+      <p role="status" className="sr-only">
+        {ready && readHere ? `Listening history read: ${sync.totalScrobbles.toLocaleString("en-US")} ${sync.totalScrobbles === 1 ? "play" : "plays"}.` : ""}
+      </p>
       {revealShown && <Reveal onDone={endReveal} />}
       {ready && <SheetHost onInvalid={sayInvalidLink} lead={lead} />}
     </ListenerContext.Provider>

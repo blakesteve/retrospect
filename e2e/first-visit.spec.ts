@@ -85,8 +85,10 @@ test("a listener with no record for the zone, first visit: the checking step, th
   await expect(page.getByRole("dialog", { name: "Your sky" })).toBeVisible({ timeout: 30_000 });
   expect(await status).toEqual({ tz: zone, answersStored: false });
   const shown = await seen(page);
-  // The step shows, and lasts until the reveal.
-  expect(shown.map((s) => s.what).filter((w) => w !== "other")).toEqual(["checking", "reveal"]);
+  // The step shows, its status there empty before its words, which name what's counted.
+  const checking = shown.filter((s) => s.what === "checking").map((s) => s.said);
+  expect(checking).toEqual(["", "0 of 12 questions"]);
+  expect(shown.map((s) => s.what).filter((w) => w !== "other")).toEqual(["checking", "checking", "reveal"]);
 });
 
 test("a sheet opened while a stored listener's answers load calls the reveal off, and leaves it unseen", async ({ page }) => {
