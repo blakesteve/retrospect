@@ -21,10 +21,23 @@ import { mulberry32 } from "@/lib/analysis/rng";
  *   listens and replays all occur at realistic rates.
  */
 export function synthHistory(target = 500_000, seed = 20260930, startYear = 2006, endYear = 2026): Scrobble[] {
-  const rng = mulberry32(seed);
-  const DAY = 86_400;
   const start = Date.UTC(startYear, 0, 1) / 1000;
   const end = endYear === 2026 ? Date.UTC(2026, 8, 30) / 1000 : Date.UTC(endYear, 11, 31) / 1000;
+  return synthSpan(target, seed, start, end);
+}
+
+const DAY = 86_400;
+
+/**
+ * The same listener between any two instants (seconds), each taken at its UTC
+ * midnight so days keep their shape: the null test's young histories and its
+ * floor edges (`nullTrials.ts`) start mid-year. `synthHistory` is this from 1
+ * January, so its plays are unchanged.
+ */
+export function synthSpan(target: number, seed: number, from: number, to: number): Scrobble[] {
+  const rng = mulberry32(seed);
+  const start = Math.floor(from / DAY) * DAY;
+  const end = Math.floor(to / DAY) * DAY;
   const days = Math.floor((end - start) / DAY);
   const ARTISTS = 8_000;
   const TRACKS = 64_000;

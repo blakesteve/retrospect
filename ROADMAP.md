@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The null test covers young histories, and every seam question has a planted test (28 Oct 2026) · A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -17,14 +17,54 @@
   bundle-shape guard (18 Sept) · Roster 5.0.0 (17 Sept) · Roster 4.13.0
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
-- **Next, quality:** a NASA answers test fails just after UTC midnight · the
-  sync's end under a shared link's sheet · three "scrobble"s a visitor still
-  meets · a sheet closed as it opens can freeze over the page in WebKit ·
-  three dev tools' advisories wait on npm · Every night's doors in Safari ·
-  loading shifts that need a design change · the nights API's bad-range 400s
-  carry no code
+- **Next, quality:** storms and flares say Yes more often in young histories ·
+  the sample shows no Maybe · a NASA answers test fails just after UTC
+  midnight · the sync's end under a shared link's sheet · three "scrobble"s a
+  visitor still meets · a sheet closed as it opens can freeze over the page in
+  WebKit · three dev tools' advisories wait on npm · Every night's doors in
+  Safari · loading shifts that need a design change · the nights API's
+  bad-range 400s carry no code
 
 ## Done
+
+### The null test covers young histories, and every seam question has a planted test (28 October 2026)
+
+- **Young histories in the null test** (ClickUp 86e3m6dgn). Its 1,000
+  made-up histories all ran about four years or more, so a young history's
+  false-Yes rate was unmeasured. `npm run null-test` now adds 500 in each of
+  four bands, each ending where more questions clear their floors (500 plays
+  in a question's windows, then 6 events, after any warm-up): 3 to 6 months
+  (the full moon's sixth comes at about 5), 6 to 12 months, 1 to 2 years
+  (the strong Moon and the new moon, after their year of warm-up) and 2 to
+  4¾ years (Mercury and the Venus and Mars questions, at 2.9 to 3.5, up to
+  where the 1,000 begin). Listeners play 10 to 120 a day, and every history
+  ends 30 Sept 2026. A young history often has nothing to test, so each
+  band is held to 13% among its histories with anything tested: 7.6% (38 of
+  500), 9.6% (47 of 490), 6.7% (26 of 388) and 7.7% (7 of 91). The 1,000
+  stay at 7.1% (71).
+- **The 6-event floor's edges:** 800 histories built to hold 6, or 5, of a
+  seam question's events (100 of each, for each of the four). Any Yes, of
+  those with anything tested: 7.5% (30 of 400) built for 6, 5.7% (19 of
+  331) built for 5. The engine counted the built number in 87 to 100 of
+  each 100, fewer when no play fell in an event, never more. The run fails
+  if it counts more, if a history built for 5 gets its question tested (with
+  the floor at 5 in a copy, 77 of the 80 built for 5 did, at 20 a question,
+  and the run failed), or if any question couldn't be computed.
+- **A planted effect for each seam question,** each beside its twin, the
+  same history with nothing planted, where the question is tested and isn't
+  a Yes: Mercury retrograde (2 extra plays of first-year songs a day through
+  each retrograde, p .0005), the new moon (1 song never heard before on each
+  new-moon day, p .0005), a strong Moon (3 extra first-year plays a day, p
+  .0005), and the full moon's night owl (p .0030, as on 6 Oct, now with its
+  twin). The plants are strong, so they catch an engine that can't find a
+  clear effect, not a small loss of power. With nothing planted, all four
+  fail.
+- **CI** runs the two sets as two jobs side by side (`null-test.yml`): the
+  1,000 take 3.5 to 4.8 minutes, the young set about 4 or 5 (its first CI
+  runs will say). `synthSpan` gives the made-up listener any start date;
+  `synthHistory` is it from 1 January, so the 1,000's plays are unchanged.
+  `src/lib/answers/nullBands.test.ts` checks the young histories are built
+  as stated, without running the engine.
 
 ### A listener with a record in a fresh browser, and what a screen reader is told (27 October 2026)
 
@@ -1314,13 +1354,31 @@ the `threshold` refactor.
 
 ### Quality
 
-- [ ] **A NASA answers test fails from midnight to 2 a.m. UTC.** "Answers
+- [ ] **Storms and flares say Yes more often in young histories.** Within
+      the bound, but in the 1 to 2 years band their p came out under 0.05
+      more often than a test with no effect should: flares in 8.8% of 318
+      tests, storms in 7.3% of 453, against a nominal 5% (about three and
+      two standard deviations); they got a Yes in 17 and 19, against 3 and 4
+      in the 1,000 of four years or more, where more questions tested each
+      also means more correction. Elsewhere their rates sit at 2.2 to 6.1%.
+      That band runs from late 2024 or 2025 to 30 Sept 2026, near the solar
+      maximum. Measured, not explained (null test, 28 Oct).
+- [ ] **The sample shows no Maybe.** The made-up sample's full moon read
+      Maybe (p .079) until the seam rotation (6 Oct, e2cf220) moved it to
+      p .107, Not clearly; nothing it shows says Maybe now. Fixing it means
+      changing the sample's made-up plays (a slight late-night lean around
+      full moons, say), which moves its published facts: a proposal, not
+      done.
+- [ ] **A NASA answers test fails from 1 to 2 a.m. UTC.** "Answers
       questions 7 and 8 from NASA's log" (`src/lib/answers/route.test.ts`)
       refreshes the log 2 hours ago, then 1 hour ago, and expects nothing
       new. The log's stamp starts with the UTC date it covers to
-      (`compact.ts`), so across midnight it reads as new and the record as
-      behind. Seen 27 Oct at 8 p.m. CDT, on `a46e3ef`'s tree too; CI in
-      that window goes red. Pinning the test's clock to midday fixes it.
+      (`compact.ts`), so when those two fall either side of midnight (from
+      1 to 2 a.m. UTC, 8 to 9 p.m. CDT) it reads as new and the record as
+      behind. Seen 27 Oct at 8 p.m. CDT, on `a46e3ef`'s tree too; it passed
+      at 00:41 UTC on 28 Oct. CI in that hour goes red. Pinning the test's
+      clock to midday fixes it. (Written 27 Oct as midnight to 2 a.m.;
+      corrected 28 Oct.)
 - [ ] **The sync's end isn't said under a shared link's sheet.** A shared
       link whose listener's history this visit reads (new, or out of date)
       opens its sheet in the same render that says "Listening history
