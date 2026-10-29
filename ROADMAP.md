@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The null test covers young histories, and every seam question has a planted test (28 Oct 2026) · A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** The sample shows a Maybe again (29 Oct 2026) · The null test covers young histories, and every seam question has a planted test (28 Oct 2026) · A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -18,14 +18,45 @@
   (17 Sept) · Roster 4.12.1 (16 Sept) · Roster sweep (5 Sept)
 - **Next, product:** nothing queued after the redesign.
 - **Next, quality:** storms and flares say Yes more often in young histories ·
-  the sample shows no Maybe · a NASA answers test fails just after UTC
-  midnight · the sync's end under a shared link's sheet · three "scrobble"s a
-  visitor still meets · a sheet closed as it opens can freeze over the page in
-  WebKit · three dev tools' advisories wait on npm · Every night's doors in
-  Safari · loading shifts that need a design change · the nights API's
-  bad-range 400s carry no code
+  a NASA answers test fails just after UTC midnight · the sync's end under a
+  shared link's sheet · three "scrobble"s a visitor still meets · a sheet
+  closed as it opens can freeze over the page in WebKit · three dev tools'
+  advisories wait on npm · Every night's doors in Safari · loading shifts that
+  need a design change · the nights API's bad-range 400s carry no code
 
 ## Done
+
+### The sample shows a Maybe again (29 October 2026)
+
+- **The full moon reads Maybe** (Blake, 28 Oct: changing the made-up data is
+  fine). The seam rotation (6 Oct) had moved it from p .079 to .107, Not
+  clearly, leaving the sample with no Maybe. Now one full-moon night, 24 Feb
+  2024, ends before midnight: its four after-midnight plays (1:03 to 1:16
+  a.m.) come at 11:44 to 11:58 p.m., the same songs in the same order and
+  the same gaps apart (`EARLY_NIGHTS` in `scripts/sample-listener.ts`).
+  They move after the rest of the history is drawn, so no other play moves.
+  The full moon: a 13% smaller after-midnight share, p .0755 (Maybe
+  whatever the correction does, from 0.05 to 0.1). The reveal says "Mostly
+  no. Here's exactly how, and the one maybe."; the landing's jars count 1
+  Maybe and 3 Not clearly.
+- **What else moved, and why it couldn't be avoided.** Storms and Mars in
+  water measure the same after-midnight share over the same history, so
+  four fewer after-midnight plays move them a little. Storms: 9.5% to
+  9.7%, p .299 to .293, still "10%", Not clearly. Mars in water: 2.9% to
+  3.1%, p .543 to .514 (its p note reads 0.51, was 0.54), No. Their
+  histograms and two others' (Venus with Mars, flares: 1 and 4 of 600
+  samples, by at most .002) shift slightly in Show the math, and storms'
+  histogram label says "10% more", was "9% more" (it rounds 9.5% down, so
+  it had disagreed with storms' own "10%"). Every other word and phrase is
+  as it was, and the songs, highlights, genres and nights files are
+  unchanged. A night in the first year keeps old favorites and first
+  listens out of it (their year of warm-up), and the shortest move keeps
+  the rest still. A balanced swap (another night running later) moved more.
+- **Pinned** in `src/lib/samples.test.ts`: the full moon is the one Maybe,
+  with the reveal's line, and its twin, the history without the early
+  night, reads Not clearly (p .107), with only those four plays different.
+  With no early night, in a copy, the twin test, the committed-files test
+  and the share card's test fail.
 
 ### The null test covers young histories, and every seam question has a planted test (28 October 2026)
 
@@ -1363,12 +1394,10 @@ the `threshold` refactor.
       also means more correction. Elsewhere their rates sit at 2.2 to 6.1%.
       That band runs from late 2024 or 2025 to 30 Sept 2026, near the solar
       maximum. Measured, not explained (null test, 28 Oct).
-- [ ] **The sample shows no Maybe.** The made-up sample's full moon read
+- [x] ~~**The sample shows no Maybe.**~~ The made-up sample's full moon read
       Maybe (p .079) until the seam rotation (6 Oct, e2cf220) moved it to
-      p .107, Not clearly; nothing it shows says Maybe now. Fixing it means
-      changing the sample's made-up plays (a slight late-night lean around
-      full moons, say), which moves its published facts: a proposal, not
-      done.
+      p .107, Not clearly. Done 29 Oct: one full-moon night in its history
+      now ends before midnight, and the full moon is a Maybe again (see Done).
 - [ ] **A NASA answers test fails from 1 to 2 a.m. UTC.** "Answers
       questions 7 and 8 from NASA's log" (`src/lib/answers/route.test.ts`)
       refreshes the log 2 hours ago, then 1 hour ago, and expects nothing

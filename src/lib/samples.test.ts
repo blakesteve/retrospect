@@ -5,6 +5,7 @@ import {
   afterMidnightOn,
   ARTISTS,
   CATALOG,
+  EARLY_NIGHTS,
   generateSamples,
   NIGHTS,
   playsOn,
@@ -15,6 +16,9 @@ import {
   writeSampleListener,
 } from "../../scripts/sample-listener";
 import { GET as nightsRoute } from "@/app/api/user/[name]/nights/route";
+import type { Scrobble } from "@/lib/analysis/nostalgia";
+import { computeAnswers } from "@/lib/answers/engine";
+import { wordFor } from "@/lib/answers/words";
 import { MemoryBlobStore, setBlobStore } from "@/lib/store/blob";
 import { openSheet, sheetDepth } from "@/components/listener/sheetUrl";
 import space from "../../scripts/sample-space.json";
@@ -222,6 +226,47 @@ describe("the sample is a made-up listener (8.1: never a real person's listening
     expect(asteroids.length).toBeGreaterThan(100);
     expect(asteroids.filter((a) => !/^\(?\d+/.test(a))).toEqual([]);
   });
+});
+
+describe("the sample's one Maybe (6.3; Blake, 28 Oct 2026)", () => {
+  /** The full moon's record for a history, as the answers route computes it. */
+  const fullMoon = (history: Scrobble[]) =>
+    computeAnswers(SAMPLE_USERNAME, history, SAMPLE_ZONE, Date.parse(SAMPLE_NOW)).questions.find((q) => q.id === "fullmoon")!;
+
+  it("is the full moon's, and the reveal says so", () => {
+    const answers = json<{ reveal: { line: string }; tally: Record<string, number>; questions: { id: string; word: string; p: number }[] }>("answers.json");
+    expect(answers.questions.filter((q) => q.word === "Maybe").map((q) => q.id)).toEqual(["fullmoon"]);
+    // A Maybe whatever the correction does: under 0.1, and not under 0.05.
+    const { p } = answers.questions.find((q) => q.id === "fullmoon")!;
+    expect(p).toBeGreaterThanOrEqual(0.05);
+    expect(p).toBeLessThan(0.1);
+    expect(answers.tally).toMatchObject({ Yes: 0, Maybe: 1, "Not clearly": 3, No: 6, "Too early": 2 });
+    expect(answers.reveal.line).toBe("Mostly no. Here's exactly how, and the one maybe.");
+  });
+
+  it("comes from Feb 24, 2024's full moon ending before midnight; without it, Not clearly", () => {
+    expect(EARLY_NIGHTS).toEqual(["2024-02-24"]);
+    const history = sampleHistory();
+    const twin = sampleHistory([]);
+    // The same plays and songs in the same order: only that night's four
+    // after-midnight plays move, 1:03 to 1:16 a.m. to 11:44 to 11:58 p.m.
+    expect(history.map((s) => `${s.artist}|${s.track}`)).toEqual(twin.map((s) => `${s.artist}|${s.track}`));
+    const at = (uts: number) => new Date(uts * 1000).toLocaleString("en-US", { timeZone: SAMPLE_ZONE, hourCycle: "h23" });
+    const moved = history.flatMap((s, i) => (s.uts === twin[i].uts ? [] : [[at(twin[i].uts), at(s.uts)]]));
+    expect(moved).toEqual([
+      ["2/25/2024, 01:03:00", "2/24/2024, 23:44:43"],
+      ["2/25/2024, 01:08:11", "2/24/2024, 23:49:54"],
+      ["2/25/2024, 01:12:45", "2/24/2024, 23:54:28"],
+      ["2/25/2024, 01:16:17", "2/24/2024, 23:58:00"],
+    ]);
+    const maybe = fullMoon(history);
+    const twinFull = fullMoon(twin);
+    expect(maybe.p).toBe(json<{ questions: { id: string; p: number }[] }>("answers.json").questions.find((q) => q.id === "fullmoon")!.p);
+    expect(wordFor(maybe.p!, false)).toBe("Maybe");
+    expect(twinFull.status).toBe("tested");
+    expect(twinFull.p).toBeGreaterThanOrEqual(0.1);
+    expect(wordFor(twinFull.p!, false)).toBe("Not clearly");
+  }, 60_000);
 });
 
 describe("the sample opens what the landing promises (8.1)", () => {

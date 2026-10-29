@@ -94,8 +94,11 @@ statistics is the answer.
   through the real routes and committed to `public/samples/`; regenerate them
   with `WRITE_SAMPLES=1 npx vitest run src/lib/samples.test.ts` after any
   change to what the routes say (without the variable, the test fails when
-  the committed files are stale). Their NASA photos and JPL flybys are real,
-  fetched once into `scripts/sample-space.json` by
+  the committed files are stale). One full-moon night in the made-up history
+  ends before midnight (`EARLY_NIGHTS`), so the samples show a Maybe, the full
+  moon's; the same test pins it, beside the history without that night,
+  where the full moon reads Not clearly. Their NASA photos and JPL flybys are
+  real, fetched once into `scripts/sample-space.json` by
   `node scripts/sample-space.mjs`; the test fails when the samples show a
   month that file doesn't have.
 
