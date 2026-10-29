@@ -17,8 +17,9 @@
  * The listener is round 2's (`finding-retrospect-ux/redesign/v2/data`): its
  * plays and after-midnight plays for each of 1,096 nights, its first
  * scrobble's minute, and its named songs' first-play minutes and play
- * counts, under other songs (see `ROUND_2`). The rest of the history is
- * generated, seeded, so every run is the same:
+ * counts, under other songs (see `ROUND_2`). One full-moon night ends before
+ * midnight where round 2's ran past it (`EARLY_NIGHTS`). The rest of the
+ * history is generated, seeded, so every run is the same:
  *
  * - 40 more songs, real ones, first played in the months whose nights the
  *   samples ship, so every song the sample can open has its night. They and
@@ -108,6 +109,16 @@ const AFTER_MIDNIGHT = [
 export const NIGHTS = AFTER_MIDNIGHT.length;
 export const playsOn = (i: number) => parseInt(PLAYS.slice(2 * i, 2 * i + 2), 36);
 export const afterMidnightOn = (i: number) => parseInt(AFTER_MIDNIGHT[i], 36);
+
+/**
+ * Full-moon nights that end before midnight, though round 2's ran past it:
+ * the night's after-midnight plays come earlier, the last at 11:58 p.m., the
+ * same songs in the same order and the same gaps apart. They move after the
+ * rest is drawn, so no other play moves. With this one the full moon reads
+ * Maybe (spec 6.3), as it did before its rotations turned on whole periods
+ * (6.1a; Blake, 28 Oct 2026: the sample shows a Maybe).
+ */
+export const EARLY_NIGHTS = ["2024-02-24"];
 
 /* ---- Songs ----------------------------------------------------------------- */
 
@@ -295,10 +306,11 @@ function sessions(rng: () => number, count: number, from: number, to: number, ev
 
 /**
  * The whole made-up history, sorted by time: 44,088 plays, each night's
- * count and after-midnight count round 2's, each catalog song first played
- * at its minute and played its count, and filler for the rest.
+ * count and after-midnight count round 2's (but for `earlyNights`, which end
+ * before midnight), each catalog song first played at its minute and
+ * played its count, and filler for the rest.
  */
-export function sampleHistory(): Scrobble[] {
+export function sampleHistory(earlyNights: readonly string[] = EARLY_NIGHTS): Scrobble[] {
   const rng = mulberry32(20231928);
   const firsts = CATALOG.map((s) => chicago(s.first));
   const anchorsBy = new Map<number, number[]>();
@@ -410,6 +422,18 @@ export function sampleHistory(): Scrobble[] {
     if (pick < 0) pick = newFiller();
     filler[pick].plays++;
     out.push({ uts: slot.uts, artist: filler[pick].artist, track: filler[pick].track });
+  }
+
+  // The early nights, last, so nothing drawn above changes.
+  const afterMidnight = (uts: number) => (uts + intlOffset(SAMPLE_ZONE, uts)) % DAY < 4 * 3600;
+  for (const date of earlyNights) {
+    const n = nightIndex(chicago(`${date}T12:00`));
+    const moving = out.flatMap((p, i) => (nightIndex(p.uts) === n && afterMidnight(p.uts) ? [i] : []));
+    if (moving.length === 0) throw new Error(`${date}: no plays after midnight to move`);
+    const shift = out[moving[moving.length - 1]].uts - chicago(`${date}T23:58`);
+    // Still after the night's other plays, so the history stays in order.
+    if (out[moving[0]].uts - shift <= out[moving[0] - 1].uts) throw new Error(`${date}: no room before midnight`);
+    for (const i of moving) out[i] = { ...out[i], uts: out[i].uts - shift };
   }
   return out;
 }
