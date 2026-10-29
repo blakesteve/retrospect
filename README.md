@@ -132,7 +132,7 @@ npm run lint         # fails on a warning as well as an error
 npm run typecheck
 npm run ephemeris    # regenerate today's UI windows, 2002 through 2035
 npm run sky          # regenerate the redesign's sky data, 2002 through 2035
-npm run null-test    # the answers' null-data test at full size, about a minute
+npm run null-test    # the answers' null-data test at full size, about 3 minutes
 npm run space        # fill or refresh NASA's data in the local store (--all for everything)
 ```
 
@@ -453,9 +453,22 @@ The answer word allows for asking several questions at once. A Yes needs the
 question to pass a Benjamini-Hochberg false-discovery correction at 10% across
 every question that was tested, and its own p under 0.05. Below that it's
 Maybe, Not clearly or No by p alone, and a question without enough to test is
-Too early. `npm run null-test` runs the 12 on 1,000 made-up histories with no
-sky in them and fails if more than 13% get any Yes; the suite runs a quick 100.
-Each history is seeded, so a run gives the same result every time.
+Too early. `npm run null-test` runs the 12 on made-up histories with no sky in
+them and fails if more than 13% of any set get any Yes: 1,000 of about four
+years or more; 500 in each of four younger bands (2 to 4¾ years, 1 to 2
+years, 6 to 12 months, 3 to 6 months), each ending where more questions
+clear their floors and each held to 13% among its histories with anything
+tested, since a young one often has nothing to test; and 800 built at the
+6-event floor, 100 to hold 6 and 100 to hold 5 of each seam question's
+events. At the floor it also fails if the engine counts more events than a
+history was built to hold (it counts fewer when no play falls in one), or
+tests a question built for 5; and anywhere, if a question couldn't be
+computed. `NULL_SET=full` or `NULL_SET=young` runs one set, as CI's two jobs
+do; the suite runs a quick 100. Each history is seeded, so a run gives
+the same result every time (spec 6.3 has the figures). The suite also plants
+an effect for each of the four seam questions (Mercury retrograde, full moon,
+new moon, strong Moon) and requires a Yes, beside the same history with
+nothing planted, which must not get one.
 
 Below the event floor, each event gets its own early-read row. For the
 questions with a warm-up (1, 3, 5 and 11), two or more events in a history's
