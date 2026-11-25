@@ -330,7 +330,7 @@ function SheetSentences({ name, q, side, className }: SheetSide) {
   if (!q && side.state === "error") return null;
   return (
     <section aria-label={name} className={`mt-6 min-w-0 sm:mt-2 ${className}`}>
-      <Eyebrow as="p" aria-hidden size="sm" tone="default" className="mb-2 truncate sm:hidden">
+      <Eyebrow as="p" aria-hidden size="sm" tone="default" className="mb-1.5 truncate sm:hidden">
         {name}
       </Eyebrow>
       <SkyRegion

@@ -26,17 +26,14 @@ export { expect };
 /** Two frames: IntersectionObserver callbacks and React have run. */
 export const settle = (page: Page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
 
-/** Escape, once a sheet just opened has finished coming in and holds focus
-    (Roster's Sheet takes focus a frame after it opens). Pressed sooner, it
-    left the sheet open, in Chromium under a full run's load and in WebKit,
-    where an Escape during the entrance can freeze the sheet out of sight
-    but still over the page, taking every click (1 to 3 Escapes in about
-    236, 25 Oct). That freeze may reach a visitor in Safari too (not
-    confirmed there): it's Roster's Sheet's to fix, not these checks'. */
+/** Escape, once a sheet just opened holds focus (Roster's Sheet takes it a
+    frame after it opens). Pressed sooner, it left the sheet open, in
+    Chromium under a full run's load. It needn't wait for the sheet to finish
+    coming in: on Roster 5.15.0, in WebKit, an Escape during the entrance
+    could freeze the sheet out of sight but still over the page (24 Nov: 13
+    of 972, and 0 of 992 on 5.23.0). */
 export async function escapeSheet(page: Page) {
-  const panel = page.locator("[data-testid=sheet-panel]");
-  await expect(panel).toBeVisible();
-  await expect(panel, "the sheet's entrance done").not.toHaveAttribute("data-transition");
+  await expect(page.locator("[data-testid=sheet-panel]")).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => Boolean(document.activeElement?.closest("[data-testid=sheet-panel]"))), { message: "focus inside the sheet" })
     .toBe(true);

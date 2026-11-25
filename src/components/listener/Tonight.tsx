@@ -559,7 +559,10 @@ function GenresRow() {
     from 640px a labeled one. Up to 1123px it sits over the column, so it
     fades in only once "Tonight, for you" has scrolled above it and never
     covers a "for you" row (ruling, 3 Oct 2026). From 1124px it sits in the
-    margin beside the column, where it covers nothing, from the start. */
+    margin beside the column, where it covers nothing, from the start. Its
+    distance from the right stops there: left on, it outranked the rule that
+    drops it (Tailwind can't sort a px breakpoint against a rem one) and left
+    the box no width, so the label wrapped (Roster 5.23.0). */
 function Surprise({ after }: { after: RefObject<HTMLDivElement | null> }) {
   const L = useListener();
   const last = useRef<string | null>(null);
@@ -589,7 +592,7 @@ function Surprise({ after }: { after: RefObject<HTMLDivElement | null> }) {
   const shown = !overColumn || past;
   return (
     <div
-      className={`fixed bottom-[calc(16px+env(safe-area-inset-bottom))] right-4 z-40 transition-[opacity,transform] duration-200 motion-reduce:transition-none sm:right-[max(16px,calc((100vw-720px)/2+16px))] min-[1124px]:left-[calc(50%+376px)] min-[1124px]:right-auto ${
+      className={`fixed bottom-[calc(16px+env(safe-area-inset-bottom))] right-4 z-40 transition-[opacity,transform] duration-200 motion-reduce:transition-none sm:max-[1124px]:right-[max(16px,calc((100vw-720px)/2+16px))] min-[1124px]:left-[calc(50%+376px)] min-[1124px]:right-auto ${
         shown ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
       }`}
       inert={!shown}

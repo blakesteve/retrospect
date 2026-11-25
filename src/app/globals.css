@@ -207,6 +207,15 @@ body {
   background-color: var(--roster-primary-500);
 }
 
+/* A press on a Button lands on the button. Since 5.23.0 Roster's Button holds
+   its content in a span, and in WebKit a press on a span inside a button
+   makes the next focus a script moves count as the keyboard's: Sky's Clear,
+   clicked, ringed the planet it gives focus back to (e2e/focus.spec.ts).
+   Roster's to fix; this goes when it does. */
+button.rst\:min-h-fit > span {
+  pointer-events: none;
+}
+
 
 /* ===========================================================================
    The redesign (phase 3): Tonight, the sheets, the landing.

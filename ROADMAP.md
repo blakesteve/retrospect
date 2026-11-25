@@ -2,7 +2,7 @@
 
 **Index**
 
-- **Done:** The sample shows a Maybe again (29 Oct 2026) · The null test covers young histories, and every seam question has a planted test (28 Oct 2026) · A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
+- **Done:** Discord notices, Roster 5.23.0 and Next.js 16.4.5 (24 Nov 2026) · The sample shows a Maybe again (29 Oct 2026) · The null test covers young histories, and every seam question has a planted test (28 Oct 2026) · A listener with a record in a fresh browser, and what a screen reader is told (27 Oct 2026) · The sync bar people can hear, Roster 5.15.0, and CI in Playwright's image (25 Oct 2026) · The wheels' focus in Safari, Roster 5.14.0, and the audit fixes (24 Oct 2026) · Loading shifts, CI on Ubuntu 24.04, and Next.js 16.4.2 (24 Oct 2026) · Tonight's ℞, long names on the share card, and error pages (21 Oct 2026) · The Sky wheel's glyphs, and Roster 5.12.0 (17 Oct 2026) · Skeletons on Roster's, and the dial's touch drag (15 Oct 2026) · Compare's question sheet on phones (12 Oct 2026) · Next.js 16.4.0 and Roster 5.8.0 (11 Oct 2026) · Whole periods for the four periodic questions (6 Oct 2026) · Answers need a zone, and the null test in CI (5 Oct 2026) · Compare and the share cards (4 Oct 2026) · Sky (3 Oct 2026) · Every night (3 Oct 2026) · Browser checks in CI (3 Oct 2026) · The Tonight revision (3 Oct 2026) · NASA's fill, by priority (2 Oct 2026) · Tonight's follow-ups
   (2 Oct 2026) · Tonight, the sheets, the
   landing and the reveal (2 Oct 2026) ·
   Questions 5 and 6 test their folklore (1 Oct 2026) · Nights,
@@ -19,12 +19,83 @@
 - **Next, product:** nothing queued after the redesign.
 - **Next, quality:** storms and flares say Yes more often in young histories ·
   a NASA answers test fails just after UTC midnight · the sync's end under a
-  shared link's sheet · three "scrobble"s a visitor still meets · a sheet
-  closed as it opens can freeze over the page in WebKit · three dev tools'
-  advisories wait on npm · Every night's doors in Safari · loading shifts that
-  need a design change · the nights API's bad-range 400s carry no code
+  shared link's sheet · three "scrobble"s a visitor still meets · a Button's
+  press rule waits on Roster · three dev tools' advisories wait on npm · Every
+  night's doors in Safari · loading shifts that need a design change · the
+  nights API's bad-range 400s carry no code
 
 ## Done
+
+### Discord notices, Roster 5.23.0 and Next.js 16.4.5 (24 November 2026)
+
+- **Deploys and red runs post to Discord** (`discord.yml`, the shared
+  workflow, from blakeb-dev's copy): a production deploy or a failed one, CI
+  red on a push to `main`, and the null test red on its schedule, named as
+  itself, since nobody is waiting on that run. A pull request's red posts
+  nothing, from a fork or not, nor does a null test started by hand. The
+  README's "Deployment notices" has the rest;
+  `src/lib/discord-workflow.test.ts` runs the workflow's condition and script
+  and pins its ceiling at 2 minutes, and `src/lib/ciWorkflow.test.ts` reads
+  the new file too, with a floor of its own for it. 18 mutants, each in a
+  copy, all caught. A permission's name in the YAML was read as a class (27
+  bytes of CSS), so Tailwind skips the workflow and its test: the CSS is
+  `bf1666a`'s.
+- **Roster 5.15.0 to 5.23.0, pinned, and Next.js 16.4.2 to 16.4.5.** Only
+  those packages and Next's own move in the lock; react-hot-toast (2.6.1) and
+  TanStack don't. `npm audit` goes from 11 (10 moderate, 1 high) to 10.
+  None of Next's seven advisories reaches production: the app has no
+  `use cache`, no `unstable_cache`, no Cache Components, no Edge route and no
+  cookie, no route returns a fetched response, and Vercel does its image
+  optimizing. Run with `next start`, the optimizer is live (the wordmark's
+  `next/image`), but it takes no remote images, and no local path serves an
+  SVG or bytes a visitor chose.
+- **What moves, measured** on clean builds of `bf1666a` and this, every
+  element's box and styles on 35 screens and states, in Chromium and WebKit,
+  at 375 and 1280 (140 in all):
+  - A sheet whose page or code loads with it open (a shared link, the
+    landing's first sample) slides in over about 0.3 seconds; it appeared in
+    place (5.19.1).
+  - A field in an error keeps its red edge when focused, where gold replaced
+    it, and the red is a step lighter: 2.83:1 to 6.54 on the card. The birth
+    chart's offset menu draws its chevron at 6.76:1, from 2.79 (5.22.0).
+  - The reveal's "asteroid flybys closer than about 4 lunar distances" takes
+    4px more at 375, its lines 14px apart (5.20.0). Compare's name in the
+    sheet on a phone keeps its 19px (`mb-1.5` for `mb-2`).
+  - Opening that menu no longer scrolls the page behind the sheet (96px at
+    1280): 5.23.0, by its source, the one release here that changed how the
+    panel is sized (not bisected).
+- **Three Buttons would have wrapped (5.23.0), and don't.** "Surprise me" on
+  Tonight and "Back to top" on Every night, from 1124px: 64 and 84px tall.
+  Their boxes had been 0px wide since 3 October, hidden while a label never
+  wrapped: the rule dropping their distance from the right lost to the one
+  setting it, because Tailwind can't sort a px breakpoint against a rem one.
+  "Jump to a wild night" at 375, 64px tall in Chromium and, in WebKit, 199px
+  wide over its neighbor: its 32px a side left no room, so it has none now.
+  Every Button's size is 5.15.0's, in 25 screens and states at 13 widths from
+  320 to 1440 in both engines (12,610 boxes), and on fresh WebKit loads the
+  two sit in the margin from 1124px. Each is pinned, and fails without its
+  fix.
+- **A press on a Button lands on the button** (a rule in globals.css). Its
+  content is a span since 5.23.0, and in WebKit a press on a span inside a
+  button makes the next focus a script moves count as the keyboard's, shown
+  on a page with no Roster in it: Sky's Clear, clicked, ringed the planet it
+  gives focus back to, and `e2e/focus.spec.ts` failed 23 of 23 in WebKit
+  without it (0 on 5.15.0). Roster's to fix; the Quality row below.
+- **A sheet closed as it opens no longer freezes in WebKit** (the Quality row
+  of 25 October, struck). The same measure, Escape during the entrance in
+  Playwright's WebKit at 4 workers: 13 of 972 on 5.15.0 and 0 of 992 on
+  5.23.0 (Roster reworked how a close leaves in 5.17.0 and 5.19.2). Escape
+  after it, 0 of 212 and 0 of 208. So the browser checks no longer wait out
+  the entrance (`escapeSheet`), only for the sheet to hold focus.
+- `nights.spec.ts` asserts the night's dialog itself, which has had a box
+  since 5.17.0. `RemoveForm`'s comment on `aria-describedby` is put right
+  (5.19.3 keeps one it's passed).
+- **Bundle, against `bf1666a`'s build:** client JS 1,470,009 to 1,482,864
+  (+12,855: Next 3,549, Roster 9,244, the app 62), its ceiling unchanged.
+  Roster's stylesheets 169,047 to 179,273 (+10,226), restated in the guard;
+  the app's own CSS 42,790 to 42,833. First loads: landing 681,119 to
+  685,084, Tonight 946,063 to 953,072, Every night 940,300 to 947,231, Sky
+  888,811 to 895,849, compare 759,629 to 766,246.
 
 ### The sample shows a Maybe again (29 October 2026)
 
@@ -1421,21 +1492,17 @@ the `threshold` refactor.
       credits, "Reads public scrobble data via the Last.fm API." (printed),
       don't. The empty account's "Last.fm calls this scrobbling" explains
       the word on purpose. A wording call for the UX lead.
-- [ ] **A sheet closed as it opens can freeze over the page in WebKit.**
-      Escape during a sheet's entrance (about 300ms), in WebKit under load,
-      sometimes leaves Roster's Sheet half-closed: the URL cleared and the
-      panel out of sight, but the dialog still mounted, with its full-screen
-      container over the page, so every click lands on it until a reload.
-      Measured 25 Oct in Playwright's WebKit, 4 workers: 1 to 3 of about 236
-      Escapes, the panel left holding `data-enter`, `data-transition` and
-      `data-closed` with nothing running: Headless UI never finishes the
-      close. On macOS, 26 Oct: 5 of 143 Escapes during the entrance and 0 of
-      47 after it, with frames still drawn and a mouse move not freeing it, so
-      it isn't the image's frame stall (the 25 October Done entry). The Sheet
-      runs the Headless UI Roster bundles, 2.2.9 in 5.15.0 (2.2.10 is out;
-      untested here). Measured in Playwright's WebKit only, not confirmed in
-      Safari itself. Roster's Sheet's to fix; the browser checks wait out the
-      entrance meanwhile.
+- [x] ~~**A sheet closed as it opens can freeze over the page in WebKit.**~~
+      Done 24 Nov, with Roster 5.23.0: 13 of 972 Escapes during the entrance
+      froze it on 5.15.0, 0 of 992 on 5.23.0 (see Done). Measured in
+      Playwright's WebKit, not in Safari itself.
+- [ ] **A Button's press rule waits on Roster.** `button.rst\:min-h-fit > span`
+      in globals.css sends a press to the button itself, because in WebKit a
+      press on Button's inner span (5.23.0) makes the next focus a script
+      moves count as the keyboard's. Roster's `main`, bound for 5.24.0, still
+      has the span (24 Nov).
+      Take the rule out with the Roster release that fixes it;
+      `e2e/focus.spec.ts` fails in WebKit if it isn't fixed.
 - [ ] **Three dev tools' advisories wait on npm.** `npm audit` lists vite
       (high, 5 advisories), vitest and @vitest/mocker (moderate), all fixed
       in range (vite 8.1.6 to 8.3.5, vitest 4.1.12), but npm 11.4.2 and
@@ -1444,6 +1511,9 @@ the `threshold` refactor.
       `update` or `install` alike. `--legacy-peer-deps` gets past it but drops
       Roster's runtime peers (react-hot-toast, goober) from the lock, so not
       that. Dev only: `vitest run` opens no server. Retry with the next npm.
+      Retried 24 Nov: npm 11.4.2 still crashes the same way, by `audit fix`
+      and `update`. `npm audit` also lists minimatch (moderate) under
+      typescript-eslint now, 10 packages in all, stuck behind the same crash.
 - [ ] **Every night's doors lose their focus ring in Safari after a click.**
       The arrow keys move focus between the doors by script, as the wheels'
       did (24 Oct, above), and the doors' rings are plain CSS

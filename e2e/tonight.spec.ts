@@ -130,7 +130,11 @@ test.describe("'Surprise me' never covers a 'for you' row (ruling, 3 Oct 2026)",
         expect(steps.length).toBeGreaterThan(55); // the dense band was scanned
         const box = await button.boundingBox();
         if (width < 640) expect([Math.round(box!.width), Math.round(box!.height)]).toEqual([56, 56]);
-        else expect(await button.textContent()).toContain("Surprise me");
+        else {
+          expect(await button.textContent()).toContain("Surprise me");
+          // On one line: Roster's Button wraps a label its box is too narrow for (5.23.0).
+          expect(Math.round(box!.height)).toBe(44);
+        }
       });
     });
   }

@@ -76,8 +76,8 @@ export function RemoveForm() {
           up with the box, not the label. `lg` on both is the height match.
           The hint is the label itself, not `helperText` (text under the box
           moves its bottom edge off the button's) and not a paragraph tied on
-          with `aria-describedby` (Roster's Input drops that prop: Headless UI's
-          Field sets its own). */}
+          with `aria-describedby` (which Roster's Input dropped until 5.19.3:
+          Headless UI's Field set its own). */}
       <div className="flex w-full items-end gap-3">
         <Input
           label={showHint ? `Type ${hint} to remove that history` : "Last.fm username"}

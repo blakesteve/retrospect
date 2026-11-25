@@ -404,8 +404,7 @@ test.describe("the calendar by keyboard, by date (11)", () => {
     await expect(page.locator(`${DOOR}[tabindex='0']`)).toHaveCount(1);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/[?&]night=2023-09-28(&|$)/);
-    // Roster's dialog element has no box of its own (its panel is fixed inside it): its heading is what shows.
-    await expect(page.getByRole("dialog", { name: "Thursday, Sept 28, 2023" }).getByRole("heading", { name: "Thursday, Sept 28, 2023" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Thursday, Sept 28, 2023" })).toBeVisible();
     await escapeSheet(page);
     await expect.poll(() => focused(page)).toBe("2023-09-28");
     // A month later sits above, out of view under the sticky top: focus scrolls it clear of the header and bar.
@@ -668,6 +667,18 @@ test.describe("the bar's controls (8.5, 7.6, 11)", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await expect(page.locator("#view-heading")).toBeFocused();
     await expect(wrap).toHaveAttribute("inert", "");
+  });
+
+  test("Back to top keeps its label on one line, in the margin at 1280px", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openNights(page);
+    await page.evaluate(() => window.scrollTo(0, 2000));
+    await expect(page.locator("[data-back-to-top]")).not.toHaveAttribute("inert");
+    await expect.poll(() => page.locator("[data-back-to-top]").evaluate((e) => getComputedStyle(e).opacity)).toBe("1");
+    // The column is 720px wide, so it ends at 1000; wrapped, the label made it 84px tall (Roster 5.23.0).
+    const box = (await page.getByRole("button", { name: "Back to top" }).boundingBox())!;
+    expect([Math.round(box.x), Math.round(box.height)]).toEqual([1016, 44]);
   });
 
   test("the year strip seeks by key and by tap, and settles on the month's first night", async ({ page }) => {

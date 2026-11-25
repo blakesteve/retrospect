@@ -129,7 +129,9 @@ describe("the error pages (not-found, error, global-error)", () => {
   it("holds Try again's place until Roster's button loads, and draws a whole document when the root layout fails", () => {
     // The button loads when the page draws (error.tsx), in a box its height.
     expect(pages[1][1]).toContain('<span class="block h-11"></span>');
-    expect(renderToStaticMarkup(createElement(TryAgain, { onClick: () => {} }))).toMatch(/^<button[^>]*>Try again<\/button>$/);
+    const tryAgain = renderToStaticMarkup(createElement(TryAgain, { onClick: () => {} }));
+    expect(tryAgain).toMatch(/^<button[^>]*>(?:(?!<button).)*<\/button>$/);
+    expect(words(tryAgain)).toBe("Try again");
     const doc = pages[2][1];
     // The root layout's own classes, read from it, and a title React lifts into the head.
     const layout = readFileSync(path.resolve(__dirname, "../app/layout.tsx"), "utf8");

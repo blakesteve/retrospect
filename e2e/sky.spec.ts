@@ -88,6 +88,10 @@ for (const width of [375, 1280]) {
       const handle = await page.locator("[data-dial-handle]").boundingBox();
       expect(handle!.width).toBeGreaterThanOrEqual(54);
       expect(handle!.height).toBeGreaterThanOrEqual(46);
+      // Under it, two labels side by side, each on one line and clear of the other (Roster's Button wraps one that can't fit, 5.23.0).
+      const [jump, back] = await Promise.all(["Jump to a wild night", "Back to tonight"].map((name) => page.getByRole("button", { name }).boundingBox()));
+      expect([jump!.height, back!.height]).toEqual([44, 44]);
+      expect(jump!.x + jump!.width).toBeLessThan(back!.x);
       const dial = slider(page);
       // At rest, tonight.
       await expect(dial).toHaveAttribute("aria-valuetext", /, tonight: /);

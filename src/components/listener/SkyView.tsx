@@ -755,11 +755,13 @@ export function SkyView() {
                 />
               )}
             />
+            {/* No side padding: each label is centered in its column, and
+                Roster's 32px a side would wrap it on a phone (5.23.0). */}
             <div className="mt-1 grid grid-cols-2 gap-2">
-              <Button size="lg" variant="outline" onClick={nextWild} disabled={!ready || headlines.length === 0}>
+              <Button size="lg" variant="outline" className="px-0" onClick={nextWild} disabled={!ready || headlines.length === 0}>
                 Jump to a wild night
               </Button>
-              <Button size="lg" variant="outline" onClick={() => go(n - 1, "back")} disabled={!ready}>
+              <Button size="lg" variant="outline" className="px-0" onClick={() => go(n - 1, "back")} disabled={!ready}>
                 Back to tonight
               </Button>
             </div>
