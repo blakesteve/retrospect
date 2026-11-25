@@ -16,6 +16,11 @@
 @import "@blakesteve/roster/style.css";
 @import "@blakesteve/roster/tokens.css";
 
+/* Not the Discord notices' workflow or its test: a permission named there
+   would be read as a class and shipped, though no page uses it. */
+@source not "../../.github/workflows/discord.yml";
+@source not "../lib/discord-workflow.test.ts";
+
 /* Keyboard focus, as Roster draws it (its README's Focus): the engine's own
    :focus-visible, or an element Roster's tracker (`useKeyFocus`) marked
    because a key moved focus to it. WebKit doesn't match :focus-visible on an

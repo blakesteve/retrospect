@@ -14,7 +14,9 @@ import { describe, expect, it } from "vitest";
    inside the job's, because a step that times out fails and keeps its
    failures, and a job that times out is cancelled and keeps nothing. The
    workflow files and their jobs are listed by name, so a new one fails here
-   until it's added, and so checked. */
+   until it's added, and so checked; with each, the lowest ceiling its jobs
+   may have, in minutes. The Discord notices' is 2: that job installs nothing,
+   and only asks GitHub and Discord (discord-workflow.test.ts). */
 
 const root = path.resolve(__dirname, "../..");
 const workflow = (file: string) => readFileSync(path.join(root, ".github/workflows", file), "utf8");
@@ -54,9 +56,10 @@ const commands = (yaml: string) =>
 /** A browser or a system library installed: `npx playwright install` or `install-deps`, any version; apt or apt-get. */
 const INSTALLS = /\bplaywright(?:@\S+)?\s+install\b|\bapt(?:-get)?\s+(?:-\S+\s+)*install\b/;
 
-const WORKFLOWS: [string, string[]][] = [
-  ["ci.yml", ["test", "lint", "browser"]],
-  ["null-test.yml", ["null-test"]],
+const WORKFLOWS: [string, string[], number][] = [
+  ["ci.yml", ["test", "lint", "browser"], 10],
+  ["discord.yml", ["notify"], 2],
+  ["null-test.yml", ["null-test"], 10],
 ];
 
 describe("CI's workflows", () => {
@@ -64,12 +67,12 @@ describe("CI's workflows", () => {
     expect(readdirSync(path.join(root, ".github/workflows")).sort()).toEqual(WORKFLOWS.map(([f]) => f).sort());
   });
 
-  it.each(WORKFLOWS)("%s runs every job on Ubuntu 24.04, with a ceiling under 15 minutes", (file, names) => {
+  it.each(WORKFLOWS)("%s runs every job on Ubuntu 24.04, with a ceiling under 15 minutes", (file, names, floor) => {
     const found = jobs(workflow(file));
     expect(found.map((j) => j.job)).toEqual(names);
     for (const j of found) {
       expect(j.runsOn, j.job).toBe("ubuntu-24.04");
-      expect(j.timeout, j.job).toBeGreaterThanOrEqual(10);
+      expect(j.timeout, j.job).toBeGreaterThanOrEqual(floor);
       expect(j.timeout, j.job).toBeLessThan(15);
     }
   });
