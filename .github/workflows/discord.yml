@@ -1,0 +1,250 @@
+# Posts Retrospect's production deploys, a production deploy that fails, red CI
+# on main, and a red scheduled null test to its Discord channel.
+#
+# The shared notices workflow (v2), copied from blakeb-dev's. There are no
+# releases here and package.json's version never moves, so it has no release
+# trigger and a post names the commit alone. The null test's scheduled run is
+# this copy's own: it's the one check nobody is waiting on.
+#
+# To change it: APP_NAME, SITE_URL, the DISCORD_WEBHOOK_URL secret, and DETAILS,
+# chosen on purpose. `workflows`, and the names in the job's `if`, match CI's
+# and the null test's, and CI's file is in the details' query. Its test,
+# src/lib/discord-workflow.test.ts, pins these settings.
+#
+# The repo is public, and deployment_status runs the copy in the deployed
+# commit, so Vercel's Git Fork Protection stays on for this project: a fork's
+# commit that Vercel built would run its own copy with the secret.
+#
+# Which copy of this file runs depends on the event:
+#   deployment_status  the one in the deployed commit
+#   workflow_run       the one on the default branch
+#   workflow_dispatch  the one on the ref it's run with
+name: Discord
+
+on:
+  deployment_status:
+  workflow_run:
+    workflows: [CI, Null test]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      message:
+        description: The message to send, marked as a test
+        type: choice
+        required: true
+        options: [deploy, deploy-failed, ci-failed]
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+  pull-requests: read
+
+env:
+  APP_NAME: Retrospect
+  SITE_URL: https://retrospect-seven.vercel.app
+  # on: PR titles and the failed job and step. off: commit and link only.
+  DETAILS: "on"
+
+jobs:
+  notify:
+    name: Post to Discord
+    # Ubuntu 24.04, as ci.yml's jobs are (it says why), so the tests run this
+    # script where the job does.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    # Here rather than in the script: a skipped job starts no runner, and every
+    # preview writes several deployment statuses. The event matters too: a pull
+    # request from a branch named main, a fork's say, runs CI and the null test
+    # with main as its head branch, and that isn't main going red. So CI posts
+    # for a push alone, and the null test, which no push runs, for its schedule.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'deployment_status' &&
+        github.event.deployment.environment == 'Production' &&
+        (github.event.deployment_status.state == 'success' ||
+          github.event.deployment_status.state == 'failure' ||
+          github.event.deployment_status.state == 'error')) ||
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'failure' &&
+        ((github.event.workflow_run.name == 'CI' &&
+          github.event.workflow_run.event == 'push') ||
+        (github.event.workflow_run.name == 'Null test' &&
+          github.event.workflow_run.event == 'schedule')))
+    steps:
+      - name: Post
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
+        # Every value comes through jq, from the event file or GitHub's API, so
+        # nothing from a commit or a pull request reaches the shell as code. Never
+        # turn on set -x.
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "::notice::DISCORD_WEBHOOK_URL isn't set, so nothing was posted."
+            exit 0
+          fi
+
+          field() { jq -r "$1 // empty" "$GITHUB_EVENT_PATH"; }
+
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          sha="$GITHUB_SHA"
+          branch="$(field .workflow_run.head_branch)"
+          workflow="$(field .workflow_run.name)"
+          prefix=""
+
+          case "$GITHUB_EVENT_NAME" in
+            deployment_status)
+              if [ "$(field .deployment_status.state)" = "success" ]; then kind="deploy"; else kind="deploy-failed"; fi
+              link="$(field .deployment_status.target_url)"
+              ;;
+            workflow_run)
+              kind="ci-failed"
+              sha="$(field .workflow_run.head_sha)"
+              link="$(field .workflow_run.html_url)"
+              ;;
+            workflow_dispatch)
+              kind="$(field .inputs.message)"
+              prefix="Test: "
+              branch="${GITHUB_REF_NAME:-}"
+              link=""
+              ;;
+            *)
+              echo "::error::No message for $GITHUB_EVENT_NAME."
+              exit 1
+              ;;
+          esac
+
+          green=5763719
+          red=15548997
+          case "$kind" in
+            deploy) what="deployed to production"; color="$green"; link="$SITE_URL" ;;
+            deploy-failed) what="production deploy failed"; color="$red" ;;
+            ci-failed) what="${workflow:-CI} failed on $branch"; color="$red" ;;
+            *) echo "::error::No message called $kind."; exit 1 ;;
+          esac
+          case "$link" in https://*) ;; *) link="" ;; esac
+          link="${link:-$run_url}"
+
+          api() { gh api "repos/$GITHUB_REPOSITORY/$1"; }
+
+          # One item per line in, at most ten out, and all text from a PR, a job or
+          # a deployment comes through here. allowed_mentions only stops
+          # pings: Discord renders markdown in an embed, so a title could draw a link
+          # saying anything. The first cut is for speed: these regexes slow down
+          # badly on one very long line.
+          tidy() {
+            jq -Rrs '
+              split("\n")
+              | map(.[:2000] | gsub("[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]"; "") | gsub("^\\s+|\\s+$"; "") | select(length > 0))
+              | . as $all
+              | .[:10]
+              | map((if length > 120 then .[:119] + "…" else . end)
+                  | gsub("(?<c>[\\\\`*_~|<>\\[\\]()#@:])"; "\\\(.c)")
+                  | "• " + .)
+              | . + (if ($all | length) > 10 then ["…and \(($all | length) - 10) more"] else [] end)
+              | join("\n")'
+          }
+
+          # Merged PRs in the commits since the good deploy before this one. Matching
+          # on merge_commit_sha works for merge, squash and rebase alike.
+          merged_since_last_deploy() {
+            local id deployed state successes previous="" this
+            this="$(field .deployment.id)"
+            if [ -n "$this" ]; then
+              # A redeploy adds another success to the same record, and ships nothing new.
+              successes="$(api "deployments/$this/statuses?per_page=100" | jq '[.[] | select(.state == "success")] | length')" || return 1
+              if [ "$successes" -gt 1 ]; then return 0; fi
+            fi
+            api "deployments?environment=Production&per_page=15" | jq -r --argjson this "${this:-9007199254740991}" \
+              '.[] | select(.id < $this) | "\(.id) \(.sha)"' > "$RUNNER_TEMP/deployments" || return 1
+            while read -r id deployed; do
+              state="$(api "deployments/$id/statuses?per_page=1" | jq -r '.[0].state // empty')" || return 1
+              case "$state" in success|inactive) previous="$deployed"; break ;; esac
+            done < "$RUNNER_TEMP/deployments"
+            if [ -z "$previous" ]; then return 0; fi
+            api "compare/$previous...$sha" | jq -r '.commits[].sha' > "$RUNNER_TEMP/shipped" || return 1
+            api "pulls?state=closed&sort=updated&direction=desc&per_page=100" | jq -r --rawfile shipped "$RUNNER_TEMP/shipped" '
+              ($shipped | split("\n")) as $commits
+              | map(select(.merged_at != null
+                  and (.merge_commit_sha as $merge | any($commits[]; . == $merge))
+                  and (.head.ref // "" | test("^((dev|main)$|release/|release-please--)") | not)))
+              | sort_by(.merged_at) | reverse | .[].title'
+          }
+
+          # Each failed job with its failed step, since a job runs several: the
+          # browser job's build and its checks. A step stopped at its own timeout
+          # reports a failure, and is named. A job that failed outside any step,
+          # as in setup, is named alone. A job stopped at its own timeout ends
+          # the run cancelled, which doesn't post.
+          failed_steps() {
+            api "actions/runs/$1/jobs?per_page=100" | jq -r '
+              .jobs[]
+              | select(.conclusion == "failure" or .conclusion == "timed_out")
+              | .name as $job
+              | [.steps[]? | select(.conclusion == "failure" or .conclusion == "timed_out") | .name] as $steps
+              | if ($steps | length) > 0 then $steps[] | "\($job): \(.)" else $job end'
+          }
+
+          details() {
+            local list label="" run_id
+            case "$kind" in
+              deploy)
+                list="$(merged_since_last_deploy | tidy)" || return 1
+                label="Merged since the last deploy:"
+                ;;
+              deploy-failed)
+                list="$(field .deployment_status.description | tidy)" || return 1
+                label="Failed:"
+                ;;
+              ci-failed)
+                # A test reads CI's latest failure on a push to main, not the
+                # repo's, which could be this workflow's own; with none, it has
+                # no details.
+                run_id="$(field .workflow_run.id)"
+                if [ -z "$run_id" ]; then
+                  run_id="$(api "actions/workflows/ci.yml/runs?branch=main&event=push&status=failure&per_page=1" | jq -r '.workflow_runs[0].id // empty')" || return 1
+                  if [ -z "$run_id" ]; then return 0; fi
+                fi
+                list="$(failed_steps "$run_id" | tidy)" || return 1
+                label="Failed:"
+                ;;
+            esac
+            if [ -n "$list" ]; then printf '%s\n%s' "$label" "$list"; fi
+          }
+
+          description="Commit ${sha:0:7}"
+          if [ "${DETAILS:-off}" = "on" ]; then
+            # Details are extra, so a bad answer costs them and not the post.
+            if extra="$(details)"; then
+              if [ -n "$extra" ]; then description="$description"$'\n\n'"$extra"; fi
+            else
+              echo "::warning::Posting without details, because they couldn't be read from GitHub."
+            fi
+          fi
+
+          payload="$(jq -n \
+            --arg title "$prefix$APP_NAME $what" \
+            --arg description "$description" \
+            --arg url "$link" \
+            --argjson color "$color" \
+            '{allowed_mentions: {parse: []}, embeds: [{title: $title, description: $description, url: $url, color: $color}]}')"
+
+          # wait=true: Discord says a message it failed to save isn't an error
+          # without it, so a 204 proves little. With it, success is the saved message.
+          response="$RUNNER_TEMP/discord-response.json"
+          status="$(curl -sS --max-time 20 -o "$response" -w '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            -d "$payload" \
+            "$DISCORD_WEBHOOK_URL?wait=true")"
+          echo "Discord answered $status"
+
+          message_id="$(jq -r '.id // empty' "$response" 2>/dev/null || true)"
+          if [ "$status" != "200" ] || [ -z "$message_id" ]; then
+            echo "::error::Discord didn't save the message (status $status)."
+            exit 1
+          fi
+          echo "Saved as message $message_id"

@@ -16,6 +16,11 @@
 @import "@blakesteve/roster/style.css";
 @import "@blakesteve/roster/tokens.css";
 
+/* Not the Discord notices' workflow or its test: a permission named there
+   would be read as a class and shipped, though no page uses it. */
+@source not "../../.github/workflows/discord.yml";
+@source not "../lib/discord-workflow.test.ts";
+
 /* Keyboard focus, as Roster draws it (its README's Focus): the engine's own
    :focus-visible, or an element Roster's tracker (`useKeyFocus`) marked
    because a key moved focus to it. WebKit doesn't match :focus-visible on an
@@ -200,6 +205,15 @@ body {
 }
 .rst\:bg-primary-600.rst\:hover\:bg-primary-700:hover {
   background-color: var(--roster-primary-500);
+}
+
+/* A press on a Button lands on the button. Since 5.23.0 Roster's Button holds
+   its content in a span, and in WebKit a press on a span inside a button
+   makes the next focus a script moves count as the keyboard's: Sky's Clear,
+   clicked, ringed the planet it gives focus back to (e2e/focus.spec.ts).
+   Roster's to fix; this goes when it does. */
+button.rst\:min-h-fit > span {
+  pointer-events: none;
 }
 
 

@@ -146,8 +146,10 @@ request that touches anything it reads, and every Monday. Every job runs on
 Ubuntu 24.04, not `ubuntu-latest` (26.04, where Playwright 1.58.2 can't
 install its browsers), with a ceiling about two and a half times its slowest
 healthy run and never under 10 minutes, but always under 15, so the browser
-checks' is 12, about twice theirs, with each step's ceiling inside it;
-`src/lib/ciWorkflow.test.ts` keeps these true of every job in every
+checks' is 12, about twice theirs, with each step's ceiling inside it. The
+Discord notices' job ([Deployment notices](#deployment-notices)) installs
+nothing, and its ceiling is 2 (`src/lib/discord-workflow.test.ts`).
+`src/lib/ciWorkflow.test.ts` keeps the rest true of every job in every
 workflow.
 
 ### Browser checks
@@ -332,6 +334,24 @@ Without the R2 variables, storage falls back to the local filesystem
 normal server. Upgrading from an older checkout? Run
 `node scripts/migrate-store.mjs` once to convert flat `.data` files to the
 blob layout.
+
+### Deployment notices
+
+`.github/workflows/discord.yml` posts to Retrospect's Discord channel when a
+production deploy succeeds or fails, when CI goes red on a push to `main`, and
+when the null test's scheduled run fails. A deploy lists the pull requests
+merged since the last good one; a red run names each failed job and step. A
+red pull request posts nothing, from a fork or not, and neither does a null
+test started by hand. A job stopped at its own ceiling ends its run canceled,
+which posts nothing either.
+
+It's the shared notices workflow, copied from blakeb-dev's, with the null test
+added and no releases or version, which this app doesn't have. It needs the
+`DISCORD_WEBHOOK_URL` secret, and skips cleanly without it. The repo is public
+and a deploy runs the copy in the deployed commit, so Vercel's Git Fork
+Protection stays on. To send a test by hand, run the Discord workflow from the
+Actions tab and choose a message. `src/lib/discord-workflow.test.ts` runs the
+workflow's own condition and script, and pins its settings.
 
 ## What's stored, and removing it
 

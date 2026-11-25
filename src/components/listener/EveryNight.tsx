@@ -625,7 +625,7 @@ function BackToTop({ shown, lift }: { shown: boolean; lift: number }) {
   return (
     <div
       style={{ "--lift": `${lift}px` } as CSSProperties}
-      className={`fixed right-4 bottom-[calc(16px+var(--lift)+env(safe-area-inset-bottom))] z-30 transition-[opacity,transform] duration-200 motion-reduce:transition-none sm:right-[max(16px,calc((100vw-720px)/2+16px))] min-[1124px]:right-auto min-[1124px]:bottom-[calc(16px+env(safe-area-inset-bottom))] min-[1124px]:left-[calc(50%+376px)] ${
+      className={`fixed right-4 bottom-[calc(16px+var(--lift)+env(safe-area-inset-bottom))] z-30 transition-[opacity,transform] duration-200 motion-reduce:transition-none sm:max-[1124px]:right-[max(16px,calc((100vw-720px)/2+16px))] min-[1124px]:right-auto min-[1124px]:bottom-[calc(16px+env(safe-area-inset-bottom))] min-[1124px]:left-[calc(50%+376px)] ${
         shown ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
       }`}
       inert={!shown}
